@@ -1,0 +1,18 @@
+[Icon Theme]
+Name=OllamaChat
+Comment=Ollama Chat Icon Theme
+Directories=scalable/actions,scalable/apps
+
+[scalable/actions]
+Context=Symbolic
+Size=16
+MinSize=8
+MaxSize=512
+Type=Scalable
+
+[scalable/apps]
+Context=Applications
+Size=128
+MinSize=8
+MaxSize=512
+Type=Scalable

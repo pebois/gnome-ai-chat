@@ -1,2 +1,7 @@
 dist/
 node_modules/
+.flatpak-builder/
+.flatpak-builddir/
+.flatpak-repo/
+.npm-cache.tar.gz
+.eslintcache
