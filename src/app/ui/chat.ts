@@ -134,7 +134,7 @@ export class Chat {
     const tracker = new ResizeTracker()
     tracker.can_target = false
     tracker.onSizeAllocate = () => {
-      if (this._isInputCentered) {
+      if (this._isInputCentered && !this._centerAnim) {
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
           this._centerInput(true, false)
           return GLib.SOURCE_REMOVE
@@ -412,7 +412,7 @@ export class Chat {
     }
 
     const H = this._splitView.get_allocated_height() || 600
-    const h = this._inputClamp.get_allocated_height() || 60
+    const h = this._inputClamp.get_allocated_height() || 136
 
     const centerMargin = Math.max(0, H / 2 - h - 48)
 
@@ -429,6 +429,12 @@ export class Chat {
 
       const anim = Adw.TimedAnimation.new(this._inputClamp, 0, 1, 500, target)
       anim.easing = Adw.Easing.EASE_IN_OUT_CUBIC
+      anim.connect('done', () => {
+        this._centerAnim = undefined
+        if (this._isInputCentered) {
+          this._centerInput(true, false)
+        }
+      })
       anim.play()
 
       this._centerAnim = anim
