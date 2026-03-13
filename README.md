@@ -36,7 +36,7 @@ A simple chat application for GNOME built with TypeScript (compiled to GJS), Gtk
 
     On Ubuntu:
     ```bash
-    sudo apt install gjs libgtk-4-dev libadwaita-1-dev
+    sudo apt install gjs libgtk-4-dev libadwaita-1-dev gir1.2-webkit-6.0 libwebkitgtk-6.0-dev
     ```
 
 ## Installation & Running the App

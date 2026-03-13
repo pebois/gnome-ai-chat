@@ -19,7 +19,8 @@ export default defineConfig({
       'gi://Graphene',
       'gi://Gtk?version=4.0',
       'gi://Pango',
-      'gi://Soup?version=3.0'
+      'gi://Soup?version=3.0',
+      'gi://WebKit?version=6.0'
     ]
   },
   sourcemap: false,

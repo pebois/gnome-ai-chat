@@ -168,7 +168,8 @@ export class Chat {
       valign: Gtk.Align.END
     })
     const scrollSpacer = new Gtk.Box({
-      can_target: false
+      can_target: false,
+      width_request: 1
     })
     this._scrollButton = new Gtk.Button({
       icon_name: 'go-bottom-symbolic',
@@ -310,19 +311,19 @@ export class Chat {
           this._history.scrollToBottom()
         },
         onMessageChunk: (chunk) => {
-          if (chunk.message.thinking) {
+          if (chunk.message?.thinking) {
             fullThinking += chunk.message.thinking
           }
-          if (chunk.message.content) {
+          if (chunk.message?.content) {
             fullContent += chunk.message.content
           }
-          if (chunk.message.tool_calls) {
+          if (chunk.message?.tool_calls) {
             fullToolCalls = [...fullToolCalls, ...chunk.message.tool_calls]
           }
 
           if (this._app.conversation?.id === conversation.id) {
             currentMessageComponent?.update({
-              ...chunk.message,
+              ...(chunk.message || {}),
               content: fullContent,
               thinking: fullThinking,
               tool_calls: fullToolCalls

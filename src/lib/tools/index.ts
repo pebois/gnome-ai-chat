@@ -1,5 +1,6 @@
 import { get_app_details, handle_get_app_details, handle_launch_app, handle_launch_app_action, handle_list_installed_apps, launch_app, launch_app_action, list_installed_apps } from '@/lib/tools/desktop.js'
 import { handle_search_files, search_files } from '@/lib/tools/files.js'
+import { handle_render_html, render_html } from '@/lib/tools/html.js'
 import { calculate, handle_calculate, handle_roll_die, roll_die } from '@/lib/tools/math.js'
 import { get_system_info, handle_get_system_info, handle_take_screenshot, take_screenshot } from '@/lib/tools/system.js'
 import { get_current_datetime, get_user_timezone, handle_get_current_datetime, handle_get_user_timezone } from '@/lib/tools/time.js'
@@ -15,6 +16,7 @@ export const tools = [
   launch_app,
   launch_app_action,
   list_installed_apps,
+  render_html,
   roll_die,
   search_files,
   take_screenshot
@@ -46,6 +48,8 @@ export async function onToolCall(name: string, args: Record<string, unknown>): P
       return handle_calculate(args)
     case 'take_screenshot':
       return handle_take_screenshot()
+    case 'render_html':
+      return handle_render_html(args)
     default:
       return ''
   }

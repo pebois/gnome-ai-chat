@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Interactive HTML Canvas**: Added the `render_html` tool powered by WebKitGTK 6.0. The AI can now autonomously generate and display interactive UIs, games, or data visualizations containing embedded CSS and JavaScript in a native preview window.
+- **Inline Preview Controls**: Added a full-size, primary "Open preview" pill button underneath `render_html` tool calls in the chat history for immediate on-demand rendering.
 - New model pull dialog with real-time progress tracking, including download speed and estimated time remaining.
 - Progress bar and cancellation support for the manual Vector Indexing tool in Settings.
 - Explicit `Stop` functionality for both model pulling and vector indexing operations.
@@ -59,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored command execution to utilize unified application actions.
 
 ### Fixed
+- **Streaming Resiliency**: Fixed an application crash triggered by empty final response chunks from the Ollama API by adding robust optional chaining.
+- **GTK Snapshot Warnings**: Eliminated GTK4 `Trying to snapshot GtkBox without a current allocation` warnings by assigning a minimal valid width request to invisible layout spacers.
 - **Streaming State Protection**: Automatically disable message interaction buttons (copy, reload) while a response is being generated to prevent race conditions.
 - **Message UI Crash**: Resolved a crash when attempting to update button sensitivity for messages without actions (e.g., system messages).
 - **GJS Console Warnings**: Resolved "Too many arguments" warnings for `Gtk.Window.present()` across the application.

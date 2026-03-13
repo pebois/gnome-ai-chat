@@ -8,6 +8,7 @@ import { showToolCallDialog } from '@/app/dialog/toolcall.js'
 import type { AppInterface } from '@/app/index.js'
 import { Images } from '@/app/ui/images.js'
 import type { OllamaMessage, OllamaToolCall } from '@/lib/ollama.js'
+import { handle_render_html } from '@/lib/tools/html.js'
 import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setupContextMenu } from '@/lib/ui.js'
 import { markdownToPango } from '@/lib/utils.js'
 
@@ -275,6 +276,36 @@ export class Message {
       row.add_css_class('monospace')
       this._toolCallsExpander.add_row(row)
       this._toolRows.push(row)
+
+      if (call.function.name === 'render_html') {
+        const previewBtn = new Gtk.Button({
+          label: 'Open preview',
+          hexpand: true,
+          margin_top: 6,
+          margin_bottom: 6,
+          margin_start: 12,
+          margin_end: 12
+        })
+        previewBtn.add_css_class('pill')
+        previewBtn.add_css_class('suggested-action')
+        previewBtn.connect('clicked', () => {
+          const args = call.function.arguments as Record<string, unknown> | undefined
+          if (args && typeof args.html_content === 'string') {
+            handle_render_html({ html_content: args.html_content })
+          }
+        })
+
+        const btnBox = new Gtk.Box()
+        btnBox.append(previewBtn)
+
+        const btnRow = new Gtk.ListBoxRow({
+          child: btnBox,
+          activatable: false,
+          selectable: false
+        })
+        this._toolCallsExpander.add_row(btnRow)
+        this._toolRows.push(btnRow)
+      }
     })
   }
 

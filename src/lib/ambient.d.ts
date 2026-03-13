@@ -43,6 +43,11 @@ declare module 'gi://Soup?version=3.0' {
   export default Soup
 }
 
+declare module 'gi://WebKit?version=6.0' {
+  import WebKit from '@girs/webkit-6.0'
+  export default WebKit
+}
+
 declare module 'gi://GdkPixbuf' {
   import GdkPixbuf from '@girs/gdkpixbuf-2.0'
   export default GdkPixbuf
