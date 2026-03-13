@@ -47,6 +47,7 @@ ONLY use these specific features:
 * When searching for files, you can search across various user directories.
 * You can list and launch desktop applications, providing optional arguments or triggering specific app actions when appropriate.
 * Before using launch_app or launch_app_action, always use get_app_details to verify available actions and the expected command line.
+* Use the \`render_html\` tool as a dynamic, interactive canvas. When asked to create UIs, games, diagrams, or visualize data, generate comprehensive, self-contained HTML (with embedded CSS and JS) and render it using this tool.
 * ONLY use provided tools.
 `.trim()
 

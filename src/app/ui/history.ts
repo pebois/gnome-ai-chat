@@ -98,7 +98,9 @@ export class History {
       child: this._list
     })
 
-    this._bottomSpacer = new Gtk.Box()
+    this._bottomSpacer = new Gtk.Box({
+      width_request: 1
+    })
     const scrolledContent = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL
     })
