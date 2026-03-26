@@ -4,7 +4,7 @@ import GLib from 'gi://GLib?version=2.0'
 import { APPLICATION_ID, DEFAULT_EMBEDDING_MODEL, DEFAULT_SETTINGS } from '@/lib/constants.js'
 import { debug } from '@/lib/debug.js'
 import type { Ollama, OllamaMessage } from '@/lib/ollama.js'
-import { debounce } from '@/lib/timeout.js'
+import { debounce, type DebouncedFunction } from '@/lib/timeout.js'
 
 Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish')
 Gio._promisify(Gio.File.prototype, 'replace_contents_async', 'replace_contents_finish')
@@ -14,7 +14,7 @@ interface StorageState {
   saving: boolean
   pending: boolean
   data?: string
-  debouncedSave?: () => void
+  debouncedSave?: DebouncedFunction<() => void>
 }
 
 export const think_types = ['none', 'low', 'medium', 'high'] as const
@@ -24,6 +24,7 @@ export type StorageThink = typeof think_types[number]
 export interface StorageSettings {
   url: string
   system: string
+  skills: { name: string; prompt: string }[]
   stream: boolean
   think: StorageThink
   theme: number
@@ -37,6 +38,7 @@ export interface StorageConversation {
   model: string
   created_at: string
   updated_at?: string
+  system?: string
   embeddings?: number[]
 }
 
@@ -100,7 +102,7 @@ export class Storage {
         void this._executeSave(file, state)
       }, 500)
     }
-    state.debouncedSave()
+    state.debouncedSave?.()
   }
 
   private async _executeSave(file: Gio.File, state: StorageState): Promise<void> {
@@ -199,10 +201,7 @@ export class Storage {
     const saves: Promise<void>[] = []
 
     const processState = (file: Gio.File, state: StorageState): void => {
-      if (state.debouncedSave) {
-        // @ts-expect-error - debounce has a cancel method
-        state.debouncedSave.cancel?.()
-      }
+      state.debouncedSave?.cancel()
       if (state.data !== undefined) {
         saves.push(this._executeSave(file, state))
       }

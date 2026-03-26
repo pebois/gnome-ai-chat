@@ -66,9 +66,16 @@ export const DEFAULT_OPTIONS = {
   top_p: 0.9
 } as Record<string, number>
 
+export const DEFAULT_SKILLS = [
+  { name: 'coder', prompt: 'You are an expert software engineer. Provide concise, correct code without unnecessary explanations. Always output full code blocks.' },
+  { name: 'writer', prompt: 'You are an expert copywriter. Write clearly, concisely, and persuasively.' },
+  { name: 'reviewer', prompt: 'You are a strict code reviewer. Identify bugs, security issues, and bad practices.' }
+]
+
 export const DEFAULT_SETTINGS = {
   url: DEFAULT_OLLAMA_URL,
   system: DEFAULT_SYSTEM_PROMPT,
+  skills: DEFAULT_SKILLS,
   options: DEFAULT_OPTIONS,
   think: DEFAULT_THINK,
   stream: DEFAULT_STREAM,

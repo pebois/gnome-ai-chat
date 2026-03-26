@@ -7,11 +7,13 @@ import type { AppInterface } from '@/app/index.js'
 import { Attachments } from '@/app/ui/attachments.js'
 import { Commands } from '@/app/ui/commands.js'
 import { Models } from '@/app/ui/models.js'
+import { Skills } from '@/app/ui/skills.js'
 
 export class Input {
   private _app: AppInterface
   private _widget!: Gtk.Box
   private _commands!: Commands
+  private _skills!: Skills
   private _messageInput!: Gtk.TextView
   private _attachments!: Attachments
   private _models!: Models
@@ -93,12 +95,16 @@ export class Input {
     inputScroll.set_child(inputOverlay)
 
     this._commands = new Commands(this._app, this._messageInput, inputToolbar)
+    this._skills = new Skills(this._app, this._messageInput, inputToolbar)
 
     const keyCtrl = new Gtk.EventControllerKey({
       propagation_phase: Gtk.PropagationPhase.CAPTURE
     })
     keyCtrl.connect('key-pressed', (_ctrl, keyval, _keycode, state) => {
       if (this._commands.handleKeyPress(keyval)) {
+        return true
+      }
+      if (this._skills.handleKeyPress(keyval)) {
         return true
       }
 

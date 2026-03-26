@@ -281,7 +281,9 @@ export class Chat {
 
     this._app.storage.saveMessages(conversation.id, conversation.messages)
     conversation.updated_at = new Date().toISOString()
-    const conv = this._app.conversations.find((c) => c.id === conversation.id)
+    const conv = this._app.conversations.find((c) => {
+      return c.id === conversation.id
+    })
     if (conv) {
       conv.updated_at = conversation.updated_at
       this._app.sidebar.updateConversation(conv)
@@ -300,7 +302,7 @@ export class Chat {
     try {
       const messages = await this._app.ollama.chat({
         model: this._app.model ?? DEFAULT_CHAT_MODEL,
-        system: this._app.settings.system,
+        system: conversation.system ?? this._app.settings.system,
         stream: this._app.settings.stream,
         think: this._app.settings.think,
         options: this._app.settings.options,
@@ -355,7 +357,9 @@ export class Chat {
 
       this._app.storage.saveMessages(conversation.id, conversation.messages)
       conversation.updated_at = new Date().toISOString()
-      const conv = this._app.conversations.find((c) => c.id === conversation.id)
+      const conv = this._app.conversations.find((c) => {
+        return c.id === conversation.id
+      })
       if (conv) {
         conv.updated_at = conversation.updated_at
         this._app.sidebar.updateConversation(conv)
@@ -403,7 +407,9 @@ export class Chat {
     conversation.messages = conversation.messages.slice(0, index)
     this._app.storage.saveMessages(conversation.id, conversation.messages)
     conversation.updated_at = new Date().toISOString()
-    const conv = this._app.conversations.find((c) => c.id === conversation.id)
+    const conv = this._app.conversations.find((c) => {
+      return c.id === conversation.id
+    })
     if (conv) {
       conv.updated_at = conversation.updated_at
       this._app.sidebar.updateConversation(conv)
