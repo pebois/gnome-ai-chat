@@ -1,4 +1,3 @@
-import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
 import type { OllamaTool } from '@/lib/ollama.js'

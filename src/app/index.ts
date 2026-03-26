@@ -498,7 +498,9 @@ export class App extends Adw.Application implements AppInterface {
       this.conversation.messages = compressedMessages
       this.storage.saveMessages(this.conversation.id, compressedMessages)
       this.conversation.updated_at = new Date().toISOString()
-      const conv = this.conversations.find((c) => c.id === this.conversation?.id)
+      const conv = this.conversations.find((c) => {
+        return c.id === this.conversation?.id
+      })
       if (conv) {
         conv.updated_at = this.conversation.updated_at
         this.sidebar.updateConversation(conv)

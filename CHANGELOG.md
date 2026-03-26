@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Hacker News Integration**: Added `/hn` slash command to quickly fetch and summarize the latest headlines from news.ycombinator.com using the web fetching tool.
 - **Conversation Compression**: Added `/compress` slash command to strip reasoning blocks (`<think>`) and tool usage history from the current conversation, helping to stay within model context limits.
 - **Persistent Web Caching**: Implemented an RFC-compliant HTTP caching system for the web fetching tool using `Soup.Cache`, persisting data across sessions in the user's cache directory.
+- **Custom @ Skills**: Added a new "Skills" feature that allows users to define and trigger custom system personas via `@` in the chat input. Skills can be managed, added, and edited through a dedicated page in the Preferences dialog.
+- **Persona Toast Notifications**: Added visual feedback when a conversation's persona is updated via a skill.
 
 ### Changed
 - **Project Rebranding**: Renamed the project from **Ollama Chat** to **Gnome AI Chat** throughout the codebase, including application ID (`io.github.pebois.gnome-ai-chat`), desktop entry, and all internal references.
@@ -78,3 +80,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a regression where the command popover failed to appear on certain GTK versions due to unitialized rectangle bounds.
 - **Empty Sidebar Headers**: Fixed an issue where date-based headers would remain visible in the sidebar after all conversations in that section were deleted.
 - **Data Persistence on Quit**: Fixed a race condition where debounced saves might not complete before the application shut down; added a mandatory storage flush during the exit sequence.
+- **Type-Safe Debounce**: Refactored the internal `debounce` utility to be fully type-safe, including a dedicated `cancel()` method, and resolved related ESLint `no-unsafe-call` warnings in the storage engine.

@@ -1,10 +1,14 @@
 import GLib from 'gi://GLib?version=2.0'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function debounce<T extends (...args: any) => void>(fn: T, delayMs = 500): (...args: Parameters<T>) => void {
+export interface DebouncedFunction<T extends (...args: unknown[]) => void> {
+  (...args: Parameters<T>): void
+  cancel(): void
+}
+
+export function debounce<T extends (...args: unknown[]) => void>(fn: T, delayMs = 500): DebouncedFunction<T> {
   let timeoutId: number | null = null
 
-  return (...args: Parameters<T>) => {
+  const debounced = (...args: Parameters<T>): void => {
     if (timeoutId !== null) {
       GLib.source_remove(timeoutId)
     }
@@ -15,6 +19,15 @@ export function debounce<T extends (...args: any) => void>(fn: T, delayMs = 500)
       return GLib.SOURCE_REMOVE
     })
   }
+
+  debounced.cancel = () => {
+    if (timeoutId !== null) {
+      GLib.source_remove(timeoutId)
+      timeoutId = null
+    }
+  }
+
+  return debounced
 }
 
 export function poll(fn: () => void | Promise<void>, intervalMs: number, immediate = false): () => void {

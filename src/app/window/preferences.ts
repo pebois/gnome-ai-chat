@@ -25,6 +25,7 @@ export class Preferences {
     this._setupGeneral()
     this._setupAppearance()
     this._setupPrompt()
+    this._setupSkills()
     this._setupAdvanced()
     this._setupData()
   }
@@ -197,6 +198,160 @@ export class Preferences {
 
     scrolled.set_child(textView)
     group.add(scrolled)
+  }
+
+  private _setupSkills(): void {
+    const page = new Adw.PreferencesPage({
+      title: 'Skills',
+      icon_name: 'avatar-default-symbolic'
+    })
+    this._window.add(page)
+
+    const group = new Adw.PreferencesGroup({
+      title: 'Configured Skills'
+    })
+    page.add(group)
+
+    const addBtn = new Gtk.Button({
+      icon_name: 'list-add-symbolic',
+      tooltip_text: 'Add new skill',
+      valign: Gtk.Align.CENTER
+    })
+    addBtn.add_css_class('flat')
+    addBtn.connect('clicked', () => {
+      this._showSkillDialog(undefined, () => {
+        return this._refreshSkills(group)
+      })
+    })
+    group.set_header_suffix(addBtn)
+
+    this._refreshSkills(group)
+  }
+
+  private _refreshSkills(group: Adw.PreferencesGroup): void {
+    let child = group.get_first_child()
+    while (child) {
+      const next = child.get_next_sibling()
+      group.remove(child)
+      child = next
+    }
+
+    if (!this._app.settings.skills) {
+      this._app.settings.skills = []
+    }
+
+    if (this._app.settings.skills.length === 0) {
+      const emptyRow = new Adw.ActionRow({
+        title: 'No skills added yet',
+        subtitle: 'Click the + button to add one.'
+      })
+      group.add(emptyRow)
+      return
+    }
+
+    for (let i = 0; i < this._app.settings.skills.length; i++) {
+      const skill = this._app.settings.skills[i]
+      const row = new Adw.ActionRow({
+        title: skill.name,
+        subtitle: skill.prompt
+      })
+
+      const box = new Gtk.Box({ spacing: 6 })
+
+      const editBtn = new Gtk.Button({
+        icon_name: 'document-edit-symbolic',
+        valign: Gtk.Align.CENTER
+      })
+      editBtn.add_css_class('flat')
+      editBtn.connect('clicked', () => {
+        this._showSkillDialog(i, () => {
+          return this._refreshSkills(group)
+        })
+      })
+      box.append(editBtn)
+
+      const delBtn = new Gtk.Button({
+        icon_name: 'user-trash-symbolic',
+        valign: Gtk.Align.CENTER
+      })
+      delBtn.add_css_class('flat')
+      delBtn.add_css_class('destructive-action')
+      delBtn.connect('clicked', () => {
+        this._app.settings.skills.splice(i, 1)
+        this._app.saveSettings()
+        this._refreshSkills(group)
+      })
+      box.append(delBtn)
+
+      row.add_suffix(box)
+      group.add(row)
+    }
+  }
+
+  private _showSkillDialog(index: number | undefined, onSave: () => void): void {
+    const dialog = new Adw.MessageDialog({
+      heading: index !== undefined ? 'Edit Skill' : 'Add Skill',
+      body: 'Configure the skill name (trigger) and its system prompt.',
+      transient_for: this._window
+    })
+
+    const box = new Gtk.Box({
+      orientation: Gtk.Orientation.VERTICAL,
+      spacing: 12
+    })
+    box.add_css_class('margin-12')
+
+    const nameEntry = new Adw.EntryRow({
+      title: 'Name',
+      text: index !== undefined ? this._app.settings.skills[index].name : ''
+    })
+    box.append(nameEntry)
+
+    const promptScrolled = new Gtk.ScrolledWindow({
+      min_content_height: 150,
+      propagate_natural_height: true
+    })
+    promptScrolled.add_css_class('frame')
+    const promptView = new Gtk.TextView({
+      wrap_mode: Gtk.WrapMode.WORD_CHAR,
+      left_margin: 12,
+      right_margin: 12,
+      top_margin: 12,
+      bottom_margin: 12
+    })
+    promptView.get_buffer().set_text(index !== undefined ? this._app.settings.skills[index].prompt : '', -1)
+    promptScrolled.set_child(promptView)
+    box.append(promptScrolled)
+
+    dialog.set_extra_child(box)
+
+    dialog.add_response('cancel', 'Cancel')
+    dialog.add_response('save', 'Save')
+    dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED)
+
+    dialog.connect('response', (_d, responseId) => {
+      if (responseId === 'save') {
+        const newName = nameEntry.get_text().trim()
+        const buf = promptView.get_buffer()
+        const newPrompt = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), false).trim()
+
+        if (newName && newPrompt) {
+          if (index !== undefined) {
+            this._app.settings.skills[index] = { name: newName, prompt: newPrompt }
+          } else {
+            if (!this._app.settings.skills) {
+              this._app.settings.skills = []
+            }
+            this._app.settings.skills.push({ name: newName, prompt: newPrompt })
+          }
+          this._app.saveSettings()
+          onSave()
+        }
+      }
+      dialog.close()
+    })
+
+    dialog.present()
   }
 
   private _setupData(): void {
