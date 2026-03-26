@@ -11,7 +11,7 @@ export class LoadingPage {
   constructor() {
     const statusPage = new Adw.StatusPage({
       icon_name: 'chat-message-new-symbolic',
-      title: 'Starting Ollama Chat',
+      title: 'Starting Gnome AI Chat',
       vexpand: true
     })
 

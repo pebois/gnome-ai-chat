@@ -1,3 +1,0 @@
-#!/bin/sh
-export LC_ALL=C.UTF-8
-exec gjs -m /app/share/io.github.pebois.ollama-chat/dist/main.mjs "$@"

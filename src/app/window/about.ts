@@ -11,8 +11,8 @@ export function showAboutWindow(app: AppInterface): void {
     developer_name: 'Pierre-Emmanuel Bois',
     version: '1.0.0',
     comments: 'A GNOME chat application that talks to a local Ollama server.',
-    website: 'https://github.com/pebois/ollama-chat',
-    issue_url: 'https://github.com/pebois/ollama-chat/issues',
+    website: 'https://github.com/pebois/gnome-ai-chat',
+    issue_url: 'https://github.com/pebois/gnome-ai-chat/issues',
     license_type: 0
   })
   if (app.settings.debug) {

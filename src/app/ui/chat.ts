@@ -280,6 +280,12 @@ export class Chat {
     conversation.messages.push(userMessage)
 
     this._app.storage.saveMessages(conversation.id, conversation.messages)
+    conversation.updated_at = new Date().toISOString()
+    const conv = this._app.conversations.find((c) => c.id === conversation.id)
+    if (conv) {
+      conv.updated_at = conversation.updated_at
+      this._app.sidebar.updateConversation(conv)
+    }
     this._app.storage.saveConversations(this._app.conversations)
 
     this._history.scrollToBottom()
@@ -348,11 +354,17 @@ export class Chat {
       }
 
       this._app.storage.saveMessages(conversation.id, conversation.messages)
+      conversation.updated_at = new Date().toISOString()
+      const conv = this._app.conversations.find((c) => c.id === conversation.id)
+      if (conv) {
+        conv.updated_at = conversation.updated_at
+        this._app.sidebar.updateConversation(conv)
+      }
       this._app.storage.saveConversations(this._app.conversations)
 
       if (!this._app.window.is_active) {
         const notification = new Gio.Notification()
-        notification.set_title('Ollama Chat')
+        notification.set_title('Gnome AI Chat')
         notification.set_body('The assistant has finished responding.')
         this._app.sendNotification('message-completed', notification)
       }
@@ -390,6 +402,12 @@ export class Chat {
     const text = message.content
     conversation.messages = conversation.messages.slice(0, index)
     this._app.storage.saveMessages(conversation.id, conversation.messages)
+    conversation.updated_at = new Date().toISOString()
+    const conv = this._app.conversations.find((c) => c.id === conversation.id)
+    if (conv) {
+      conv.updated_at = conversation.updated_at
+      this._app.sidebar.updateConversation(conv)
+    }
     this._app.storage.saveConversations(this._app.conversations)
     this.loadMessages(conversation)
     this._input.getBuffer().set_text(text, -1)

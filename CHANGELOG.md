@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Persistent Web Caching**: Implemented an RFC-compliant HTTP caching system for the web fetching tool using `Soup.Cache`, persisting data across sessions in the user's cache directory.
 
 ### Changed
+- **Project Rebranding**: Renamed the project from **Ollama Chat** to **Gnome AI Chat** throughout the codebase, including application ID (`io.github.pebois.gnome-ai-chat`), desktop entry, and all internal references.
 - **Synchronized UI Animations**: Refactored the chat input centering logic to use a single unified animation, ensuring perfectly synchronized movement and resizing.
 - **Improved Tool Architecture**: Refactored web fetching to use a singleton `Soup.Session` for better performance through connection pooling and shared state.
 - **Unified Command Execution**: Refactored the `/hn` command to utilize the formal application action system.
@@ -61,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored command execution to utilize unified application actions.
 
 ### Fixed
+- **Sidebar Dynamic Re-grouping**: Fixed an issue where conversations would not move between date-based headers (e.g., from "Yesterday" to "Today") when updated; implemented an update trigger to refresh sorting and grouping immediately upon message activity.
 - **Streaming Resiliency**: Fixed an application crash triggered by empty final response chunks from the Ollama API by adding robust optional chaining.
 - **GTK Snapshot Warnings**: Eliminated GTK4 `Trying to snapshot GtkBox without a current allocation` warnings by assigning a minimal valid width request to invisible layout spacers.
 - **Streaming State Protection**: Automatically disable message interaction buttons (copy, reload) while a response is being generated to prevent race conditions.

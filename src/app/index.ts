@@ -131,7 +131,7 @@ export class App extends Adw.Application implements AppInterface {
 
     this.window = new AppWindow(this, {
       application: this,
-      title: 'Ollama Chat',
+      title: 'Gnome AI Chat',
       default_width: 800,
       default_height: 600,
       icon_name: APPLICATION_ID
@@ -368,7 +368,7 @@ export class App extends Adw.Application implements AppInterface {
       const display = Gdk.Display.get_default()
       if (display) {
         const iconTheme = Gtk.IconTheme.get_for_display(display)
-        iconTheme.add_resource_path('resource:///io/github/pebois/ollama-chat/icons')
+        iconTheme.add_resource_path('resource:///io/github/pebois/gnome-ai-chat/icons')
 
         const iconsDir = GLib.build_filenamev([rootDir, 'icons'])
         if (GLib.file_test(iconsDir, GLib.FileTest.IS_DIR)) {
@@ -497,6 +497,13 @@ export class App extends Adw.Application implements AppInterface {
 
       this.conversation.messages = compressedMessages
       this.storage.saveMessages(this.conversation.id, compressedMessages)
+      this.conversation.updated_at = new Date().toISOString()
+      const conv = this.conversations.find((c) => c.id === this.conversation?.id)
+      if (conv) {
+        conv.updated_at = this.conversation.updated_at
+        this.sidebar.updateConversation(conv)
+      }
+      this.storage.saveConversations(this.conversations)
       this.chat.loadMessages(this.conversation)
       this.showToast('Conversation compressed')
     })
@@ -525,7 +532,7 @@ export class App extends Adw.Application implements AppInterface {
 }
 
 GObject.registerClass({
-  GTypeName: 'OllamaChat',
+  GTypeName: 'GnomeAIChat',
   Signals: {
     'busy-changed': {
       param_types: [GObject.TYPE_BOOLEAN]

@@ -1,0 +1,3 @@
+#!/bin/sh
+export LC_ALL=C.UTF-8
+exec gjs -m /app/share/io.github.pebois.gnome-ai-chat/dist/main.mjs "$@"

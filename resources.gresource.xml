@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/io/github/pebois/ollama-chat/">
+  <gresource prefix="/io/github/pebois/gnome-ai-chat/">
     <file>icons/scalable/actions/package-x-generic-symbolic.svg</file>
     <file>icons/scalable/actions/newspaper-symbolic.svg</file>
     <file>icons/scalable/actions/bug-symbolic.svg</file>
@@ -9,6 +9,6 @@
     <file>icons/scalable/actions/paper-plane-symbolic.svg</file>
     <file>icons/scalable/actions/processor-symbolic.svg</file>
     <file>icons/scalable/actions/resources-symbolic.svg</file>
-    <file>icons/scalable/apps/io.github.pebois.ollama-chat.svg</file>
+    <file>icons/scalable/apps/io.github.pebois.gnome-ai-chat.svg</file>
   </gresource>
 </gresources>

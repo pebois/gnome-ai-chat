@@ -154,5 +154,5 @@ src/
 - **Comments**: Comments are strictly forbidden. Code must be self-documenting through clear naming and small, focused functions. Remove all existing comments.
 
 ## Deployment & Distribution
-- **Flatpak**: This is the primary distribution format. The `io.github.pebois.ollama-chat.json` manifest defines the build environment and dependencies.
-- **Resources**: Icons and desktop files are located in `icons/` and the root directory, following the Reverse DNS naming convention (`io.github.pebois.ollama-chat`).
+- **Flatpak**: This is the primary distribution format. The `io.github.pebois.gnome-ai-chat.json` manifest defines the build environment and dependencies.
+- **Resources**: Icons and desktop files are located in `icons/` and the root directory, following the Reverse DNS naming convention (`io.github.pebois.gnome-ai-chat`).
