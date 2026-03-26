@@ -175,6 +175,11 @@ export class Sidebar {
       }
 
       if (r1.conversation && r2.conversation) {
+        const date1 = new Date(r1.conversation.updated_at || r1.conversation.created_at).getTime()
+        const date2 = new Date(r2.conversation.updated_at || r2.conversation.created_at).getTime()
+        if (date1 !== date2) {
+          return date2 - date1
+        }
         return r1.conversation.id > r2.conversation.id ? -1 : (r1.conversation.id < r2.conversation.id ? 1 : 0)
       }
       return 0
@@ -205,7 +210,7 @@ export class Sidebar {
       const matchesSemantic = similarity >= 0.5
 
       if (matchesText || matchesSemantic) {
-        this._visibleGroups.add(getDateGroup(conv.created_at))
+        this._visibleGroups.add(getDateGroup(conv.updated_at || conv.created_at))
       }
     }
   }
@@ -218,14 +223,14 @@ export class Sidebar {
     }
 
     const sortedConvs = [...this._app.conversations].sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime()
-      const dateB = new Date(b.created_at).getTime()
+      const dateA = new Date(a.updated_at || a.created_at).getTime()
+      const dateB = new Date(b.updated_at || b.created_at).getTime()
       return dateB - dateA
     })
 
     const grouped = new Map<string, StorageConversation[]>()
     for (const conv of sortedConvs) {
-      const group = getDateGroup(conv.created_at)
+      const group = getDateGroup(conv.updated_at || conv.created_at)
       if (!grouped.has(group)) {
         grouped.set(group, [])
       }
@@ -257,11 +262,13 @@ export class Sidebar {
   }
 
   public async createNewConversation(): Promise<void> {
+    const now = new Date().toISOString()
     const conversation: StorageConversation = {
       id: Date.now(),
       title: 'New chat',
       model: this._app.model,
-      created_at: new Date().toISOString()
+      created_at: now,
+      updated_at: now
     }
     this._app.conversations.unshift(conversation)
     this._app.storage.saveConversations(this._app.conversations)
@@ -278,6 +285,24 @@ export class Sidebar {
     if (row) {
       row.label.set_label(title)
       row.set_tooltip_text(title)
+    }
+  }
+
+  public updateConversation(conversation: StorageConversation): void {
+    const row = this._getRow(conversation)
+    if (row) {
+      const newGroup = getDateGroup(conversation.updated_at || conversation.created_at)
+      if (row.group !== newGroup) {
+        this.populateList()
+        if (this._app.conversation) {
+          const activeRow = this._getRow(this._app.conversation)
+          if (activeRow) {
+            this._conversationList.select_row(activeRow)
+          }
+        }
+      } else {
+        this._conversationList.invalidate_sort()
+      }
     }
   }
 
@@ -389,7 +414,7 @@ export class Sidebar {
     setupContextMenu(row, popover)
 
     row.conversation = conversation
-    row.group = getDateGroup(conversation.created_at)
+    row.group = getDateGroup(conversation.updated_at || conversation.created_at)
     row.popover = popover
 
     return row

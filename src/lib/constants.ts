@@ -1,8 +1,8 @@
 import type { StoragePerformanceStats, StorageSettings } from '@/lib/storage.js'
 
-export const APPLICATION_NAME = 'Ollama Chat'
+export const APPLICATION_NAME = 'Gnome AI Chat'
 
-export const APPLICATION_ID = 'io.github.pebois.ollama-chat'
+export const APPLICATION_ID = 'io.github.pebois.gnome-ai-chat'
 
 export const DEFAULT_OLLAMA_URL = 'http://localhost:11434'
 

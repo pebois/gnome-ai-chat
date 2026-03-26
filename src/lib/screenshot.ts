@@ -12,7 +12,7 @@ export async function takeScreenshot(): Promise<Gio.File | null> {
         throw new Error('No unique DBus name available')
       }
 
-      const token = 'ollamachat_' + new Date().getTime()
+      const token = 'gnomeaichat_' + new Date().getTime()
       const sender = uniqueName.replace(/\./g, '_').replace(':', '')
       const requestPath = `/org/freedesktop/portal/desktop/request/${sender}/${token}`
 

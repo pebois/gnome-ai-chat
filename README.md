@@ -1,4 +1,4 @@
-# Ollama Chat GNOME App
+# Gnome AI Chat App
 
 A simple chat application for GNOME built with TypeScript (compiled to GJS), Gtk4, and Libadwaita. It communicates with the Ollama HTTP API.
 

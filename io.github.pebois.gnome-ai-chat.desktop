@@ -1,17 +1,17 @@
 [Desktop Entry]
-Name=Ollama Chat
+Name=Gnome AI Chat
 GenericName=AI Chat
 Comment=Chat with local AI models via Ollama
-Exec=io.github.pebois.ollama-chat %U
-Icon=io.github.pebois.ollama-chat
+Exec=io.github.pebois.gnome-ai-chat %U
+Icon=io.github.pebois.gnome-ai-chat
 Terminal=false
 Type=Application
 Categories=Utility;Network;
 Keywords=ollama;ai;chat;llm;assistant;
-StartupWMClass=io.github.pebois.ollama-chat
+StartupWMClass=io.github.pebois.gnome-ai-chat
 X-GNOME-UsesNotifications=false
 Actions=new-conversation;
 
 [Desktop Action new-conversation]
 Name=New Conversation
-Exec=io.github.pebois.ollama-chat --new-conversation
+Exec=io.github.pebois.gnome-ai-chat --new-conversation
