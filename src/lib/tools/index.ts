@@ -1,4 +1,5 @@
 import { handle_run_automation_command, run_automation_command } from '@/lib/tools/automation.js'
+import { handle_list_directory, handle_read_file, handle_run_shell_command, handle_write_file, list_directory, read_file, run_shell_command, write_file } from '@/lib/tools/code.js'
 import { get_app_details, handle_get_app_details, handle_launch_app, handle_launch_app_action, handle_list_installed_apps, launch_app, launch_app_action, list_installed_apps } from '@/lib/tools/desktop.js'
 import { handle_search_files, search_files } from '@/lib/tools/files.js'
 import { handle_render_html, render_html } from '@/lib/tools/html.js'
@@ -16,12 +17,16 @@ export const tools = [
   get_user_timezone,
   launch_app,
   launch_app_action,
+  list_directory,
   list_installed_apps,
+  read_file,
   render_html,
   roll_die,
   run_automation_command,
+  run_shell_command,
   search_files,
-  take_screenshot
+  take_screenshot,
+  write_file
 ]
 
 export async function onToolCall(name: string, args: Record<string, unknown>): Promise<string> {
@@ -54,6 +59,14 @@ export async function onToolCall(name: string, args: Record<string, unknown>): P
       return handle_take_screenshot()
     case 'render_html':
       return handle_render_html(args)
+    case 'read_file':
+      return handle_read_file(args)
+    case 'write_file':
+      return handle_write_file(args)
+    case 'list_directory':
+      return handle_list_directory(args)
+    case 'run_shell_command':
+      return handle_run_shell_command(args)
     default:
       return ''
   }
