@@ -16,6 +16,37 @@ declare module 'gi://Gdk' {
 declare module 'gi://Gio' {
   import Gio from '@girs/gio-2.0'
   export default Gio
+
+  export interface File extends Omit<Gio.File, 'replace_contents_bytes_async' | 'enumerate_children_async' | 'load_contents_async'> {
+    replace_contents_bytes_async(
+      contents: unknown,
+      etag: string | null,
+      make_backup: boolean,
+      flags: unknown,
+      cancellable: unknown
+    ): Promise<[boolean, string]>
+    enumerate_children_async(
+      attributes: string,
+      flags: unknown,
+      io_priority: number,
+      cancellable: unknown
+    ): Promise<FileEnumerator>
+    load_contents_async(
+      cancellable: unknown
+    ): Promise<[Uint8Array, string]>
+  }
+
+  export interface FileEnumerator extends Gio.FileEnumerator {
+    next_files_async(
+      num_files: number,
+      io_priority: number,
+      cancellable: unknown
+    ): Promise<Gio.FileInfo[]>
+    close_async(
+      io_priority: number,
+      cancellable: unknown
+    ): Promise<boolean>
+  }
 }
 
 declare module 'gi://GioUnix?version=2.0' {
