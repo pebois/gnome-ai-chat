@@ -2,6 +2,7 @@ import Gdk from 'gi://Gdk'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/app/index.js'
+import type { StorageSkill } from '@/lib/storage.js'
 
 export class Skills {
   private _app: AppInterface
@@ -9,7 +10,7 @@ export class Skills {
   private _parent: Gtk.Widget
   private _popover!: Gtk.Popover
   private _listBox!: Gtk.ListBox
-  private _matches: { name: string; prompt: string }[] = []
+  private _matches: StorageSkill[] = []
 
   constructor(app: AppInterface, textView: Gtk.TextView, parent: Gtk.Widget) {
     this._app = app
@@ -110,33 +111,8 @@ export class Skills {
     return this._popover.get_visible()
   }
 
-  public execute(skill: { name: string; prompt: string }): void {
+  public execute(_skill: StorageSkill): void {
     this._popover.popdown()
-
-    if (this._app.conversation) {
-      this._app.conversation.system = skill.prompt
-      this._app.storage.saveConversations(this._app.conversations)
-      this._app.showToast(`Persona updated to: ${skill.name}`)
-    }
-
-    const buffer = this._textView.get_buffer()
-    const cursor = buffer.get_iter_at_mark(buffer.get_insert())
-    const start = cursor.copy()
-    start.set_line_offset(0)
-    const lineText = buffer.get_text(start, cursor, false)
-
-    // Replace the @skill part.
-    const lastMatch = lineText.match(/(?:^|\s)(@[^\s]*)$/)
-    if (lastMatch) {
-      const matchText = lastMatch[1]
-      const matchIndex = lineText.lastIndexOf(matchText)
-
-      const replaceStart = start.copy()
-      replaceStart.forward_chars(matchIndex)
-
-      buffer.delete(replaceStart, cursor)
-    }
-
     this._textView.grab_focus()
   }
 
@@ -238,7 +214,7 @@ export class Skills {
         this._listBox.remove(child)
       }
 
-      this._matches.forEach(() => {
+      this._matches.forEach((_skill) => {
         const box = new Gtk.Box({
           orientation: Gtk.Orientation.HORIZONTAL,
           spacing: 6,
@@ -250,14 +226,17 @@ export class Skills {
 
         const icon = new Gtk.Image({
           icon_name: 'avatar-default-symbolic',
-          pixel_size: 16
+          pixel_size: 16,
+          valign: Gtk.Align.CENTER
         })
         icon.add_css_class('dim-label')
 
         const titleLabel = new Gtk.Label({
           halign: Gtk.Align.START,
-          use_markup: true
+          use_markup: true,
+          valign: Gtk.Align.CENTER
         })
+
         box.append(icon)
         box.append(titleLabel)
 
@@ -281,7 +260,7 @@ export class Skills {
       const row = this._listBox.get_row_at_index(i)
       if (row) {
         const box = row.get_child() as Gtk.Box
-        const titleLabel = box.get_first_child()?.get_next_sibling() as Gtk.Label
+        const titleLabel = box.get_last_child() as Gtk.Label
         if (titleLabel) {
           const name = skill.name
           const filterLower = filterText.toLowerCase()
