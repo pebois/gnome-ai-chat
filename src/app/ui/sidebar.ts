@@ -112,7 +112,9 @@ export class Sidebar {
     })
     navigationHeader.pack_end(this._searchButton)
 
-    this._searchEntry = new Gtk.SearchEntry()
+    this._searchEntry = new Gtk.SearchEntry({
+      hexpand: true
+    })
 
     this._searchEntry.connect('search-changed', () => {
       this._updateVisibleGroups()
