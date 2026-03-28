@@ -58,6 +58,11 @@ declare module 'gi://Graphene' {
   export default Graphene
 }
 
+declare module 'gi://GtkSource?version=5' {
+  import GtkSource from '@girs/gtksource-5'
+  export default GtkSource
+}
+
 declare class TextEncoder {
   encode(input?: string): Uint8Array
 }

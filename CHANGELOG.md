@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Wayland Desktop Automation**: Added the `run_automation_command` tool to programmatically control the desktop using `ydotool` (Wayland). This includes a new `@automation` default skill to guide the model through screenshot-based coordinate analysis and execution.
 
 ### Changed
+- **Optimized Message Rendering**: Refactored the message content parser to stream and render text and code chunks independently, significantly reducing UI layout shifts during active generation.
+- **Improved Spacing**: Implemented intelligent whitespace trimming for text paragraphs between code blocks to maintain a compact and readable conversation flow.
+- **Updated Type Definitions**: Upgraded all `@girs` TypeScript declarations to the latest versions to resolve internal GObject Introspection type mismatches.
 - **Project Rebranding**: Renamed the project from **Ollama Chat** to **Gnome AI Chat** throughout the codebase, including application ID (`io.github.pebois.gnome-ai-chat`), desktop entry, and all internal references.
 - **Synchronized UI Animations**: Refactored the chat input centering logic to use a single unified animation, ensuring perfectly synchronized movement and resizing.
 - **Improved Tool Architecture**: Refactored web fetching to use a singleton `Soup.Session` for better performance through connection pooling and shared state.

@@ -2,6 +2,7 @@ import Adw from 'gi://Adw?version=1'
 import Gdk from 'gi://Gdk'
 import Gio from 'gi://Gio'
 import Gtk from 'gi://Gtk?version=4.0'
+import GtkSource from 'gi://GtkSource?version=5'
 import Pango from 'gi://Pango'
 
 import { showToolCallDialog } from '@/app/dialog/toolcall.js'
@@ -18,6 +19,14 @@ export interface MessageProps {
   onCopy: () => void
 }
 
+interface ContentPart {
+  type: 'text' | 'code'
+  widget: Gtk.Widget
+  contentLabel?: Gtk.Label
+  expanderRow?: Adw.ExpanderRow
+  buffer?: GtkSource.Buffer
+}
+
 export class Message {
   private _app: AppInterface
   private _widget: Gtk.Box
@@ -26,7 +35,8 @@ export class Message {
   private _thinkingLabel!: Gtk.Label
   private _toolCallsListBox!: Gtk.ListBox
   private _toolCallsExpander!: Adw.ExpanderRow
-  private _contentLabel!: Gtk.Label
+  private _contentBox!: Gtk.Box
+  private _contentParts: ContentPart[] = []
   private _roleBox!: Gtk.Box
   private _toolRows: Gtk.Widget[] = []
   private _currentMessage: OllamaMessage
@@ -116,14 +126,10 @@ export class Message {
   private _setupContent(message: OllamaMessage): void {
     const isVisible = !!message.content?.length && ['user', 'assistant'].includes(message.role)
 
-    this._contentLabel = new Gtk.Label({
-      label: markdownToPango(message.content || ''),
-      use_markup: true,
-      wrap: true,
-      wrap_mode: Pango.WrapMode.WORD_CHAR,
-      xalign: 0,
+    this._contentBox = new Gtk.Box({
+      orientation: Gtk.Orientation.VERTICAL,
+      spacing: 12,
       halign: message.role === 'user' ? Gtk.Align.END : Gtk.Align.FILL,
-      selectable: true,
       visible: isVisible
     })
 
@@ -134,10 +140,153 @@ export class Message {
     }
 
     if (roleClasses[message.role]) {
-      this._contentLabel.add_css_class(roleClasses[message.role])
+      this._contentBox.add_css_class(roleClasses[message.role])
     }
 
-    this._widget.append(this._contentLabel)
+    this._widget.append(this._contentBox)
+    this._renderContent(message)
+  }
+
+  private _parseCodeBlock(block: string): { language: string; code: string } {
+    let raw = block
+    if (raw.startsWith('```')) {
+      raw = raw.slice(3)
+    }
+    const lines = raw.split('\n')
+    const firstLine = lines.shift() || ''
+    const language = firstLine.trim()
+
+    if (lines.length > 0 && lines[lines.length - 1].trim().endsWith('```')) {
+      const last = lines.pop()!
+      const remainder = last.slice(0, -3).trim()
+      if (remainder) {
+        lines.push(remainder)
+      }
+    }
+    return { language, code: lines.join('\n') }
+  }
+
+  private _renderContent(message: OllamaMessage): void {
+    if (!message.content) {
+      this._contentParts.forEach((p) => {
+        return this._contentBox.remove(p.widget)
+      })
+      this._contentParts = []
+      return
+    }
+
+    const rawChunks = message.content.split(/(```[\s\S]*?(?:```|$))/g)
+    const chunks = rawChunks
+      .map((c) => {
+        return c.startsWith('```') ? c : c.trim()
+      })
+      .filter((c) => {
+        return c.length > 0
+      })
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]
+      const isCode = chunk.startsWith('```')
+
+      if (i < this._contentParts.length) {
+        const part = this._contentParts[i]
+        if (part.type === (isCode ? 'code' : 'text')) {
+          if (isCode) {
+            const { code, language } = this._parseCodeBlock(chunk)
+            part.expanderRow!.set_title(language || 'text')
+            part.buffer!.set_text(code, -1)
+          } else {
+            part.contentLabel!.set_label(markdownToPango(chunk))
+          }
+          continue
+        } else {
+          for (let j = i; j < this._contentParts.length; j++) {
+            this._contentBox.remove(this._contentParts[j].widget)
+          }
+          this._contentParts.splice(i)
+        }
+      }
+
+      if (isCode) {
+        const { code, language } = this._parseCodeBlock(chunk)
+        const [listBox, expander] = createBoxedExpanderRow(language || 'text', 'text-x-generic-symbolic')
+        listBox.add_css_class('code-block-list')
+        expander.set_expanded(true)
+
+        const copyBtn = new Gtk.Button({
+          icon_name: 'edit-copy-symbolic',
+          tooltip_text: 'Copy code',
+          valign: Gtk.Align.CENTER
+        })
+        copyBtn.add_css_class('flat')
+        copyBtn.connect('clicked', () => {
+          const cb = Gdk.Display.get_default()!.get_clipboard()
+          cb.set(code)
+          this._app.showToast('Code copied')
+        })
+        expander.add_suffix(copyBtn)
+
+        const buffer = new GtkSource.Buffer()
+        const lm = GtkSource.LanguageManager.get_default()
+        const lang = lm.get_language(language || 'text') || lm.get_language('text')
+        if (lang) {
+          buffer.set_language(lang)
+        }
+        buffer.set_text(code, -1)
+
+        const sm = GtkSource.StyleSchemeManager.get_default()
+        const scheme = sm.get_scheme('Adwaita-dark')
+        if (scheme) {
+          buffer.set_style_scheme(scheme)
+        }
+
+        const sourceView = new GtkSource.View({
+          buffer: buffer,
+          editable: false,
+          monospace: true,
+          show_line_numbers: true,
+          wrap_mode: Gtk.WrapMode.WORD_CHAR,
+          top_margin: 6,
+          bottom_margin: 6,
+          left_margin: 6,
+          right_margin: 6,
+          margin_top: 6,
+          margin_bottom: 6,
+          margin_start: 6,
+          margin_end: 6
+        })
+        sourceView.add_css_class('code-view')
+
+        expander.add_row(sourceView)
+        this._contentBox.append(listBox)
+        this._contentParts.push({
+          type: 'code',
+          widget: listBox,
+          expanderRow: expander,
+          buffer: buffer
+        })
+      } else {
+        const label = new Gtk.Label({
+          label: markdownToPango(chunk),
+          use_markup: true,
+          wrap: true,
+          wrap_mode: Pango.WrapMode.WORD_CHAR,
+          xalign: 0,
+          selectable: true
+        })
+        this._contentBox.append(label)
+        this._contentParts.push({
+          type: 'text',
+          widget: label,
+          contentLabel: label
+        })
+      }
+    }
+
+    while (this._contentParts.length > chunks.length) {
+      const part = this._contentParts.pop()!
+      this._contentBox.remove(part.widget)
+    }
   }
 
   private _setupRole(props: MessageProps): void {
@@ -315,8 +464,9 @@ export class Message {
     this._thinkingLabel.set_markup(markdownToPango(updated.thinking || ''))
     this._toolCallsListBox.set_visible(!!updated.tool_calls?.length)
     this._updateToolCalls(updated.tool_calls)
-    this._contentLabel.set_markup(markdownToPango(updated.content || ''))
-    this._contentLabel.set_visible(!!updated.content?.length)
+
+    this._renderContent(updated)
+    this._contentBox.set_visible(!!updated.content?.length)
     this._roleBox.set_visible(!!updated.content?.length)
   }
 }

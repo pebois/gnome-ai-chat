@@ -18,6 +18,7 @@ export default defineConfig({
       'gi://GObject',
       'gi://Graphene',
       'gi://Gtk?version=4.0',
+      'gi://GtkSource?version=5',
       'gi://Pango',
       'gi://Soup?version=3.0',
       'gi://WebKit?version=6.0'
