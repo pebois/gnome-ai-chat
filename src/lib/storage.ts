@@ -21,10 +21,17 @@ export const think_types = ['none', 'low', 'medium', 'high'] as const
 
 export type StorageThink = typeof think_types[number]
 
+export interface StorageSkill {
+  id: string
+  name: string
+  description?: string
+  prompt: string
+}
+
 export interface StorageSettings {
   url: string
   system: string
-  skills: { name: string; prompt: string }[]
+  skills: StorageSkill[]
   stream: boolean
   think: StorageThink
   theme: number
@@ -173,6 +180,7 @@ export class Storage {
 
   public async loadSettings(): Promise<void> {
     const data = await this._read<Partial<StorageSettings>>(this._settingsFile)
+
     Object.assign(this._settings, {
       ...DEFAULT_SETTINGS,
       ...data,

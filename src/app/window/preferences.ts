@@ -3,8 +3,9 @@ import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
+import { showSkillDialog } from '@/app/dialog/skill.js'
 import type { AppInterface } from '@/app/index.js'
-import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_STREAM, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
+import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_SKILLS, DEFAULT_STREAM, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
 import { think_types } from '@/lib/storage.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
 
@@ -212,6 +213,14 @@ export class Preferences {
     })
     page.add(group)
 
+    const listBox = new Gtk.ListBox({
+      selection_mode: Gtk.SelectionMode.NONE
+    })
+    listBox.add_css_class('boxed-list')
+    group.add(listBox)
+
+    const headerBox = new Gtk.Box({ spacing: 6 })
+
     const addBtn = new Gtk.Button({
       icon_name: 'list-add-symbolic',
       tooltip_text: 'Add new skill',
@@ -219,21 +228,38 @@ export class Preferences {
     })
     addBtn.add_css_class('flat')
     addBtn.connect('clicked', () => {
-      this._showSkillDialog(undefined, () => {
-        return this._refreshSkills(group)
+      showSkillDialog(this._app, this._window, undefined, () => {
+        return this._refreshSkills(group, listBox)
       })
     })
-    group.set_header_suffix(addBtn)
+    headerBox.append(addBtn)
 
-    this._refreshSkills(group)
+    const resetBtn = this._createResetButton(() => {
+      this._app.settings.skills = [...DEFAULT_SKILLS]
+      this._app.saveSettings()
+      this._refreshSkills(group, listBox)
+    })
+    headerBox.append(resetBtn)
+
+    group.set_header_suffix(headerBox)
+
+    this._refreshSkills(group, listBox)
   }
 
-  private _refreshSkills(group: Adw.PreferencesGroup): void {
-    let child = group.get_first_child()
+  private _refreshSkills(group: Adw.PreferencesGroup, listBox: Gtk.ListBox): void {
+    const isDefault = JSON.stringify(this._app.settings.skills) === JSON.stringify(DEFAULT_SKILLS)
+    const headerBox = group.get_header_suffix() as Gtk.Box
+    if (headerBox) {
+      const resetBtn = headerBox.get_last_child() as Gtk.Button
+      if (resetBtn) {
+        resetBtn.sensitive = !isDefault
+      }
+    }
+
+    let child = listBox.get_first_child()
     while (child) {
-      const next = child.get_next_sibling()
-      group.remove(child)
-      child = next
+      listBox.remove(child)
+      child = listBox.get_first_child()
     }
 
     if (!this._app.settings.skills) {
@@ -245,7 +271,7 @@ export class Preferences {
         title: 'No skills added yet',
         subtitle: 'Click the + button to add one.'
       })
-      group.add(emptyRow)
+      listBox.append(emptyRow)
       return
     }
 
@@ -253,7 +279,7 @@ export class Preferences {
       const skill = this._app.settings.skills[i]
       const row = new Adw.ActionRow({
         title: skill.name,
-        subtitle: skill.prompt
+        subtitle: skill.description || skill.prompt
       })
 
       const box = new Gtk.Box({ spacing: 6 })
@@ -264,8 +290,8 @@ export class Preferences {
       })
       editBtn.add_css_class('flat')
       editBtn.connect('clicked', () => {
-        this._showSkillDialog(i, () => {
-          return this._refreshSkills(group)
+        showSkillDialog(this._app, this._window, i, () => {
+          return this._refreshSkills(group, listBox)
         })
       })
       box.append(editBtn)
@@ -279,79 +305,13 @@ export class Preferences {
       delBtn.connect('clicked', () => {
         this._app.settings.skills.splice(i, 1)
         this._app.saveSettings()
-        this._refreshSkills(group)
+        this._refreshSkills(group, listBox)
       })
       box.append(delBtn)
 
       row.add_suffix(box)
-      group.add(row)
+      listBox.append(row)
     }
-  }
-
-  private _showSkillDialog(index: number | undefined, onSave: () => void): void {
-    const dialog = new Adw.MessageDialog({
-      heading: index !== undefined ? 'Edit Skill' : 'Add Skill',
-      body: 'Configure the skill name (trigger) and its system prompt.',
-      transient_for: this._window
-    })
-
-    const box = new Gtk.Box({
-      orientation: Gtk.Orientation.VERTICAL,
-      spacing: 12
-    })
-    box.add_css_class('margin-12')
-
-    const nameEntry = new Adw.EntryRow({
-      title: 'Name',
-      text: index !== undefined ? this._app.settings.skills[index].name : ''
-    })
-    box.append(nameEntry)
-
-    const promptScrolled = new Gtk.ScrolledWindow({
-      min_content_height: 150,
-      propagate_natural_height: true
-    })
-    promptScrolled.add_css_class('frame')
-    const promptView = new Gtk.TextView({
-      wrap_mode: Gtk.WrapMode.WORD_CHAR,
-      left_margin: 12,
-      right_margin: 12,
-      top_margin: 12,
-      bottom_margin: 12
-    })
-    promptView.get_buffer().set_text(index !== undefined ? this._app.settings.skills[index].prompt : '', -1)
-    promptScrolled.set_child(promptView)
-    box.append(promptScrolled)
-
-    dialog.set_extra_child(box)
-
-    dialog.add_response('cancel', 'Cancel')
-    dialog.add_response('save', 'Save')
-    dialog.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED)
-
-    dialog.connect('response', (_d, responseId) => {
-      if (responseId === 'save') {
-        const newName = nameEntry.get_text().trim()
-        const buf = promptView.get_buffer()
-        const newPrompt = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), false).trim()
-
-        if (newName && newPrompt) {
-          if (index !== undefined) {
-            this._app.settings.skills[index] = { name: newName, prompt: newPrompt }
-          } else {
-            if (!this._app.settings.skills) {
-              this._app.settings.skills = []
-            }
-            this._app.settings.skills.push({ name: newName, prompt: newPrompt })
-          }
-          this._app.saveSettings()
-          onSave()
-        }
-      }
-      dialog.close()
-    })
-
-    dialog.present()
   }
 
   private _setupData(): void {

@@ -250,12 +250,30 @@ export class Chat {
     }
 
     const buffer = this._input.getBuffer()
-    const text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false).trim()
+    let text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false).trim()
     const conversation = this._app.conversation
 
     if (!text || !conversation) {
       this._input.grabFocus()
       return
+    }
+
+    if (text.startsWith('@')) {
+      const textLower = text.toLowerCase()
+      const skill = this._app.settings.skills.find((s) => {
+        return textLower.startsWith(`@${s.name.toLowerCase()}`)
+      })
+      if (skill) {
+        conversation.system = skill.prompt
+        text = text.slice(skill.name.length + 1).trim()
+
+        if (!text) {
+          this._app.storage.saveConversations(this._app.conversations)
+          buffer.set_text('', -1)
+          this._input.grabFocus()
+          return
+        }
+      }
     }
 
     if (conversation.messages.length === 0) {

@@ -1,4 +1,4 @@
-import type { StoragePerformanceStats, StorageSettings } from '@/lib/storage.js'
+import type { StoragePerformanceStats, StorageSettings, StorageSkill } from '@/lib/storage.js'
 
 export const APPLICATION_NAME = 'Gnome AI Chat'
 
@@ -66,10 +66,31 @@ export const DEFAULT_OPTIONS = {
   top_p: 0.9
 } as Record<string, number>
 
-export const DEFAULT_SKILLS = [
-  { name: 'coder', prompt: 'You are an expert software engineer. Provide concise, correct code without unnecessary explanations. Always output full code blocks.' },
-  { name: 'writer', prompt: 'You are an expert copywriter. Write clearly, concisely, and persuasively.' },
-  { name: 'reviewer', prompt: 'You are a strict code reviewer. Identify bugs, security issues, and bad practices.' }
+export const DEFAULT_SKILLS: StorageSkill[] = [
+  {
+    id: 'coder',
+    name: 'Coder',
+    description: 'Expert software engineer. Concise and correct code.',
+    prompt: 'You are an expert software engineer. Provide concise, correct code without unnecessary explanations. Always output full code blocks.'
+  },
+  {
+    id: 'writer',
+    name: 'Writer',
+    description: 'Expert copywriter. Clear and persuasive writing.',
+    prompt: 'You are an expert copywriter. Write clearly, concisely, and persuasively.'
+  },
+  {
+    id: 'reviewer',
+    name: 'Reviewer',
+    description: 'Strict code reviewer. Focus on bugs and best practices.',
+    prompt: 'You are a strict code reviewer. Identify bugs, security issues, and bad practices.'
+  },
+  {
+    id: 'automation',
+    name: 'Automation',
+    description: 'Wayland desktop automation expert using ydotool.',
+    prompt: 'You are a Wayland desktop automation expert. Use `ydotool` via the `run_automation_command` tool to automate mouse and keyboard actions. ALWAYS call `take_screenshot` before any `ydotool` command to identify coordinates from the visual state. Coordinates start at (0,0) top-left. Left click: 0xC0, Right click: 0xC1.'
+  }
 ]
 
 export const DEFAULT_SETTINGS = {

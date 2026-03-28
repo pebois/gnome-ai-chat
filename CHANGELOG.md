@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Refined Skill Workflow**: Skills are now applied at the moment of sending a message by parsing the `@SkillName` prefix from the input text. This allows users to see and edit the active persona before committing the message.
+- **Enhanced Skill Editing**: Moved the skill configuration dialog to a dedicated component with a significantly larger editing area for easier prompt management.
 - **Interactive HTML Canvas**: Added the `render_html` tool powered by WebKitGTK 6.0. The AI can now autonomously generate and display interactive UIs, games, or data visualizations containing embedded CSS and JavaScript in a native preview window.
 - **Inline Preview Controls**: Added a full-size, primary "Open preview" pill button underneath `render_html` tool calls in the chat history for immediate on-demand rendering.
 - New model pull dialog with real-time progress tracking, including download speed and estimated time remaining.
@@ -33,8 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Hacker News Integration**: Added `/hn` slash command to quickly fetch and summarize the latest headlines from news.ycombinator.com using the web fetching tool.
 - **Conversation Compression**: Added `/compress` slash command to strip reasoning blocks (`<think>`) and tool usage history from the current conversation, helping to stay within model context limits.
 - **Persistent Web Caching**: Implemented an RFC-compliant HTTP caching system for the web fetching tool using `Soup.Cache`, persisting data across sessions in the user's cache directory.
-- **Custom @ Skills**: Added a new "Skills" feature that allows users to define and trigger custom system personas via `@` in the chat input. Skills can be managed, added, and edited through a dedicated page in the Preferences dialog.
-- **Persona Toast Notifications**: Added visual feedback when a conversation's persona is updated via a skill.
+- **Wayland Desktop Automation**: Added the `run_automation_command` tool to programmatically control the desktop using `ydotool` (Wayland). This includes a new `@automation` default skill to guide the model through screenshot-based coordinate analysis and execution.
 
 ### Changed
 - **Project Rebranding**: Renamed the project from **Ollama Chat** to **Gnome AI Chat** throughout the codebase, including application ID (`io.github.pebois.gnome-ai-chat`), desktop entry, and all internal references.
@@ -49,6 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Compact Slash Commands**: Optimized the slash command menu layout with reduced vertical spacing and capped width for a better visual balance.
 - **Improved Image Rendering**: Images now consistently display at 250px width using efficient GPU-based scaling via `Gtk.Picture`.
 - **Clean Settings UI**: Removed verbose descriptions and subtitles from the Preferences dialog for a more direct "product" aesthetic.
+- **Improved Skill Autocomplete**: Simplified the `@` skills menu by removing descriptions and adding a consistent symbolic icon for a more focused selection experience.
+- **Silent Persona Selection**: Removed the toast notification when selecting a skill from the autocomplete menu to reduce UI noise.
 - **Centralized Storage Logic**: Refactored indexing and data persistence logic into the `Storage` class to improve architectural separation.
 - **Indexing Layout**: Realigned the progress bar to appear to the left of the indexing button for better visual flow.
 - Semantic search results now maintain their natural chronological order and remain grouped within their date-based sections ("Today", "Yesterday", etc.).
@@ -81,3 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Empty Sidebar Headers**: Fixed an issue where date-based headers would remain visible in the sidebar after all conversations in that section were deleted.
 - **Data Persistence on Quit**: Fixed a race condition where debounced saves might not complete before the application shut down; added a mandatory storage flush during the exit sequence.
 - **Type-Safe Debounce**: Refactored the internal `debounce` utility to be fully type-safe, including a dedicated `cancel()` method, and resolved related ESLint `no-unsafe-call` warnings in the storage engine.
+
+### Removed
+- **Remote Skill Sync**: Removed the "Import from URL" and synchronization functionality for skills to focus on local persona management.
+- **Skill Customization Details**: Removed the per-skill custom icon configuration in favor of a unified visual style.

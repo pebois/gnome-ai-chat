@@ -1,3 +1,4 @@
+import { handle_run_automation_command, run_automation_command } from '@/lib/tools/automation.js'
 import { get_app_details, handle_get_app_details, handle_launch_app, handle_launch_app_action, handle_list_installed_apps, launch_app, launch_app_action, list_installed_apps } from '@/lib/tools/desktop.js'
 import { handle_search_files, search_files } from '@/lib/tools/files.js'
 import { handle_render_html, render_html } from '@/lib/tools/html.js'
@@ -18,6 +19,7 @@ export const tools = [
   list_installed_apps,
   render_html,
   roll_die,
+  run_automation_command,
   search_files,
   take_screenshot
 ]
@@ -42,6 +44,8 @@ export async function onToolCall(name: string, args: Record<string, unknown>): P
       return handle_launch_app_action(args)
     case 'search_files':
       return handle_search_files(args)
+    case 'run_automation_command':
+      return handle_run_automation_command(args)
     case 'fetch_web_page':
       return handle_fetch_web_page(args)
     case 'calculate':
