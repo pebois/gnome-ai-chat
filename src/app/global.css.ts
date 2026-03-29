@@ -26,6 +26,7 @@ export const css = /* css */`
 
 .chat-history > row {
   background-color: transparent;
+  padding: 6px 0;
 }
 
 .chat-history > row:hover {
@@ -50,11 +51,10 @@ export const css = /* css */`
 
 .user-message {
   padding: 12px;
-  margin-bottom: 2px;
   border-radius: 12px;
+  border-bottom-right-radius: 0px;
   background-color: @accent_bg_color;
   color: @accent_fg_color;
-  border-bottom-right-radius: 0px;
 }
 
 .assistant-message {
@@ -65,7 +65,6 @@ export const css = /* css */`
 .message-canvas {
   border-radius: 12px;
   background: @shade_color;
-  margin-bottom: 12px;
 }
 
 .message-image {

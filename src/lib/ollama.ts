@@ -49,6 +49,7 @@ export interface OllamaMessage {
   role: 'user' | 'assistant' | 'system' | 'tool'
   content: string
   images?: string[]
+  files?: { name: string; content: string }[]
   thinking?: string
   tool_calls?: OllamaToolCall[]
   tool_name?: string
@@ -365,11 +366,17 @@ export class Ollama {
     const supportsThink = capabilities.includes('think')
 
     const processedMessages = messages.map((msg) => {
-      if (!supportsVision && msg.images) {
-        const { images: _, ...rest } = msg
-        return rest
+      let processed = { ...msg }
+      if (!supportsVision && processed.images) {
+        const { images: _, ...rest } = processed
+        processed = rest
       }
-      return msg
+      if (processed.files?.length) {
+        const blocks = processed.files.map((f) => `\`\`\`${f.name}\n${f.content}\n\`\`\``)
+        const { files: _, ...rest } = processed
+        processed = { ...rest, content: blocks.join('\n\n') + '\n\n' + (processed.content || '') }
+      }
+      return processed
     })
 
     const req: OllamaChatRequest = {

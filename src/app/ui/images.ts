@@ -4,6 +4,8 @@ import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
+import { DEFAULT_SPACING } from '@/lib/constants.js'
+
 export class Images {
   private _widget: Gtk.Box
 
@@ -14,7 +16,7 @@ export class Images {
   constructor(images: string[], role: string) {
     this._widget = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
-      spacing: 4,
+      spacing: DEFAULT_SPACING,
       halign: role === 'user' ? Gtk.Align.END : Gtk.Align.START
     })
 
