@@ -189,6 +189,12 @@ export class Storage {
         ...(data?.options || {})
       }
     })
+
+    if (this._settings.skills) {
+      this._settings.skills.sort((a, b) => {
+        return a.name.localeCompare(b.name)
+      })
+    }
   }
 
   public saveSettings(settings: StorageSettings): void {

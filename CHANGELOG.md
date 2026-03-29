@@ -26,9 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`/compress` Command**: Strip reasoning blocks and tool history from the current conversation to stay within context limits.
 - **Persistent Web Caching**: RFC-compliant HTTP cache via `Soup.Cache` for the web fetching tool, persisted across sessions.
 - **Wayland Desktop Automation**: `run_automation_command` tool using `ydotool`, with a new `@automation` skill for screenshot-based coordinate analysis.
+- **`@canvas` Skill**: Specialized skill for generating and rendering high-quality, self-contained HTML/JS applications, games, and visualizations using the `render_html` tool.
+- **Alphabetical Skill Sorting**: Skills are now sorted alphabetically in the autocomplete menu and settings for easier navigation.
 - **Embedding API Tracking**: Embedding API calls are now recorded in performance statistics.
 
 ### Changed
+- **Improved Agent Robustness**: Enhanced default system prompt and skill descriptions for better tool sequencing, error recovery, and role-playing accuracy.
+- **Refined Tool Metadata**: Updated all tool descriptions with clearer usage constraints, warnings about side effects (e.g., file overwrites, non-interactive shell commands), and discovery prerequisites.
 - **Message Layout**: Content and role label are grouped in a shared box with consistent 4px spacing; group is hidden when content is empty.
 - **Uniform Message Spacing**: All message parts (thinking, tool calls, images, file attachments, content) use a consistent 12px gap.
 - **Optimized Message Rendering**: Content parser streams text and code chunks independently, reducing layout shifts during generation.

@@ -16,7 +16,7 @@ export const run_automation_command: OllamaTool = {
       },
       required: ['command']
     },
-    description: 'Executes a ydotool command for Wayland desktop automation. IMPORTANT: You MUST take a screenshot using `take_screenshot` first to determine coordinates.'
+    description: 'Executes a ydotool command for Wayland desktop automation. IMPORTANT: You MUST take a screenshot using `take_screenshot` first to determine coordinates. Coordinates start at top-left (0,0). Left click: 0xC0, Right click: 0xC1.'
   }
 }
 

@@ -17,7 +17,7 @@ export const take_screenshot: OllamaTool = {
   function: {
     name: 'take_screenshot',
     parameters: {},
-    description: 'Takes a screenshot of the entire screen.'
+    description: 'Takes a screenshot of the entire screen and returns the file URI where it was saved.'
   }
 }
 
