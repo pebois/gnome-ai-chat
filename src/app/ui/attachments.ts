@@ -8,9 +8,13 @@ import type { AppInterface } from '@/app/index.js'
 import { takeScreenshot } from '@/lib/screenshot.js'
 import { createMenuItem, createSimpleAction } from '@/lib/ui.js'
 
+type Attachment
+  = | { type: 'image'; name: string; base64: string }
+    | { type: 'text'; name: string; content: string }
+
 export class Attachments {
   private _app: AppInterface
-  private _selectedImages: { name: string; base64: string }[] = []
+  private _attachments: Attachment[] = []
   private _attachButton: Gtk.MenuButton
   private _attachmentsGroup: Gtk.Box
   private _attachmentsListButton: Gtk.MenuButton
@@ -38,13 +42,17 @@ export class Attachments {
     this._attachButton.add_css_class('circular')
 
     const attachMenu = new Gio.Menu()
-    attachMenu.append_item(createMenuItem('Add Image', 'chat.add_image', 'image-x-generic-symbolic'))
+    attachMenu.append_item(createMenuItem('Add Picture', 'chat.add_picture', 'image-x-generic-symbolic'))
+    attachMenu.append_item(createMenuItem('Add Text', 'chat.add_text', 'document-open-symbolic'))
     attachMenu.append_item(createMenuItem('Take Screenshot', 'chat.take_screenshot', 'camera-photo-symbolic'))
     this._attachButton.set_menu_model(attachMenu)
 
     const attachActionGroup = new Gio.SimpleActionGroup()
-    attachActionGroup.add_action(createSimpleAction('add_image', () => {
-      return this._handleAttachImage()
+    attachActionGroup.add_action(createSimpleAction('add_picture', () => {
+      return this._handleAttachPicture()
+    }))
+    attachActionGroup.add_action(createSimpleAction('add_text', () => {
+      return this._handleAttachText()
     }))
 
     attachActionGroup.add_action(createSimpleAction('take_screenshot', async () => {
@@ -64,7 +72,7 @@ export class Attachments {
       (_action, parameter) => {
         if (parameter) {
           const index = parameter.get_int32()
-          this._selectedImages.splice(index, 1)
+          this._attachments.splice(index, 1)
           this._updateAttachmentsUI()
         }
       },
@@ -103,37 +111,44 @@ export class Attachments {
   }
 
   public get images(): string[] {
-    return this._selectedImages.map((img) => {
-      return img.base64
-    })
+    return this._attachments
+      .filter((a): a is Extract<Attachment, { type: 'image' }> => {
+        return a.type === 'image'
+      })
+      .map((a) => {
+        return a.base64
+      })
   }
 
-  public get hasImages(): boolean {
-    return this._selectedImages.length > 0
+  public get textFiles(): { name: string; content: string }[] {
+    return this._attachments
+      .filter((a): a is Extract<Attachment, { type: 'text' }> => {
+        return a.type === 'text'
+      })
+      .map((a) => {
+        return { name: a.name, content: a.content }
+      })
+  }
+
+  public get hasAttachments(): boolean {
+    return this._attachments.length > 0
   }
 
   public clear(): void {
-    this._selectedImages = []
+    this._attachments = []
     this._updateAttachmentsUI()
   }
 
-  private _handleAttachImage(): void {
+  private _openFileChooser(title: string, filter: Gtk.FileFilter): void {
     const dialog = new Gtk.FileChooserNative({
-      title: 'Attach Image(s)',
+      title,
       transient_for: this._app.window,
       action: Gtk.FileChooserAction.OPEN,
       accept_label: 'Attach',
       cancel_label: 'Cancel',
       select_multiple: true
     })
-
-    const filter = new Gtk.FileFilter()
-    filter.set_name('Images')
-    filter.add_mime_type('image/png')
-    filter.add_mime_type('image/jpeg')
-    filter.add_mime_type('image/webp')
     dialog.add_filter(filter)
-
     dialog.connect('response', (_dialog, responseId) => {
       if (responseId === Gtk.ResponseType.ACCEPT) {
         const files = dialog.get_files()
@@ -146,36 +161,62 @@ export class Attachments {
       }
       dialog.destroy()
     })
-
     dialog.show()
+  }
+
+  private _handleAttachPicture(): void {
+    const filter = new Gtk.FileFilter()
+    filter.set_name('Images')
+    filter.add_mime_type('image/png')
+    filter.add_mime_type('image/jpeg')
+    filter.add_mime_type('image/webp')
+    this._openFileChooser('Attach Picture(s)', filter)
+  }
+
+  private _handleAttachText(): void {
+    const filter = new Gtk.FileFilter()
+    filter.set_name('Text Files')
+    filter.add_mime_type('text/plain')
+    filter.add_mime_type('text/markdown')
+    filter.add_mime_type('text/csv')
+    filter.add_mime_type('text/html')
+    filter.add_mime_type('text/xml')
+    filter.add_mime_type('application/json')
+    filter.add_mime_type('application/javascript')
+    filter.add_mime_type('application/typescript')
+    this._openFileChooser('Attach Text File(s)', filter)
   }
 
   public addFile(file: Gio.File): void {
     file.query_info_async('standard::content-type', Gio.FileQueryInfoFlags.NONE, GLib.PRIORITY_DEFAULT, null, (_src, res) => {
       try {
         const info = file.query_info_finish(res)
-        const contentType = info.get_content_type()
-        const isImage = contentType && (
-          contentType === 'image/png'
-          || contentType === 'image/jpeg'
-          || contentType === 'image/webp'
-        )
+        const contentType = info.get_content_type() ?? ''
+        const isImage = contentType === 'image/png' || contentType === 'image/jpeg' || contentType === 'image/webp'
+        const isText = contentType.startsWith('text/')
+          || contentType === 'application/json'
+          || contentType === 'application/javascript'
+          || contentType === 'application/typescript'
 
-        if (!isImage) {
+        if (!isImage && !isText) {
           return
         }
 
-        file.load_contents_async(null, (_source_object, res) => {
+        file.load_contents_async(null, (_source_object, result) => {
           try {
-            const [success, contents] = file.load_contents_finish(res)
-            if (success && contents) {
-              const base64 = GLib.base64_encode(contents)
-              const name = file.get_basename() || 'image'
-              this._selectedImages.push({ name, base64 })
-              this._updateAttachmentsUI()
+            const [success, contents] = file.load_contents_finish(result)
+            if (!success || !contents) {
+              return
             }
+            const name = file.get_basename() || 'file'
+            if (isImage) {
+              this._attachments.push({ type: 'image', name, base64: GLib.base64_encode(contents) })
+            } else {
+              this._attachments.push({ type: 'text', name, content: new TextDecoder().decode(contents) })
+            }
+            this._updateAttachmentsUI()
           } catch (e) {
-            console.error('Failed to load image:', e)
+            console.error('Failed to load file:', e)
           }
         })
       } catch (e) {
@@ -185,20 +226,20 @@ export class Attachments {
   }
 
   private _updateAttachmentsUI(): void {
-    if (this._selectedImages.length === 0) {
+    if (this._attachments.length === 0) {
       this._attachmentsGroup.set_visible(false)
       this._attachmentsListButton.set_menu_model(null)
       return
     }
 
     this._attachmentsGroup.set_visible(true)
-    this._attachmentsListButton.set_tooltip_text(`${this._selectedImages.length} Attachment(s)`)
+    this._attachmentsListButton.set_tooltip_text(`${this._attachments.length} Attachment(s)`)
 
     const menu = new Gio.Menu()
     const imagesSection = new Gio.Menu()
-    this._selectedImages.forEach((image, index) => {
+    this._attachments.forEach((attachment, index) => {
       imagesSection.append_item(createMenuItem(
-        `Remove ${image.name}`,
+        `Remove ${attachment.name}`,
         'chat.remove_attachment',
         'window-close-symbolic',
         new GLib.Variant('i', index)

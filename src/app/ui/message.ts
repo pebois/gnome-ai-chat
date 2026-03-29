@@ -8,6 +8,7 @@ import Pango from 'gi://Pango'
 import { showToolCallDialog } from '@/app/dialog/toolcall.js'
 import type { AppInterface } from '@/app/index.js'
 import { Images } from '@/app/ui/images.js'
+import { DEFAULT_SPACING } from '@/lib/constants.js'
 import type { OllamaMessage, OllamaToolCall } from '@/lib/ollama.js'
 import { handle_render_html } from '@/lib/tools/html.js'
 import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setupContextMenu } from '@/lib/ui.js'
@@ -35,6 +36,7 @@ export class Message {
   private _thinkingLabel!: Gtk.Label
   private _toolCallsListBox!: Gtk.ListBox
   private _toolCallsExpander!: Adw.ExpanderRow
+  private _messageGroup!: Gtk.Box
   private _contentBox!: Gtk.Box
   private _contentParts: ContentPart[] = []
   private _roleBox!: Gtk.Box
@@ -57,13 +59,23 @@ export class Message {
     this._widget = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
       hexpand: true,
-      spacing: 4
+      spacing: DEFAULT_SPACING
+    })
+
+    const isContentVisible = !!props.message.content?.length && ['user', 'assistant'].includes(props.message.role)
+    this._messageGroup = new Gtk.Box({
+      orientation: Gtk.Orientation.VERTICAL,
+      hexpand: true,
+      spacing: 4,
+      visible: isContentVisible
     })
 
     const { message } = props
     this._setupThinking(message)
     this._setupToolCalls(message)
     this._setupImages(message)
+    this._setupFiles(message)
+    this._widget.append(this._messageGroup)
     this._setupContent(message)
     this._setupRole(props)
     this._setupActions(props)
@@ -123,12 +135,64 @@ export class Message {
     }
   }
 
+  private _setupFiles(message: OllamaMessage): void {
+    if (!message.files?.length) {
+      return
+    }
+
+    const filesBox = new Gtk.Box({
+      orientation: Gtk.Orientation.VERTICAL,
+      spacing: DEFAULT_SPACING,
+      hexpand: true
+    })
+
+    message.files.forEach((file) => {
+      const [listBox, expander] = createBoxedExpanderRow(file.name, 'text-x-generic-symbolic')
+
+      const buffer = new GtkSource.Buffer()
+      const lm = GtkSource.LanguageManager.get_default()
+      const ext = file.name.split('.').pop() || ''
+      const lang = lm.get_language(ext) || lm.get_language('text')
+      if (lang) {
+        buffer.set_language(lang)
+      }
+      buffer.set_text(file.content, -1)
+
+      const sm = GtkSource.StyleSchemeManager.get_default()
+      const scheme = sm.get_scheme('Adwaita-dark')
+      if (scheme) {
+        buffer.set_style_scheme(scheme)
+      }
+
+      const sourceView = new GtkSource.View({
+        buffer,
+        editable: false,
+        monospace: true,
+        show_line_numbers: true,
+        wrap_mode: Gtk.WrapMode.WORD_CHAR,
+        top_margin: 6,
+        bottom_margin: 6,
+        left_margin: 6,
+        right_margin: 6,
+        margin_top: 6,
+        margin_bottom: 6,
+        margin_start: 6,
+        margin_end: 6
+      })
+      sourceView.add_css_class('code-view')
+      expander.add_row(sourceView)
+      filesBox.append(listBox)
+    })
+
+    this._widget.append(filesBox)
+  }
+
   private _setupContent(message: OllamaMessage): void {
     const isVisible = !!message.content?.length && ['user', 'assistant'].includes(message.role)
 
     this._contentBox = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
-      spacing: 12,
+      spacing: DEFAULT_SPACING,
       halign: message.role === 'user' ? Gtk.Align.END : Gtk.Align.FILL,
       visible: isVisible
     })
@@ -143,7 +207,7 @@ export class Message {
       this._contentBox.add_css_class(roleClasses[message.role])
     }
 
-    this._widget.append(this._contentBox)
+    this._messageGroup.append(this._contentBox)
     this._renderContent(message)
   }
 
@@ -356,10 +420,10 @@ export class Message {
     hoverCtrl.connect('leave', () => {
       return buttonsBox.set_opacity(0)
     })
-    this._widget.add_controller(hoverCtrl)
+    this._messageGroup.add_controller(hoverCtrl)
     buttonsBox.set_opacity(0)
 
-    this._widget.append(this._roleBox)
+    this._messageGroup.append(this._roleBox)
   }
 
   private _setupActions(props: MessageProps): void {
@@ -394,12 +458,12 @@ export class Message {
     }
 
     const popover = Gtk.PopoverMenu.new_from_model(menu)
-    popover.set_parent(this._widget)
+    popover.set_parent(this._messageGroup)
     popover.set_has_arrow(false)
     popover.set_position(Gtk.PositionType.BOTTOM)
-    this._widget.insert_action_group('chat', actionGroup)
+    this._messageGroup.insert_action_group('chat', actionGroup)
 
-    setupContextMenu(this._widget, popover)
+    setupContextMenu(this._messageGroup, popover)
   }
 
   private _updateToolCalls(calls?: OllamaToolCall[]): void {
@@ -465,8 +529,10 @@ export class Message {
     this._toolCallsListBox.set_visible(!!updated.tool_calls?.length)
     this._updateToolCalls(updated.tool_calls)
 
+    const hasContent = !!updated.content?.length
+    this._messageGroup.set_visible(hasContent)
     this._renderContent(updated)
-    this._contentBox.set_visible(!!updated.content?.length)
-    this._roleBox.set_visible(!!updated.content?.length)
+    this._contentBox.set_visible(hasContent)
+    this._roleBox.set_visible(hasContent)
   }
 }

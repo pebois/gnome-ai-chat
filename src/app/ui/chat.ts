@@ -289,8 +289,15 @@ export class Chat {
     this._input.setSendMode('stop')
 
     const userMessage: OllamaMessage = { role: 'user', content: text }
-    if (this._input.attachments.hasImages) {
-      userMessage.images = this._input.attachments.images
+    if (this._input.attachments.hasAttachments) {
+      const textFiles = this._input.attachments.textFiles
+      if (textFiles.length > 0) {
+        userMessage.files = textFiles
+      }
+      const imgs = this._input.attachments.images
+      if (imgs.length > 0) {
+        userMessage.images = imgs
+      }
       this._input.attachments.clear()
     }
     this._renderMessage(userMessage)
