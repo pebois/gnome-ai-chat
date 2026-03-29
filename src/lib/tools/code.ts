@@ -23,7 +23,7 @@ export const read_file: OllamaTool = {
       },
       required: ['file_path']
     },
-    description: 'Reads and returns the complete text content of a specified file.'
+    description: 'Reads and returns the complete text content of a specified file. Note that it reads the entire file into context.'
   }
 }
 
@@ -45,7 +45,7 @@ export const write_file: OllamaTool = {
       },
       required: ['file_path', 'content']
     },
-    description: 'Writes the provided content to a file. Overwrites existing files.'
+    description: 'Writes the provided content to a file. WARNING: This completely overwrites existing files.'
   }
 }
 
@@ -81,7 +81,7 @@ export const run_shell_command: OllamaTool = {
       },
       required: ['command']
     },
-    description: 'Executes a given shell command as a subprocess.'
+    description: 'Executes a given shell command as a subprocess. WARNING: Ensure commands are non-interactive (e.g., use `-y` flags, avoid `vim` or `top`) and complete in a reasonable time.'
   }
 }
 

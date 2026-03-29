@@ -19,7 +19,8 @@ export const get_current_datetime: OllamaTool = {
       type: 'object',
       properties: {
         timezone: {
-          type: 'string'
+          type: 'string',
+          description: 'A valid IANA timezone identifier (e.g., "America/New_York", "Europe/Paris").'
         }
       },
       required: ['timezone']

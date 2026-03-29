@@ -37,7 +37,7 @@ export const fetch_web_page: OllamaTool = {
       },
       required: ['url']
     },
-    description: 'Fetches the text content of a web page.'
+    description: 'Fetches the raw HTML source of a web page (truncated to 50k characters).'
   }
 }
 

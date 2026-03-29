@@ -16,7 +16,7 @@ export const list_installed_apps: OllamaTool = {
   function: {
     name: 'list_installed_apps',
     parameters: {},
-    description: 'Lists all installed desktop applications with their names and IDs.'
+    description: 'Lists all installed desktop applications with their names and IDs. Use this before launching apps to find the correct app_id.'
   }
 }
 
@@ -39,7 +39,7 @@ export const launch_app: OllamaTool = {
       },
       required: ['app_id']
     },
-    description: 'Launches a desktop application by its ID with optional arguments.'
+    description: 'Launches a desktop application by its ID with optional arguments. ALWAYS use list_installed_apps to find the correct app_id.'
   }
 }
 
@@ -57,7 +57,7 @@ export const get_app_details: OllamaTool = {
       },
       required: ['app_id']
     },
-    description: 'Retrieves details about an application, including its launch command and available desktop actions.'
+    description: 'Retrieves details about an application, including its launch command and available desktop actions. IMPORTANT: Use this tool to discover available actions before using launch_app_action.'
   }
 }
 
@@ -79,7 +79,7 @@ export const launch_app_action: OllamaTool = {
       },
       required: ['app_id', 'action_name']
     },
-    description: 'Launches a specific desktop action for an application.'
+    description: 'Launches a specific desktop action for an application. Always verify actions with get_app_details first.'
   }
 }
 

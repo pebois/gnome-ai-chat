@@ -26,7 +26,7 @@ export const search_files: OllamaTool = {
       },
       required: ['query']
     },
-    description: 'Searches for files in specific user directories.'
+    description: 'Searches for files in specific user directories. Performs a recursive, case-insensitive partial match limited to a depth of 3 and 20 results.'
   }
 }
 

@@ -17,7 +17,7 @@ export const render_html: OllamaTool = {
       },
       required: ['html_content']
     },
-    description: 'Renders HTML content inside a new internal application window. Use this tool as an interactive canvas to generate and display complex UIs, games, data visualizations (e.g., charts, graphs), or any dynamic web content. The HTML string should be fully self-contained, including necessary CSS and JavaScript.'
+    description: 'Renders HTML content inside a new internal application window. Use this tool as an interactive canvas to generate and display complex UIs, games, data visualizations (e.g., charts, graphs), or any dynamic web content. The HTML string should be fully self-contained. Note that external resources may be blocked; embed CSS and JS directly.'
   }
 }
 

@@ -372,7 +372,9 @@ export class Ollama {
         processed = rest
       }
       if (processed.files?.length) {
-        const blocks = processed.files.map((f) => `\`\`\`${f.name}\n${f.content}\n\`\`\``)
+        const blocks = processed.files.map((f) => {
+          return `\`\`\`${f.name}\n${f.content}\n\`\`\``
+        })
         const { files: _, ...rest } = processed
         processed = { ...rest, content: blocks.join('\n\n') + '\n\n' + (processed.content || '') }
       }

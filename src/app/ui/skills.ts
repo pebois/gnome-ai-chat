@@ -192,7 +192,7 @@ export class Skills {
   }
 
   private _updateList(filterText: string): void {
-    const skills = this._app.settings.skills || []
+    const skills = [...(this._app.settings.skills || [])].sort((a, b) => a.name.localeCompare(b.name))
     const matches = skills.filter((skill) => {
       return skill.name.toLowerCase().startsWith(filterText)
     })
