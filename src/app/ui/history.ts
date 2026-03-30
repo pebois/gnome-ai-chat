@@ -32,6 +32,10 @@ export class History {
   private _loading = false
   private _loaded = false
 
+  public get stickToBottom(): boolean {
+    return this._scrollManager.stickToBottom
+  }
+
   public get widget(): Gtk.Widget {
     return this._widget
   }
