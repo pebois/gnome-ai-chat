@@ -89,13 +89,16 @@ export function showToolCallDialog(app: AppInterface, tool_call: OllamaToolCall)
     })
     page.add(responseGroup)
 
+    const isError = toolResponse.content.startsWith('Error') || toolResponse.content.startsWith('Failed') || toolResponse.content.includes('failed:')
+    const cssClass = isError ? 'error' : 'dim-label'
+
     const responseLabel = new Gtk.Label({
       label: toolResponse.content,
       use_markup: false,
       xalign: 0,
       selectable: true,
       wrap: true,
-      css_classes: ['dim-label', 'monospace'],
+      css_classes: [cssClass, 'monospace'],
       margin_top: 12,
       margin_bottom: 12,
       margin_start: 12,

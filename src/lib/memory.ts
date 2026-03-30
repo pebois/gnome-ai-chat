@@ -129,15 +129,25 @@ class MemoryManager {
   }
 
   public async createRelations(relations: Relation[]): Promise<Relation[]> {
+    if (!Array.isArray(relations)) {
+      throw new Error('relations must be an array')
+    }
     const graph = await this.load()
     const added: Relation[] = []
     for (const r of relations) {
+      if (!r.from || !r.to || !r.relationType) {
+        throw new Error('Each relation must have from, to, and relationType strings')
+      }
       const exists = graph.relations.some((existing) => {
         return existing.from === r.from && existing.to === r.to && existing.relationType === r.relationType
       }
       )
       if (!exists) {
-        graph.relations.push(r)
+        graph.relations.push({
+          from: r.from,
+          to: r.to,
+          relationType: r.relationType
+        })
         added.push(r)
       }
     }
@@ -148,17 +158,25 @@ class MemoryManager {
   }
 
   public async addObservations(observations: { entityName: string; contents: string[] }[]): Promise<{ entityName: string; added: string[] }[]> {
+    if (!Array.isArray(observations)) {
+      throw new Error('observations must be an array')
+    }
     const graph = await this.load()
     const results: { entityName: string; added: string[] }[] = []
     let changed = false
+    const notFound: string[] = []
 
     for (const obs of observations) {
+      if (!obs.entityName) {
+        throw new Error('Each observation must have an entityName')
+      }
       const entity = graph.entities.find((e) => {
         return e.name === obs.entityName
       })
       if (entity) {
         const added: string[] = []
-        for (const content of obs.contents) {
+        const contents = Array.isArray(obs.contents) ? obs.contents : []
+        for (const content of contents) {
           if (!entity.observations.includes(content)) {
             entity.observations.push(content)
             added.push(content)
@@ -169,12 +187,15 @@ class MemoryManager {
           results.push({ entityName: obs.entityName, added })
         }
       } else {
-        throw new Error(`Entity not found: ${obs.entityName}`)
+        notFound.push(obs.entityName)
       }
     }
 
     if (changed) {
       this._save()
+    }
+    if (notFound.length > 0) {
+      throw new Error(`Failed to add observations. The following entities were not found: ${notFound.join(', ')}. Create them first using create_entities.`)
     }
     return results
   }
@@ -195,30 +216,47 @@ class MemoryManager {
   }
 
   public async deleteObservations(deletions: { entityName: string; observations: string[] }[]): Promise<void> {
+    if (!Array.isArray(deletions)) {
+      throw new Error('deletions must be an array')
+    }
     const graph = await this.load()
     let changed = false
+    let notFoundCount = 0
 
     for (const del of deletions) {
+      if (!del.entityName) {
+        continue
+      }
       const entity = graph.entities.find((e) => {
         return e.name === del.entityName
       })
       if (entity) {
         const initialCount = entity.observations.length
+        const toDelete = Array.isArray(del.observations) ? del.observations : []
         entity.observations = entity.observations.filter((obs) => {
-          return !del.observations.includes(obs)
+          return !toDelete.includes(obs)
         })
         if (entity.observations.length !== initialCount) {
           changed = true
+        } else {
+          notFoundCount++
         }
+      } else {
+        notFoundCount++
       }
     }
 
     if (changed) {
       this._save()
+    } else if (notFoundCount > 0) {
+      throw new Error('No matching observations found to delete.')
     }
   }
 
   public async deleteRelations(relations: Relation[]): Promise<void> {
+    if (!Array.isArray(relations)) {
+      throw new Error('relations must be an array')
+    }
     const graph = await this.load()
     const initialCount = graph.relations.length
 
@@ -230,6 +268,8 @@ class MemoryManager {
 
     if (graph.relations.length !== initialCount) {
       this._save()
+    } else {
+      throw new Error('No matching relations found to delete.')
     }
   }
 
@@ -247,16 +287,14 @@ class MemoryManager {
         || e.observations.some((obs) => {
           return obs.toLowerCase().includes(lowerQuery)
         })
-    }
-    )
+    })
     const matchedEntityNames = new Set(matchedEntities.map((e) => {
       return e.name
     }))
 
     const matchedRelations = graph.relations.filter((r) => {
       return matchedEntityNames.has(r.from) || matchedEntityNames.has(r.to)
-    }
-    )
+    })
 
     return { entities: matchedEntities, relations: matchedRelations }
   }

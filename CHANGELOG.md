@@ -11,10 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Model Update Notifications**: A banner now appears at the top of the chat when an update is available for the currently selected model. Includes an **Update** button that opens the pull dialog pre-filled with the model name.
 - **Dynamic Model Capabilities**: The app now tracks model capabilities (`vision`, `tools`) and adjusts the UI accordingly.
 - **Vision-Aware Attachments**: "Add Picture" and "Take Screenshot" actions are automatically disabled if the selected model does not support vision. Existing image attachments are cleared when switching to a non-vision model.
+- **Tool Call Error Display**: Responses from tool calls that indicate failure (e.g., starting with "Error" or "Failed") are now styled with an error color in the tool call dialog for better visibility.
 
 ### Changed
 - **Tool-Required Model Selection**: The model selector now greys out and disables selection for models that do not support tools, ensuring the active model can always use the app's core features (Skills, Memory, etc.).
 - **Model Pull Dialog**: Now supports pre-filling the model name when opened from the update banner.
+- **Enhanced Memory Validation**: Improved error handling and validation in the memory management system. The system now provides explicit feedback when operations fail (e.g., trying to add observations to a non-existent entity), helping the AI agent recover from mistakes.
+- **Robust Memory Tools**: All memory tool handlers now include comprehensive error catching, returning clear error strings to the model and UI.
 
 ### Fixed
 - **History Pagination**: Fixed an issue where the "Load More" banner would display incorrectly and load duplicate messages by tracking the start index instead of message count.
