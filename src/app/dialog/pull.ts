@@ -6,7 +6,7 @@ import Gtk from 'gi://Gtk?version=4.0'
 import type { AppInterface } from '@/app/index.js'
 import { formatRemainingTime, formatSize } from '@/lib/utils.js'
 
-export function showPullDialog(app: AppInterface): void {
+export function showPullDialog(app: AppInterface, defaultModel?: string): void {
   const window = new Adw.Window({
     title: 'Pull Model',
     modal: true,
@@ -76,7 +76,7 @@ export function showPullDialog(app: AppInterface): void {
   const inputGroup = new Adw.PreferencesGroup()
   const modelEntry = new Adw.EntryRow({
     title: 'Model Name',
-    text: '',
+    text: defaultModel ?? '',
     activates_default: true
   })
   inputGroup.add(modelEntry)

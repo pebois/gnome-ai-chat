@@ -4,6 +4,7 @@ import GLib from 'gi://GLib?version=2.0'
 import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 
+import { showPullDialog } from '@/app/dialog/pull.js'
 import type { AppInterface } from '@/app/index.js'
 import { EmptyPage } from '@/app/page/empty.js'
 import type { ChatConversation } from '@/app/ui/history.js'
@@ -33,6 +34,7 @@ export class Chat {
   private _cancellable?: Gio.Cancellable
   private _isInputCentered: boolean = false
   private _centerAnim?: Adw.TimedAnimation
+  private _updateBanner!: Adw.Banner
 
   private _showScrollButton = debounce(() => {
     if (this._shouldShowScrollButton) {
@@ -104,6 +106,20 @@ export class Chat {
 
     const chatBox = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL
+    })
+
+    this._updateBanner = new Adw.Banner({
+      title: 'Model update available',
+      button_label: 'Update',
+      revealed: false
+    })
+    this._updateBanner.connect('button-clicked', () => {
+      showPullDialog(this._app, this._app.model)
+    })
+    chatBox.append(this._updateBanner)
+
+    this._app.connect('capabilities-changed', () => {
+      void this._checkUpdate()
     })
 
     this._history = new History(this._app, {
@@ -191,6 +207,21 @@ export class Chat {
     contentStackOverlay.add_overlay(this._inputClamp)
     contentStackOverlay.add_overlay(scrollBox)
     this._box.append(chatBox)
+  }
+
+  private async _checkUpdate(): Promise<void> {
+    const currentModel = this._app.model
+    if (!currentModel) {
+      return
+    }
+    try {
+      const hasUpdate = await this._app.ollama.checkUpdate(currentModel)
+      if (this._app.model === currentModel) {
+        this._updateBanner.revealed = hasUpdate
+      }
+    } catch (err) {
+      console.error('Failed to check for update:', err)
+    }
   }
 
   public loadModels(): void {
