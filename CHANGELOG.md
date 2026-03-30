@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+
+## [1.1.0] - 2026-03-30
+
+### Added
+- **Auto-Summarize**: Conversation titles and emojis are automatically generated in the background after the first assistant response.
 - **Text File Attachments**: Attach text files (plain text, markdown, CSV, JSON, HTML, XML, JavaScript, TypeScript) to messages. Contents are sent to the model as context and displayed as a collapsible syntax-highlighted block above the message bubble.
 - **Separate Attachment Actions**: Attach menu now has distinct **Add Picture** and **Add Text** entries, each opening a file chooser filtered to the relevant MIME types.
 - **Refined Skill Workflow**: Skills are applied at send time by parsing the `@SkillName` prefix, letting users see and edit the active persona before committing.
@@ -34,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Embedding API Tracking**: Embedding API calls are now recorded in performance statistics.
 
 ### Changed
+- **Conversation Selection**: Default to selecting the most recently updated conversation instead of the oldest one on startup or deletion.
+- **Memory Saving Optimization**: Optimized background knowledge graph memory saving and refined file extension to language mapping.
 - **Improved Agent Robustness**: Enhanced default system prompt and skill descriptions for better tool sequencing, error recovery, and role-playing accuracy.
 - **Refined Tool Metadata**: Updated all tool descriptions with clearer usage constraints, warnings about side effects (e.g., file overwrites, non-interactive shell commands), and discovery prerequisites.
 - **Sub-command Autocompletion**: Enhanced slash commands to support nested sub-commands with unique icons and descriptions (e.g., `/memory summarize`).
