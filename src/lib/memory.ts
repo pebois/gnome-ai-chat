@@ -2,6 +2,7 @@ import Gio, { type File } from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
 import { APPLICATION_ID } from '@/lib/constants.js'
+import { debounce, type DebouncedFunction } from '@/lib/timeout.js'
 
 Gio._promisify(Gio.File.prototype, 'replace_contents_bytes_async', 'replace_contents_finish')
 Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish')
@@ -23,9 +24,16 @@ export interface KnowledgeGraph {
   relations: Relation[]
 }
 
+interface MemoryState {
+  saving: boolean
+  pending: boolean
+  debouncedSave?: DebouncedFunction<() => void>
+}
+
 class MemoryManager {
   private file: File
   private graph: KnowledgeGraph | null = null
+  private _state: MemoryState = { saving: false, pending: false }
 
   constructor() {
     const configDir = GLib.build_filenamev([GLib.get_user_data_dir(), APPLICATION_ID])
@@ -56,10 +64,26 @@ class MemoryManager {
     return this.graph
   }
 
-  private async save(): Promise<void> {
+  private _save(): void {
+    if (!this._state.debouncedSave) {
+      this._state.debouncedSave = debounce(() => {
+        void this._executeSave()
+      }, 500)
+    }
+    this._state.debouncedSave?.()
+  }
+
+  private async _executeSave(): Promise<void> {
     if (!this.graph) {
       return
     }
+
+    if (this._state.saving) {
+      this._state.pending = true
+      return
+    }
+
+    this._state.saving = true
     try {
       const configDir = GLib.build_filenamev([GLib.get_user_data_dir(), APPLICATION_ID])
       const dir = Gio.File.new_for_path(configDir) as File
@@ -78,6 +102,12 @@ class MemoryManager {
       )
     } catch (err) {
       console.error('Failed to save memory graph:', err)
+    } finally {
+      this._state.saving = false
+      if (this._state.pending) {
+        this._state.pending = false
+        void this._executeSave()
+      }
     }
   }
 
@@ -93,7 +123,7 @@ class MemoryManager {
       }
     }
     if (added.length > 0) {
-      await this.save()
+      this._save()
     }
     return added
   }
@@ -112,7 +142,7 @@ class MemoryManager {
       }
     }
     if (added.length > 0) {
-      await this.save()
+      this._save()
     }
     return added
   }
@@ -144,7 +174,7 @@ class MemoryManager {
     }
 
     if (changed) {
-      await this.save()
+      this._save()
     }
     return results
   }
@@ -160,7 +190,7 @@ class MemoryManager {
       graph.relations = graph.relations.filter((r) => {
         return !entityNames.includes(r.from) && !entityNames.includes(r.to)
       })
-      await this.save()
+      this._save()
     }
   }
 
@@ -184,7 +214,7 @@ class MemoryManager {
     }
 
     if (changed) {
-      await this.save()
+      this._save()
     }
   }
 
@@ -199,7 +229,7 @@ class MemoryManager {
     })
 
     if (graph.relations.length !== initialCount) {
-      await this.save()
+      this._save()
     }
   }
 
