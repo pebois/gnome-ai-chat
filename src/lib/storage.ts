@@ -35,6 +35,7 @@ export interface StorageSettings {
   stream: boolean
   think: StorageThink
   theme: number
+  syntax: string
   debug: boolean
   options: Record<string, number>
 }

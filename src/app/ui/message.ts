@@ -8,11 +8,11 @@ import Pango from 'gi://Pango'
 import { showToolCallDialog } from '@/app/dialog/toolcall.js'
 import type { AppInterface } from '@/app/index.js'
 import { Images } from '@/app/ui/images.js'
-import { DEFAULT_SPACING } from '@/lib/constants.js'
+import { DEFAULT_SPACING, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
 import type { OllamaMessage, OllamaToolCall } from '@/lib/ollama.js'
 import { handle_render_html } from '@/lib/tools/html.js'
 import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setupContextMenu } from '@/lib/ui.js'
-import { markdownToPango } from '@/lib/utils.js'
+import { getLanguageId, markdownToPango } from '@/lib/utils.js'
 
 export interface MessageProps {
   message: OllamaMessage
@@ -39,6 +39,7 @@ export class Message {
   private _messageGroup!: Gtk.Box
   private _contentBox!: Gtk.Box
   private _contentParts: ContentPart[] = []
+  private _fileBuffers: GtkSource.Buffer[] = []
   private _roleBox!: Gtk.Box
   private _toolRows: Gtk.Widget[] = []
   private _currentMessage: OllamaMessage
@@ -47,6 +48,7 @@ export class Message {
   private _reloadButton?: Gtk.Button
   private _reloadAction?: Gio.SimpleAction
   private _busySignalId: number
+  private _syntaxSignalId: number
 
   public get widget(): Gtk.Box {
     return this._widget
@@ -84,11 +86,34 @@ export class Message {
       this._updateSensitivity(isBusy)
     })
 
+    this._syntaxSignalId = this._app.connect('syntax-changed', (_: number, theme: string) => {
+      this._updateSyntax(theme)
+    })
+
     this._widget.connect('destroy', () => {
       this._app.disconnect(this._busySignalId)
+      this._app.disconnect(this._syntaxSignalId)
     })
 
     this._updateSensitivity(this._app.isBusy)
+  }
+
+  private _updateSyntax(theme: string): void {
+    const sm = GtkSource.StyleSchemeManager.get_default()
+    const scheme = sm.get_scheme(theme)
+    if (!scheme) {
+      return
+    }
+
+    this._contentParts.forEach((part) => {
+      if (part.type === 'code' && part.buffer) {
+        part.buffer.set_style_scheme(scheme)
+      }
+    })
+
+    this._fileBuffers.forEach((buffer) => {
+      buffer.set_style_scheme(scheme)
+    })
   }
 
   private _updateSensitivity(isBusy: boolean): void {
@@ -152,17 +177,19 @@ export class Message {
       const buffer = new GtkSource.Buffer()
       const lm = GtkSource.LanguageManager.get_default()
       const ext = file.name.split('.').pop() || ''
-      const lang = lm.get_language(ext) || lm.get_language('text')
+      const langId = getLanguageId(ext)
+      const lang = lm.get_language(langId) || lm.get_language('text')
       if (lang) {
         buffer.set_language(lang)
       }
       buffer.set_text(file.content, -1)
 
       const sm = GtkSource.StyleSchemeManager.get_default()
-      const scheme = sm.get_scheme('Adwaita-dark')
+      const scheme = sm.get_scheme(this._app.settings.syntax || DEFAULT_SYNTAX_THEME)
       if (scheme) {
         buffer.set_style_scheme(scheme)
       }
+      this._fileBuffers.push(buffer)
 
       const sourceView = new GtkSource.View({
         buffer,
@@ -292,14 +319,15 @@ export class Message {
 
         const buffer = new GtkSource.Buffer()
         const lm = GtkSource.LanguageManager.get_default()
-        const lang = lm.get_language(language || 'text') || lm.get_language('text')
+        const langId = getLanguageId(language)
+        const lang = lm.get_language(langId) || lm.get_language('text')
         if (lang) {
           buffer.set_language(lang)
         }
         buffer.set_text(code, -1)
 
         const sm = GtkSource.StyleSchemeManager.get_default()
-        const scheme = sm.get_scheme('Adwaita-dark')
+        const scheme = sm.get_scheme(this._app.settings.syntax || DEFAULT_SYNTAX_THEME)
         if (scheme) {
           buffer.set_style_scheme(scheme)
         }

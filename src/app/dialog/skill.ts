@@ -1,7 +1,9 @@
 import Adw from 'gi://Adw?version=1'
 import Gtk from 'gi://Gtk?version=4.0'
+import GtkSource from 'gi://GtkSource?version=5'
 
 import type { AppInterface } from '@/app/index.js'
+import { DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
 
 export function showSkillDialog(app: AppInterface, parent: Gtk.Window, index: number | undefined, onSave: () => void): void {
   const dialog = new Adw.MessageDialog({
@@ -36,14 +38,30 @@ export function showSkillDialog(app: AppInterface, parent: Gtk.Window, index: nu
     propagate_natural_height: true
   })
   promptScrolled.add_css_class('frame')
-  const promptView = new Gtk.TextView({
+
+  const lm = GtkSource.LanguageManager.get_default()
+  const promptBuffer = new GtkSource.Buffer()
+  const lang = lm.get_language('markdown')
+  if (lang) {
+    promptBuffer.set_language(lang)
+  }
+
+  const sm = GtkSource.StyleSchemeManager.get_default()
+  const scheme = sm.get_scheme(app.settings.syntax || DEFAULT_SYNTAX_THEME)
+  if (scheme) {
+    promptBuffer.set_style_scheme(scheme)
+  }
+
+  const promptView = new GtkSource.View({
+    buffer: promptBuffer,
     wrap_mode: Gtk.WrapMode.WORD_CHAR,
     left_margin: 12,
     right_margin: 12,
     top_margin: 12,
-    bottom_margin: 12
+    bottom_margin: 12,
+    monospace: true
   })
-  promptView.get_buffer().set_text(skill?.prompt || '', -1)
+  promptBuffer.set_text(skill?.prompt || '', -1)
   promptScrolled.set_child(promptView)
   box.append(promptScrolled)
 

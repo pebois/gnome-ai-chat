@@ -205,3 +205,44 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   }
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB))
 }
+
+export function getLanguageId(lang: string): string {
+  if (!lang) {
+    return 'text'
+  }
+
+  const map: Record<string, string> = {
+    'ts': 'typescript',
+    'tsx': 'typescript',
+    'js': 'javascript',
+    'jsx': 'javascript',
+    'vue': 'javascript',
+    'md': 'markdown',
+    'py': 'python',
+    'rs': 'rust',
+    'sh': 'sh',
+    'bash': 'sh',
+    'zsh': 'sh',
+    'yml': 'yaml',
+    'yaml': 'yaml',
+    'cxx': 'cpp',
+    'c++': 'cpp',
+    'rb': 'ruby',
+    'cs': 'csharp',
+    'c#': 'csharp',
+    'fs': 'fsharp',
+    'f#': 'fsharp',
+    'kt': 'kotlin',
+    'html': 'html',
+    'xml': 'xml',
+    'css': 'css',
+    'json': 'json',
+    'java': 'java',
+    'swift': 'swift',
+    'php': 'php',
+    'sql': 'sql'
+  }
+
+  const l = lang.toLowerCase()
+  return map[l] || l
+}

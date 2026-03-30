@@ -43,7 +43,9 @@ export interface AppInterface {
 
   activateAction(action_name: string, parameter: GLib.Variant | null): void
   clearAllConversations(): Promise<void>
-  connect(sigName: string, callback: (_: number, isBusy: boolean) => void): number
+  connect(sigName: 'busy-changed', callback: (_: number, isBusy: boolean) => void): number
+  connect(sigName: 'syntax-changed', callback: (_: number, theme: string) => void): number
+  connect(sigName: string, callback: (...args: unknown[]) => void): number
   disconnect(id: number): void
   focusInput(): void
   getShortcut(action_name: string): string | null
@@ -56,6 +58,7 @@ export interface AppInterface {
   setModel(model: string): void
   setSummarizing(active: boolean): void
   setTheme(theme: number): void
+  setSyntax(theme: string): void
   showToast(message: string, error?: boolean): void
   toggleDebug(): void
   toggleSidebar(): void
@@ -281,6 +284,12 @@ export class App extends Adw.Application implements AppInterface {
     if (action) {
       action.set_state(GLib.Variant.new_int32(theme))
     }
+  }
+
+  public setSyntax(theme: string): void {
+    this._settings.syntax = theme
+    this.storage.saveSettings(this._settings)
+    this.emit('syntax-changed', theme)
   }
 
   public toggleDebug(): void {
@@ -575,6 +584,9 @@ GObject.registerClass({
   Signals: {
     'busy-changed': {
       param_types: [GObject.TYPE_BOOLEAN]
+    },
+    'syntax-changed': {
+      param_types: [GObject.TYPE_STRING]
     }
   }
 }, App)
