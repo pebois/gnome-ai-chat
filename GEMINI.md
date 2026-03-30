@@ -10,7 +10,7 @@ This is a GNOME desktop application built with TypeScript, GJS, GTK4, and Libadw
 - **Multimodal Capabilities**: Effortlessly include images in prompts using drag-and-drop or the native file picker for vision-enabled models.
 - **Smart Chat Organization**: Automatically categorizes conversations with concise AI-generated titles and relevant emojis for effortless navigation.
 - **Rich Text Rendering**: Full Markdown support including code blocks, headers, and text formatting, cleanly rendered natively using Pango markup.
-- **Integrated System Tools**: Expand model capabilities with built-in function calling for time, math calculations, web fetching, system info, file searching, app launching, and screenshots.
+- **Integrated System Tools**: Expand model capabilities with built-in function calling for time, math calculations, web fetching, HTML parsing, system info, file searching, app launching, desktop automation, code execution, persistent memory, and screenshots.
 - **Comprehensive Analytics**: Monitor performance with detailed statistics on API latency, tool execution times, and per-model token consumption.
 - **Advanced Chat Controls**: Full-featured chat management including search, message copying, session restarting, keyboard shortcuts, and smart bottom-scrolling.
 - **Quick Slash Commands**: Execute powerful inline actions (e.g., `/hn` for Hacker News, `/compress` to optimize context) with a dynamic, filterable autocomplete interface.
@@ -75,10 +75,11 @@ src/
     index.ts            # App (Adw.Application) — thin orchestrator
     global.css.ts       # bundled CSS
     dialog/
-      preferences.ts    # preferences dialog (General, Prompt, Data, Advanced, Vector Indexing)
+      image.ts          # image preview and slideshow dialog
       ps.ts             # running models dialog (memory and expiration)
       pull.ts           # model pull dialog (with progress and speed tracking)
       shortcuts.ts      # keyboard shortcuts dialog
+      skill.ts          # skill management dialog
       stats.ts          # performance and usage statistics dialog
       toolcall.ts       # tool call and response details dialog
     page/
@@ -96,24 +97,32 @@ src/
       models.ts         # Models dropdown component
       scroll.ts         # ScrollManager for "stick to bottom" logic
       sidebar.ts        # Sidebar class — left-pane and conversation lifecycle
+      skills.ts         # Skills UI components
     window/
       about.ts          # about dialog
       main.ts           # AppWindow class — main window orchestrator
+      preferences.ts    # preferences dialog (General, Prompt, Data, Advanced, Vector Indexing)
   lib/
     agent/
       summarize.ts      # AI agent for conversation titles
     tools/
       index.ts          # tools export and runner
+      automation.ts     # desktop automation tools
+      code.ts           # code evaluation and execution tools
       desktop.ts        # app listing and launching tools
       files.ts          # file search tool
+      html.ts           # html parsing and extraction tools
       math.ts           # dice rolling and calculator tools
+      memory.ts         # persistent memory tools
       system.ts         # system info and screenshot tools
       time.ts           # time and timezone tools
       web.ts            # web page fetching tool
     ambient.d.ts        # type definitions for GJS and external libraries
     constants.ts        # application-wide constants
     debug.ts            # centralized debug logging utility
+    memory.ts           # semantic memory logic
     ollama.ts           # Ollama HTTP API client
+    screenshot.ts       # screenshot capture logic
     storage.ts          # local JSON persistence with debounced writes
     timeout.ts          # async utilities (debounce, poll, sleep)
     tracker.ts          # performance and usage tracking logic

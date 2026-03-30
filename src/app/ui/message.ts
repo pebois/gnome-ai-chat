@@ -155,7 +155,7 @@ export class Message {
 
   private _setupImages(message: OllamaMessage): void {
     if (message.images?.length) {
-      const images = new Images(message.images, message.role)
+      const images = new Images(this._app, message.images, message.role)
       this._widget.append(images.widget)
     }
   }
