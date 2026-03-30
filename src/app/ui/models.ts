@@ -44,7 +44,16 @@ export class Models {
       const label = listItem.get_child() as Gtk.Label
       const item = listItem.get_item()
       if (item instanceof Gtk.StringObject) {
-        label.set_label(item.get_string())
+        const model = item.get_string()
+        label.set_label(model)
+
+        if (!this._app.toolModels.includes(model)) {
+          listItem.set_selectable(false)
+          label.add_css_class('dim-label')
+        } else {
+          listItem.set_selectable(true)
+          label.remove_css_class('dim-label')
+        }
       }
     })
     this._modelsDropDown.set_list_factory(listFactory)
@@ -62,7 +71,10 @@ export class Models {
       const stringList = Gtk.StringList.new(this._app.models)
       this._modelsDropDown.set_model(stringList)
     }
-    const model = selectDefaultModel(this._app.models)
+    let model = selectDefaultModel(this._app.models)
+    if (!this._app.toolModels.includes(model) && this._app.toolModels.length > 0) {
+      model = this._app.toolModels[0]
+    }
     this._app.setModel(model)
     const index = this._app.models.indexOf(model)
     if (index !== -1) {

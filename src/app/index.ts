@@ -26,24 +26,26 @@ import { convertMessageToTitle, pangoEscape } from '@/lib/utils.js'
 
 export interface AppInterface {
   readonly chat: Chat
-  readonly conversations: StorageConversation[]
-  readonly model: string
-  readonly models: string[]
-  readonly ollama: Ollama
   readonly conversation?: ChatConversation
-  readonly settings: StorageSettings
-  readonly sidebar: Sidebar
-  readonly storage: Storage
-  readonly tracker: Tracker
-  readonly window: AppWindow
-
+  readonly conversations: StorageConversation[]
   readonly isBusy: boolean
   readonly isGeneratingMessage: boolean
   readonly isSummarizing: boolean
+  readonly model: string
+  readonly models: string[]
+  readonly ollama: Ollama
+  readonly settings: StorageSettings
+  readonly sidebar: Sidebar
+  readonly storage: Storage
+  readonly supportsVision: boolean
+  readonly toolModels: string[]
+  readonly tracker: Tracker
+  readonly window: AppWindow
 
   activateAction(action_name: string, parameter: GLib.Variant | null): void
   clearAllConversations(): Promise<void>
   connect(sigName: 'busy-changed', callback: (_: number, isBusy: boolean) => void): number
+  connect(sigName: 'capabilities-changed', callback: (_: number) => void): number
   connect(sigName: 'syntax-changed', callback: (_: number, theme: string) => void): number
   connect(sigName: string, callback: (...args: unknown[]) => void): number
   disconnect(id: number): void
@@ -69,16 +71,18 @@ export class App extends Adw.Application implements AppInterface {
   private _settings: StorageSettings
   private _isExiting: boolean = false
 
-  public window!: AppWindow
+  public conversation?: ChatConversation
+  public conversations: StorageConversation[]
   public isGeneratingMessage = false
   public isSummarizing = false
-  public conversations: StorageConversation[]
-  public conversation?: ChatConversation
-  public models: string[]
   public model: string
+  public models: string[]
   public ollama: Ollama
   public storage: Storage
+  public supportsVision = true
+  public toolModels: string[] = []
   public tracker: Tracker
+  public window!: AppWindow
 
   constructor(application_id: string) {
     super({
@@ -274,6 +278,14 @@ export class App extends Adw.Application implements AppInterface {
     if (conv) {
       conv.model = model
     }
+    void this._updateCapabilities(model)
+  }
+
+  private async _updateCapabilities(model: string): Promise<void> {
+    const details = await this.ollama.model(model)
+    const capabilities = details?.capabilities || []
+    this.supportsVision = capabilities.includes('vision')
+    this.emit('capabilities-changed')
   }
 
   public setTheme(theme: number): void {
@@ -565,6 +577,16 @@ export class App extends Adw.Application implements AppInterface {
 
   private async _loadModels(): Promise<void> {
     this.models = await this.ollama.models()
+
+    const toolModels: string[] = []
+    for (const m of this.models) {
+      const details = await this.ollama.model(m)
+      if (details?.capabilities?.includes('tools')) {
+        toolModels.push(m)
+      }
+    }
+    this.toolModels = toolModels
+
     this.chat.loadModels()
   }
 
@@ -584,6 +606,9 @@ GObject.registerClass({
   Signals: {
     'busy-changed': {
       param_types: [GObject.TYPE_BOOLEAN]
+    },
+    'capabilities-changed': {
+      param_types: []
     },
     'syntax-changed': {
       param_types: [GObject.TYPE_STRING]
