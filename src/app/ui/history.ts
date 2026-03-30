@@ -131,8 +131,8 @@ export class History {
       this.renderMessage(msg)
     })
 
-    this._currentOffset = initialMessages.length
-    if (this._currentOffset >= conversation.messages.length) {
+    this._currentOffset = start
+    if (this._currentOffset <= 0) {
       this._loaded = true
     }
   }
@@ -144,7 +144,7 @@ export class History {
     }
     const conversation = this._app.conversation
 
-    if (this._currentOffset >= conversation.messages.length) {
+    if (this._currentOffset <= 0) {
       this._loaded = true
       return
     }
@@ -152,8 +152,8 @@ export class History {
     this._loading = true
     this._scrolledWindow.set_kinetic_scrolling(false)
 
-    const start = Math.max(0, conversation.messages.length - this._currentOffset - DEFAULT_LIMIT)
-    const end = conversation.messages.length - this._currentOffset
+    const start = Math.max(0, this._currentOffset - DEFAULT_LIMIT)
+    const end = this._currentOffset
     const oldMessages = conversation.messages.slice(start, end)
 
     if (oldMessages.length > 0) {
@@ -164,8 +164,8 @@ export class History {
         this.renderMessage(oldMessages[i], true)
       }
 
-      this._currentOffset += oldMessages.length
-      if (this._currentOffset >= conversation.messages.length) {
+      this._currentOffset = start
+      if (this._currentOffset <= 0) {
         this._loaded = true
       }
 
