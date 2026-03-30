@@ -18,6 +18,8 @@ export class Attachments {
   private _attachButton: Gtk.MenuButton
   private _attachmentsGroup: Gtk.Box
   private _attachmentsListButton: Gtk.MenuButton
+  private _addPictureAction: Gio.SimpleAction
+  private _takeScreenshotAction: Gio.SimpleAction
 
   public get attachButton(): Gtk.MenuButton {
     return this._attachButton
@@ -48,14 +50,16 @@ export class Attachments {
     this._attachButton.set_menu_model(attachMenu)
 
     const attachActionGroup = new Gio.SimpleActionGroup()
-    attachActionGroup.add_action(createSimpleAction('add_picture', () => {
+    this._addPictureAction = createSimpleAction('add_picture', () => {
       return this._handleAttachPicture()
-    }))
+    })
+    attachActionGroup.add_action(this._addPictureAction)
+
     attachActionGroup.add_action(createSimpleAction('add_text', () => {
       return this._handleAttachText()
     }))
 
-    attachActionGroup.add_action(createSimpleAction('take_screenshot', async () => {
+    this._takeScreenshotAction = createSimpleAction('take_screenshot', async () => {
       try {
         const file = await takeScreenshot()
         if (file) {
@@ -65,7 +69,8 @@ export class Attachments {
         console.error('Failed to take screenshot:', err)
         this._app.showToast('Failed to take screenshot', true)
       }
-    }))
+    })
+    attachActionGroup.add_action(this._takeScreenshotAction)
 
     attachActionGroup.add_action(createSimpleAction(
       'remove_attachment',
@@ -100,6 +105,27 @@ export class Attachments {
     this._attachmentsListButton.add_css_class('flat')
     this._attachmentsListButton.insert_action_group('chat', attachActionGroup)
     this._attachmentsGroup.append(this._attachmentsListButton)
+
+    this._app.connect('capabilities-changed', () => {
+      this._updateCapabilities()
+    })
+    this._updateCapabilities()
+  }
+
+  private _updateCapabilities(): void {
+    this._addPictureAction.set_enabled(this._app.supportsVision)
+    this._takeScreenshotAction.set_enabled(this._app.supportsVision)
+
+    if (!this._app.supportsVision) {
+      const initialLength = this._attachments.length
+      this._attachments = this._attachments.filter((a) => {
+        return a.type !== 'image'
+      })
+      if (this._attachments.length !== initialLength) {
+        this._updateAttachmentsUI()
+        this._app.showToast('Removed image attachments as the selected model does not support vision', true)
+      }
+    }
   }
 
   public addResponsiveBreakpoints(breakpoint: Adw.Breakpoint): void {
@@ -199,6 +225,11 @@ export class Attachments {
           || contentType === 'application/typescript'
 
         if (!isImage && !isText) {
+          return
+        }
+
+        if (isImage && !this._app.supportsVision) {
+          this._app.showToast('Selected model does not support vision', true)
           return
         }
 
