@@ -254,7 +254,12 @@ export class Sidebar {
 
   public async selectFirst(): Promise<void> {
     if (this._app.conversations.length > 0) {
-      const conv = this._app.conversations[0]
+      const sortedConvs = [...this._app.conversations].sort((a, b) => {
+        const dateA = new Date(a.updated_at || a.created_at).getTime()
+        const dateB = new Date(b.updated_at || b.created_at).getTime()
+        return dateB - dateA
+      })
+      const conv = sortedConvs[0]
       await this._selectConversation(conv)
       const row = this._getRow(conv)
       if (row) {
@@ -333,7 +338,12 @@ export class Sidebar {
     this.populateList()
 
     if (this._app.conversation?.id === conversation.id) {
-      const selected = this._app.conversations[0]
+      const sortedConvs = [...this._app.conversations].sort((a, b) => {
+        const dateA = new Date(a.updated_at || a.created_at).getTime()
+        const dateB = new Date(b.updated_at || b.created_at).getTime()
+        return dateB - dateA
+      })
+      const selected = sortedConvs[0]
       await this._selectConversation(selected)
       const row = this._getRow(selected)
       if (row) {
