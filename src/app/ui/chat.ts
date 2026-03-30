@@ -265,6 +265,7 @@ export class Chat {
       this._history.clear()
       this._centerInput(true)
       this._input.getBuffer().set_text('', -1)
+      this._contentHeader.add_css_class('flat')
     } else {
       this._contentStack.set_visible_child_name('chat')
       this._history.loadMessages(conversation)

@@ -9,34 +9,42 @@ export function showSkillDialog(app: AppInterface, parent: Gtk.Window, index: nu
   const dialog = new Adw.MessageDialog({
     heading: index !== undefined ? 'Edit Skill' : 'Add Skill',
     body: 'Configure the skill persona and its system prompt.',
-    transient_for: parent
+    transient_for: parent,
+    width_request: 450
   })
 
   const box = new Gtk.Box({
     orientation: Gtk.Orientation.VERTICAL,
     spacing: 12
   })
-  // box.add_css_class('margin-12')
-  box.set_size_request(500, -1)
 
   const skill = index !== undefined ? app.settings.skills[index] : null
+
+  const infoGroup = new Adw.PreferencesGroup()
+  box.append(infoGroup)
 
   const nameEntry = new Adw.EntryRow({
     title: 'Name',
     text: skill?.name || ''
   })
-  box.append(nameEntry)
+  infoGroup.add(nameEntry)
 
   const descEntry = new Adw.EntryRow({
     title: 'Description',
     text: skill?.description || ''
   })
-  box.append(descEntry)
+  infoGroup.add(descEntry)
+
+  const promptGroup = new Adw.PreferencesGroup({ title: 'System Prompt' })
+  box.append(promptGroup)
 
   const promptScrolled = new Gtk.ScrolledWindow({
-    min_content_height: 250,
-    propagate_natural_height: true
+    propagate_natural_height: true,
+    min_content_height: 150,
+    max_content_height: 300,
+    hscrollbar_policy: Gtk.PolicyType.NEVER
   })
+  promptScrolled.add_css_class('view')
   promptScrolled.add_css_class('frame')
 
   const lm = GtkSource.LanguageManager.get_default()
@@ -63,7 +71,18 @@ export function showSkillDialog(app: AppInterface, parent: Gtk.Window, index: nu
   })
   promptBuffer.set_text(skill?.prompt || '', -1)
   promptScrolled.set_child(promptView)
-  box.append(promptScrolled)
+  promptGroup.add(promptScrolled)
+
+  const syntaxSignalId = app.connect('syntax-changed', (_, theme: string) => {
+    const scheme = sm.get_scheme(theme)
+    if (scheme) {
+      promptBuffer.set_style_scheme(scheme)
+    }
+  })
+
+  dialog.connect('destroy', () => {
+    app.disconnect(syntaxSignalId)
+  })
 
   dialog.set_extra_child(box)
 

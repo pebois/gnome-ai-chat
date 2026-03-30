@@ -4,6 +4,8 @@ import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
+import { showImageDialog } from '@/app/dialog/image.js'
+import type { AppInterface } from '@/app/index.js'
 import { DEFAULT_SPACING } from '@/lib/constants.js'
 
 export class Images {
@@ -13,14 +15,14 @@ export class Images {
     return this._widget
   }
 
-  constructor(images: string[], role: string) {
+  constructor(app: AppInterface, images: string[], role: string) {
     this._widget = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
       spacing: DEFAULT_SPACING,
       halign: role === 'user' ? Gtk.Align.END : Gtk.Align.START
     })
 
-    images.forEach((base64) => {
+    images.forEach((base64, index) => {
       try {
         const bytes = GLib.base64_decode(base64)
         const inputStream = Gio.MemoryInputStream.new_from_bytes(new GLib.Bytes(bytes))
@@ -50,6 +52,13 @@ export class Images {
           })
           canvas.add_css_class('message-canvas')
           canvas.append(picture)
+          canvas.set_cursor(Gdk.Cursor.new_from_name('pointer', null))
+
+          const gesture = new Gtk.GestureClick()
+          gesture.connect('pressed', () => {
+            showImageDialog(app, images, index)
+          })
+          canvas.add_controller(gesture)
 
           this._widget.append(canvas)
         }

@@ -53,7 +53,9 @@ export class ScrollManager {
       if (fromScroll) {
         this._stickToBottom = true
       }
-    } else if (value <= 1) {
+    }
+    
+    if (value <= 1) {
       this._callbacks?.onReachTop?.()
     }
   }

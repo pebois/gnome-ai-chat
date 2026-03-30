@@ -425,7 +425,7 @@ export class Preferences {
     clearBtn.add_css_class('destructive-action')
     clearBtn.connect('clicked', () => {
       showDestructiveConfirmation(
-        this._app.window,
+        this._window,
         'Clear All Chats',
         'Are you sure you want to permanently delete all conversation history?\nThis action cannot be undone.',
         async () => {
@@ -452,7 +452,7 @@ export class Preferences {
     clearStatsBtn.add_css_class('destructive-action')
     clearStatsBtn.connect('clicked', () => {
       showDestructiveConfirmation(
-        this._app.window,
+        this._window,
         'Clear Performance Stats',
         'Are you sure you want to permanently delete all performance statistics?\nThis action cannot be undone.',
         () => {
