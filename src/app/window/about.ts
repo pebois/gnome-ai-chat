@@ -9,7 +9,7 @@ export function showAboutWindow(app: AppInterface): void {
     application_name: APPLICATION_NAME,
     application_icon: APPLICATION_ID,
     developer_name: 'Pierre-Emmanuel Bois',
-    version: '1.0.0',
+    version: '1.1.0',
     comments: 'A GNOME chat application that talks to a local Ollama server.',
     website: 'https://github.com/pebois/gnome-ai-chat',
     issue_url: 'https://github.com/pebois/gnome-ai-chat/issues',
