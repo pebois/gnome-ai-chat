@@ -76,7 +76,9 @@ export function showSkillDialog(app: AppInterface, parent: Gtk.Window, index: nu
           }
           app.settings.skills.push(newSkill)
         }
-        app.settings.skills.sort((a, b) => a.name.localeCompare(b.name))
+        app.settings.skills.sort((a, b) => {
+          return a.name.localeCompare(b.name)
+        })
         app.saveSettings()
         onSave()
       }

@@ -89,6 +89,12 @@ export const DEFAULT_SKILLS: StorageSkill[] = [
     prompt: 'You are an expert software engineer. Provide concise, correct, and idiomatic code without unnecessary explanations. Always output full, valid code blocks and explain complex logic succinctly.'
   },
   {
+    id: 'memory',
+    name: 'Memory',
+    description: 'Knowledge Graph expert. Persists facts and relationships about the user.',
+    prompt: 'You are a memory specialist. Your goal is to build and maintain a comprehensive knowledge graph about the user, their preferences, projects, and relationships. Use the memory tools (`create_entities`, `create_relations`, `add_observations`, etc.) proactively to save important information from the conversation. Always search the graph using `search_nodes` or `open_nodes` at the start of a session or when relevant to recall context. Keep observations atomic and relationships in the active voice.'
+  },
+  {
     id: 'reviewer',
     name: 'Reviewer',
     description: 'Strict code reviewer. Focuses on bugs, security, and best practices.',

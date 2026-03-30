@@ -1,21 +1,45 @@
 import Gdk from 'gi://Gdk'
+import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/app/index.js'
 
-const commands = [
+interface SubCommand {
+  name: string
+  description: string
+  icon?: string
+}
+
+interface Command {
+  name: string
+  description: string
+  icon: string
+  subCommands?: SubCommand[]
+}
+
+const commands: Command[] = [
   { name: 'about', description: 'Show about dialog', icon: 'help-about-symbolic' },
   { name: 'clear', description: 'Clear current conversation', icon: 'edit-clear-all-symbolic' },
   { name: 'compress', description: 'Strip think and tools from conversation', icon: 'package-x-generic-symbolic' },
   { name: 'debug', description: 'Toggle debug mode', icon: 'bug-symbolic' },
   { name: 'hn', description: 'Get Hacker News headlines', icon: 'newspaper-symbolic' },
+  {
+    name: 'memory',
+    description: 'Manage knowledge graph memory',
+    icon: 'note-symbolic',
+    subCommands: [
+      { name: 'summarize', description: 'Summarize stored facts and user history', icon: 'format-justify-left-symbolic' },
+      { name: 'clean', description: 'Identify and suggest deletions for redundant data', icon: 'edit-clear-symbolic' },
+      { name: 'optimize', description: 'Restructure graph for better performance and clarity', icon: 'view-grid-symbolic' }
+    ]
+  },
   { name: 'ps', description: 'Show running models', icon: 'processor-symbolic' },
   { name: 'pull', description: 'Pull a new model', icon: 'folder-download-symbolic' },
   { name: 'quit', description: 'Exit the application', icon: 'application-exit-symbolic' },
   { name: 'settings', description: 'Open preferences', icon: 'preferences-system-symbolic' },
   { name: 'shortcuts', description: 'Open keyboard shortcuts', icon: 'preferences-desktop-keyboard-shortcuts-symbolic' },
   { name: 'stats', description: 'Open performance statistics', icon: 'resources-symbolic' }
-] as const
+]
 
 export class Commands {
   private _app: AppInterface
@@ -23,7 +47,8 @@ export class Commands {
   private _parent: Gtk.Widget
   private _popover!: Gtk.Popover
   private _listBox!: Gtk.ListBox
-  private _matches: (typeof commands)[number][] = []
+  private _matches: { name: string; description: string; icon: string }[] = []
+  private _currentCommand: Command | null = null
 
   constructor(app: AppInterface, textView: Gtk.TextView, parent: Gtk.Widget) {
     this._app = app
@@ -103,7 +128,7 @@ export class Commands {
       const lineText = buffer.get_text(start, cursor, false)
 
       if (lineText.startsWith('/')) {
-        this._updateList(lineText.slice(1).toLowerCase())
+        this._updateList(lineText)
       } else if (this._popover.get_visible()) {
         this._popover.popdown()
       }
@@ -114,7 +139,20 @@ export class Commands {
       const selected = this._matches[index]
       if (selected) {
         this._complete(selected.name)
-        this.execute(selected.name)
+        if (this._currentCommand && this._currentCommand.subCommands?.some((s) => {
+          return s.name === selected.name
+        })) {
+          this.execute(`${this._currentCommand.name} ${selected.name}`)
+        } else {
+          const cmd = commands.find((c) => {
+            return c.name === selected.name
+          })
+          if (cmd?.subCommands) {
+            this._updateList(`/${cmd.name} `)
+          } else {
+            this.execute(selected.name)
+          }
+        }
       }
     })
   }
@@ -123,9 +161,12 @@ export class Commands {
     return this._popover.get_visible()
   }
 
-  public execute(commandName: string): void {
+  public execute(commandPath: string): void {
     this._popover.popdown()
-    this._app.activateAction(commandName, null)
+    const parts = commandPath.split(' ')
+    const commandName = parts[0]
+    const parameter = parts.length > 1 ? GLib.Variant.new_string(commandPath) : null
+    this._app.activateAction(commandName, parameter)
 
     const buffer = this._textView.get_buffer()
     const start = buffer.get_start_iter()
@@ -170,7 +211,20 @@ export class Commands {
         if (selected) {
           this._complete(selected.name)
           if (isReturn) {
-            this.execute(selected.name)
+            if (this._currentCommand && this._currentCommand.subCommands?.some((s) => {
+              return s.name === selected.name
+            })) {
+              this.execute(`${this._currentCommand.name} ${selected.name}`)
+            } else {
+              const cmd = commands.find((c) => {
+                return c.name === selected.name
+              })
+              if (cmd?.subCommands) {
+                this._updateList(`/${cmd.name} `)
+              } else {
+                this.execute(selected.name)
+              }
+            }
           }
           return true
         }
@@ -191,20 +245,52 @@ export class Commands {
     return true
   }
 
-  private _complete(commandName: string): void {
+  private _complete(name: string): void {
     const buffer = this._textView.get_buffer()
     const cursor = buffer.get_iter_at_mark(buffer.get_insert())
     const start = cursor.copy()
     start.set_line_offset(0)
 
     buffer.delete(start, cursor)
-    buffer.insert(start, `/${commandName} `, -1)
+    if (this._currentCommand) {
+      buffer.insert(start, `/${this._currentCommand.name} ${name} `, -1)
+    } else {
+      buffer.insert(start, `/${name} `, -1)
+    }
   }
 
-  private _updateList(filterText: string): void {
-    const matches = commands.filter((cmd) => {
-      return cmd.name.startsWith(filterText)
-    })
+  private _updateList(lineText: string): void {
+    let filterText = lineText.startsWith('/') ? lineText.slice(1).toLowerCase() : lineText.toLowerCase()
+    let matches: { name: string; description: string; icon: string }[] = []
+    this._currentCommand = null
+
+    const parts = filterText.split(' ')
+    if (parts.length > 1) {
+      const baseCmdName = parts[0]
+      const subFilter = parts.slice(1).join(' ')
+      const baseCmd = commands.find((c) => {
+        return c.name === baseCmdName
+      })
+      if (baseCmd && baseCmd.subCommands) {
+        this._currentCommand = baseCmd
+        matches = baseCmd.subCommands
+          .filter((sub) => {
+            return sub.name.startsWith(subFilter)
+          })
+          .map((sub) => {
+            return {
+              name: sub.name,
+              description: sub.description,
+              icon: sub.icon || baseCmd.icon
+            }
+          })
+        filterText = subFilter
+      }
+    } else {
+      matches = commands.filter((cmd) => {
+        return cmd.name.startsWith(filterText)
+      })
+    }
 
     if (matches.length === 0) {
       this._popover.popdown()
@@ -254,7 +340,7 @@ export class Commands {
         descLabel.add_css_class('dim-label')
         box.append(descLabel)
 
-        const shortcut = this._app.getShortcut(cmd.name)
+        const shortcut = this._currentCommand ? null : this._app.getShortcut(cmd.name)
         if (shortcut) {
           const shortcutLabel = new Gtk.Label({
             label: shortcut,
@@ -289,7 +375,7 @@ export class Commands {
           const highlighted = filterText.length > 0
             ? `<b>${cmd.name.slice(0, filterText.length)}</b>${cmd.name.slice(filterText.length)}`
             : cmd.name
-          titleLabel.set_markup(`/${highlighted}`)
+          titleLabel.set_markup(this._currentCommand ? highlighted : `/${highlighted}`)
         }
       }
     })

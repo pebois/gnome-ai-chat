@@ -478,6 +478,43 @@ export class App extends Adw.Application implements AppInterface {
     })
     this.add_action(hnAction)
 
+    const memoryAction = new Gio.SimpleAction({
+      name: 'memory',
+      parameter_type: GLib.VariantType.new('s')
+    })
+    memoryAction.connect('activate', (_action, parameter) => {
+      const variant = parameter as GLib.Variant
+      const text = variant.get_string()[0]
+      const parts = text.split(' ')
+
+      if (parts.length < 2) {
+        this.showToast('Usage: /memory [summarize|clean|optimize]')
+        return
+      }
+
+      const subCommand = parts[1].toLowerCase()
+      let prompt: string
+      switch (subCommand) {
+        case 'summarize':
+          prompt = 'Use your memory tools to read the knowledge graph and provide a concise summary of what you know about me and our past interactions.'
+          break
+        case 'clean':
+          prompt = 'Use your memory tools to review the knowledge graph and identify any duplicate, contradictory, or outdated information. Suggest what should be deleted or corrected.'
+          break
+        case 'optimize':
+          prompt = 'Use your memory tools to optimize the knowledge graph. Look for opportunities to merge similar entities, refine relationship types to be more descriptive, and ensure observations are atomic and well-structured.'
+          break
+        default:
+          this.showToast(`Unknown memory command: ${subCommand}`)
+          return
+      }
+
+      const buffer = this.chat.input.getBuffer()
+      buffer.set_text(prompt, -1)
+      void this.chat.sendMessage()
+    })
+    this.add_action(memoryAction)
+
     const compressAction = createSimpleAction('compress', () => {
       if (!this.conversation) {
         return
