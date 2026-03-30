@@ -71,7 +71,10 @@ export function showSkillDialog(app: AppInterface, parent: Gtk.Window, index: nu
   })
   promptBuffer.set_text(skill?.prompt || '', -1)
   promptScrolled.set_child(promptView)
-  promptGroup.add(promptScrolled)
+
+  const promptRow = new Adw.PreferencesRow()
+  promptRow.set_child(promptScrolled)
+  promptGroup.add(promptRow)
 
   const syntaxSignalId = app.connect('syntax-changed', (_, theme: string) => {
     const scheme = sm.get_scheme(theme)
