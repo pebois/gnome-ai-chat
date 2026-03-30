@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 ### Changed
 ### Fixed
+- **History Pagination**: Fixed an issue where the "Load More" banner would display incorrectly and load duplicate messages by tracking the start index instead of message count.
+- **Skill Mentions**: The `@persona` trigger is no longer removed from the user's message text when submitted, ensuring it remains visible in the chat history.
 ### Removed
 
 ## [1.1.0] - 2026-03-30
@@ -42,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Embedding API Tracking**: Embedding API calls are now recorded in performance statistics.
 
 ### Changed
+- **`@canvas` Skill & `render_html` Tool**: Updated descriptions and prompts to prioritize responsive design using the shadcn UI style and zinc theme for all generated HTML content.
 - **Conversation Selection**: Default to selecting the most recently updated conversation instead of the oldest one on startup or deletion.
 - **Memory Saving Optimization**: Optimized background knowledge graph memory saving and refined file extension to language mapping.
 - **Improved Agent Robustness**: Enhanced default system prompt and skill descriptions for better tool sequencing, error recovery, and role-playing accuracy.
