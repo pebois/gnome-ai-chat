@@ -10,11 +10,13 @@ import type { ChatConversation } from '@/app/ui/history.js'
 import { History } from '@/app/ui/history.js'
 import { Input } from '@/app/ui/input.js'
 import { Message } from '@/app/ui/message.js'
+import { summarizeConversation } from '@/lib/agent/summarize.js'
 import { DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
 import type { OllamaMessage, OllamaToolCall } from '@/lib/ollama.js'
 import { debounce } from '@/lib/timeout.js'
 import { onToolCall, tools } from '@/lib/tools/index.js'
 import { createMenuItem, ResizeTracker } from '@/lib/ui.js'
+import { convertSummaryToTitle } from '@/lib/utils.js'
 
 export class Chat {
   private _app: AppInterface
@@ -258,6 +260,8 @@ export class Chat {
       return
     }
 
+    const isFirstMessage = conversation.messages.length === 0
+
     if (text.startsWith('@')) {
       const textLower = text.toLowerCase()
       const skill = this._app.settings.skills.find((s) => {
@@ -276,7 +280,7 @@ export class Chat {
       }
     }
 
-    if (conversation.messages.length === 0) {
+    if (isFirstMessage) {
       conversation.model = this._app.model
       conversation.created_at = new Date().toISOString()
       this._app.setConversationTitle(conversation, text)
@@ -399,6 +403,24 @@ export class Chat {
         notification.set_title('Gnome AI Chat')
         notification.set_body('The assistant has finished responding.')
         this._app.sendNotification('message-completed', notification)
+      }
+
+      if (isFirstMessage) {
+        this._app.setSummarizing(true)
+        summarizeConversation({ ollama: this._app.ollama, messages: conversation.messages })
+          .then((summary) => {
+            if (summary) {
+              const title = convertSummaryToTitle(summary)
+              this._app.setConversationTitle(conversation, title)
+              this._app.storage.saveConversations(this._app.conversations)
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to auto-summarize conversation:', err)
+          })
+          .finally(() => {
+            this._app.setSummarizing(false)
+          })
       }
     } catch (err) {
       console.error(err)
