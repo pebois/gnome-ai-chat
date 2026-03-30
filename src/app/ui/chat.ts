@@ -269,9 +269,9 @@ export class Chat {
       })
       if (skill) {
         conversation.system = `${this._app.settings.system}\n\n${skill.prompt}`
-        const remainingText = text.slice(skill.name.length + 1).trim()
+        text = text.slice(skill.name.length + 1).trim()
 
-        if (!remainingText) {
+        if (!text) {
           this._app.storage.saveConversations(this._app.conversations)
           buffer.set_text('', -1)
           this._input.grabFocus()

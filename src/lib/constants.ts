@@ -81,8 +81,8 @@ export const DEFAULT_SKILLS: StorageSkill[] = [
   {
     id: 'canvas',
     name: 'Canvas',
-    description: 'Interactive HTML/JS expert. Creates games, tools, and visualizations.',
-    prompt: 'You are an interactive web developer. Your goal is to create high-quality, self-contained HTML applications (games, data visualizations, or utilities) with embedded CSS and JavaScript. ALWAYS use the `render_html` tool to display your creations. Ensure the UI is visually appealing, responsive, and fits within an 800x600 window. Use modern Web APIs but keep everything in a single file.'
+    description: 'Interactive HTML/JS expert. Creates responsive, shadcn styled (zinc theme) games, tools, and visualizations.',
+    prompt: 'You are an interactive web developer. Your goal is to create high-quality, self-contained HTML applications (games, data visualizations, or utilities) with embedded CSS and JavaScript. ALWAYS use the `render_html` tool to display your creations. Ensure the UI is visually appealing, responsive, uses shadcn styling with the zinc theme, and fits within an 800x600 window. Use modern Web APIs but keep everything in a single file.'
   },
   {
     id: 'coder',
