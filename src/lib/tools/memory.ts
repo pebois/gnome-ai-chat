@@ -196,58 +196,90 @@ export const open_nodes: OllamaTool = {
 }
 
 export async function handle_create_entities(args: Record<string, unknown>): Promise<string> {
-  const entities = (args.entities as Entity[]) || []
-  const added = await memoryManager.createEntities(entities)
-  return JSON.stringify(added)
+  try {
+    const entities = (args.entities as Entity[]) || []
+    const added = await memoryManager.createEntities(entities)
+    return added.length > 0 ? `Successfully created entities: ${JSON.stringify(added)}` : 'No new entities were created (they may already exist).'
+  } catch (err) {
+    return `Error creating entities: ${err instanceof Error ? err.message : String(err)}`
+  }
 }
 
 export async function handle_create_relations(args: Record<string, unknown>): Promise<string> {
-  const relations = (args.relations as Relation[]) || []
-  const added = await memoryManager.createRelations(relations)
-  return JSON.stringify(added)
+  try {
+    const relations = (args.relations as Relation[]) || []
+    const added = await memoryManager.createRelations(relations)
+    return added.length > 0 ? `Successfully created relations: ${JSON.stringify(added)}` : 'No new relations were created (they may already exist).'
+  } catch (err) {
+    return `Error creating relations: ${err instanceof Error ? err.message : String(err)}`
+  }
 }
 
 export async function handle_add_observations(args: Record<string, unknown>): Promise<string> {
-  const observations = (args.observations as { entityName: string; contents: string[] }[]) || []
   try {
+    const observations = (args.observations as { entityName: string; contents: string[] }[]) || []
     const results = await memoryManager.addObservations(observations)
-    return JSON.stringify(results)
+    return results.length > 0 ? `Successfully added observations: ${JSON.stringify(results)}` : 'No new observations were added.'
   } catch (err) {
-    return String(err)
+    return `Error adding observations: ${err instanceof Error ? err.message : String(err)}`
   }
 }
 
 export async function handle_delete_entities(args: Record<string, unknown>): Promise<string> {
-  const entityNames = (args.entityNames as string[]) || []
-  await memoryManager.deleteEntities(entityNames)
-  return 'Entities deleted successfully.'
+  try {
+    const entityNames = (args.entityNames as string[]) || []
+    await memoryManager.deleteEntities(entityNames)
+    return 'Entities deleted successfully.'
+  } catch (err) {
+    return `Error deleting entities: ${err instanceof Error ? err.message : String(err)}`
+  }
 }
 
 export async function handle_delete_observations(args: Record<string, unknown>): Promise<string> {
-  const deletions = (args.deletions as { entityName: string; observations: string[] }[]) || []
-  await memoryManager.deleteObservations(deletions)
-  return 'Observations deleted successfully.'
+  try {
+    const deletions = (args.deletions as { entityName: string; observations: string[] }[]) || []
+    await memoryManager.deleteObservations(deletions)
+    return 'Observations deleted successfully.'
+  } catch (err) {
+    return `Error deleting observations: ${err instanceof Error ? err.message : String(err)}`
+  }
 }
 
 export async function handle_delete_relations(args: Record<string, unknown>): Promise<string> {
-  const relations = (args.relations as Relation[]) || []
-  await memoryManager.deleteRelations(relations)
-  return 'Relations deleted successfully.'
+  try {
+    const relations = (args.relations as Relation[]) || []
+    await memoryManager.deleteRelations(relations)
+    return 'Relations deleted successfully.'
+  } catch (err) {
+    return `Error deleting relations: ${err instanceof Error ? err.message : String(err)}`
+  }
 }
 
 export async function handle_read_graph(): Promise<string> {
-  const graph = await memoryManager.readGraph()
-  return JSON.stringify(graph)
+  try {
+    const graph = await memoryManager.readGraph()
+    return JSON.stringify(graph)
+  } catch (err) {
+    return `Error reading graph: ${err instanceof Error ? err.message : String(err)}`
+  }
 }
 
 export async function handle_search_nodes(args: Record<string, unknown>): Promise<string> {
-  const query = (args.query as string) || ''
-  const result = await memoryManager.searchNodes(query)
-  return JSON.stringify(result)
+  try {
+    const query = (args.query as string) || ''
+    const result = await memoryManager.searchNodes(query)
+    return JSON.stringify(result)
+  } catch (err) {
+    return `Error searching nodes: ${err instanceof Error ? err.message : String(err)}`
+  }
 }
 
 export async function handle_open_nodes(args: Record<string, unknown>): Promise<string> {
-  const names = (args.names as string[]) || []
-  const result = await memoryManager.openNodes(names)
-  return JSON.stringify(result)
+  try {
+    const names = (args.names as string[]) || []
+    const result = await memoryManager.openNodes(names)
+    return JSON.stringify(result)
+  } catch (err) {
+    return `Error opening nodes: ${err instanceof Error ? err.message : String(err)}`
+  }
 }
