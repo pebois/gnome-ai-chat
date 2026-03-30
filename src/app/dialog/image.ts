@@ -75,22 +75,16 @@ export function showImageDialog(app: AppInterface, images: string[], startIndex:
 
   const keyCtrl = new Gtk.EventControllerKey()
   keyCtrl.connect('key-pressed', (_controller, keyval) => {
+    const n = carousel.get_n_pages()
+    const index = Math.round(carousel.get_position())
     if (keyval === Gdk.KEY_Left) {
-      const n = carousel.get_n_pages()
-      if (n > 0) {
-        const i = carousel.get_position()
-        if (i > 0) {
-          carousel.scroll_to(children[Math.round(i) - 1], true)
-        }
+      if (index > 0) {
+        carousel.scroll_to(children[index - 1], true)
       }
       return true
     } else if (keyval === Gdk.KEY_Right) {
-      const n = carousel.get_n_pages()
-      if (n > 0) {
-        const i = carousel.get_position()
-        if (i < n - 1) {
-          carousel.scroll_to(children[Math.round(i) + 1], true)
-        }
+      if (index < n - 1) {
+        carousel.scroll_to(children[index + 1], true)
       }
       return true
     }

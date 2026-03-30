@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+## [1.2.1] - 2026-03-30
+
+### Fixed
+- **Image Carousel**: Fixed an out-of-bounds array access and simplified keyboard navigation logic for the image previewer.
+- **Skill Dialog**: Wrapped the system prompt text view in an `Adw.PreferencesRow` to ensure consistent styling and margins.
+- **Chat UI**: Removed redundant header CSS class additions during empty state transitions.
+
 ## [1.2.0] - 2026-03-30
 
 ### Added
