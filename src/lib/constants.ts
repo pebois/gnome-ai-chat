@@ -60,6 +60,8 @@ export const DEFAULT_THINK = 'medium'
 
 export const DEFAULT_THEME = 0
 
+export const DEFAULT_SYNTAX_THEME = 'Adwaita-dark'
+
 export const DEFAULT_DEBUG = false
 
 export const DEFAULT_OPTIONS = {
@@ -116,6 +118,7 @@ export const DEFAULT_SETTINGS = {
   think: DEFAULT_THINK,
   stream: DEFAULT_STREAM,
   theme: DEFAULT_THEME,
+  syntax: DEFAULT_SYNTAX_THEME,
   debug: DEFAULT_DEBUG
 } as StorageSettings
 

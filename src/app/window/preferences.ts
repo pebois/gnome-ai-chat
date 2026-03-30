@@ -2,10 +2,11 @@ import Adw from 'gi://Adw?version=1'
 import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
+import GtkSource from 'gi://GtkSource?version=5'
 
 import { showSkillDialog } from '@/app/dialog/skill.js'
 import type { AppInterface } from '@/app/index.js'
-import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_SKILLS, DEFAULT_STREAM, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
+import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_SKILLS, DEFAULT_STREAM, DEFAULT_SYNTAX_THEME, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
 import { think_types } from '@/lib/storage.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
 
@@ -151,6 +152,35 @@ export class Preferences {
 
     themeRow.add_suffix(themeReset)
     group.add(themeRow)
+
+    const sm = GtkSource.StyleSchemeManager.get_default()
+    const schemeIds = sm.get_scheme_ids() || []
+    const currentScheme = this._app.settings.syntax || DEFAULT_SYNTAX_THEME
+    let selectedSchemeIndex = schemeIds.indexOf(currentScheme)
+    if (selectedSchemeIndex === -1) {
+      selectedSchemeIndex = 0
+    }
+
+    const syntaxRow = new Adw.ComboRow({
+      title: 'Syntax Highlighting Theme',
+      model: Gtk.StringList.new(schemeIds),
+      selected: selectedSchemeIndex
+    })
+
+    const syntaxReset = this._createResetButton(() => {
+      const resetIndex = schemeIds.indexOf(DEFAULT_SYNTAX_THEME)
+      syntaxRow.selected = resetIndex !== -1 ? resetIndex : 0
+    })
+    syntaxReset.sensitive = currentScheme !== DEFAULT_SYNTAX_THEME
+
+    syntaxRow.connect('notify::selected', () => {
+      const val = schemeIds[syntaxRow.selected]
+      this._app.setSyntax(val)
+      syntaxReset.sensitive = val !== DEFAULT_SYNTAX_THEME
+    })
+
+    syntaxRow.add_suffix(syntaxReset)
+    group.add(syntaxRow)
   }
 
   private _setupPrompt(): void {
@@ -174,15 +204,40 @@ export class Preferences {
     scrolled.add_css_class('view')
     scrolled.add_css_class('frame')
 
-    const textView = new Gtk.TextView({
+    const lm = GtkSource.LanguageManager.get_default()
+    const buffer = new GtkSource.Buffer()
+    const lang = lm.get_language('markdown')
+    if (lang) {
+      buffer.set_language(lang)
+    }
+
+    const sm = GtkSource.StyleSchemeManager.get_default()
+    const scheme = sm.get_scheme(this._app.settings.syntax || DEFAULT_SYNTAX_THEME)
+    if (scheme) {
+      buffer.set_style_scheme(scheme)
+    }
+
+    const textView = new GtkSource.View({
+      buffer,
       wrap_mode: Gtk.WrapMode.WORD_CHAR,
       left_margin: 12,
       right_margin: 12,
       top_margin: 12,
-      bottom_margin: 12
+      bottom_margin: 12,
+      monospace: true
     })
-    const buffer = textView.get_buffer()
     buffer.set_text(this._app.settings.system, -1)
+
+    const syntaxSignalId = this._app.connect('syntax-changed', (_, theme: string) => {
+      const scheme = sm.get_scheme(theme)
+      if (scheme) {
+        buffer.set_style_scheme(scheme)
+      }
+    })
+
+    this._window.connect('destroy', () => {
+      this._app.disconnect(syntaxSignalId)
+    })
 
     const resetBtn = this._createResetButton(() => {
       buffer.set_text(DEFAULT_SYSTEM_PROMPT, -1)
