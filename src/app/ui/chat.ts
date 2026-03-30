@@ -172,7 +172,7 @@ export class Chat {
       width_request: 1
     })
     this._scrollButton = new Gtk.Button({
-      icon_name: 'go-bottom-symbolic',
+      icon_name: 'go-down-symbolic',
       css_classes: ['circular', 'osd', 'scroll-button'],
       halign: Gtk.Align.CENTER,
       valign: Gtk.Align.CENTER,
@@ -355,13 +355,16 @@ export class Chat {
           }
 
           if (this._app.conversation?.id === conversation.id) {
+            const shouldScroll = this._history.stickToBottom
             currentMessageComponent?.update({
               ...(chunk.message || {}),
               content: fullContent,
               thinking: fullThinking,
               tool_calls: fullToolCalls
             })
-            this._history.scrollToBottom()
+            if (shouldScroll) {
+              this._history.scrollToBottom()
+            }
           }
         },
         onToolCall,

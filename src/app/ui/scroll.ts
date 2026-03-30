@@ -14,6 +14,10 @@ export class ScrollManager {
   private _animation?: Adw.TimedAnimation
   private _stickToBottom = false
 
+  public get stickToBottom(): boolean {
+    return this._stickToBottom
+  }
+
   constructor(scrolledWindow: Gtk.ScrolledWindow, callbacks?: ScrollCallbacks) {
     this._scrolledWindow = scrolledWindow
     this._callbacks = callbacks
