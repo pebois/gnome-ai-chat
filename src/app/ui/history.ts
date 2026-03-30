@@ -116,24 +116,26 @@ export class History {
   }
 
   public loadMessages(conversation: ChatConversation): void {
-    this._banner.revealed = false
-    this.scrollToTop()
-
-    this._currentOffset = 0
-    this._loaded = false
-
     this.clear()
+    this.scrollToTop()
 
     const start = Math.max(0, conversation.messages.length - DEFAULT_LIMIT)
     const initialMessages = conversation.messages.slice(start)
+
+    this._currentOffset = start
+    this._loaded = start <= 0
 
     initialMessages.forEach((msg) => {
       this.renderMessage(msg)
     })
 
-    this._currentOffset = start
-    if (this._currentOffset <= 0) {
-      this._loaded = true
+    if (this._loaded) {
+      this._banner.revealed = false
+    } else {
+      const vadj = this._scrolledWindow.get_vadjustment()
+      if (vadj.get_value() <= 1) {
+        this._banner.revealed = true
+      }
     }
   }
 
@@ -230,5 +232,9 @@ export class History {
 
   public clear(): void {
     this._list.remove_all()
+    this._banner.revealed = false
+    this._loaded = true
+    this._loading = false
+    this._currentOffset = 0
   }
 }

@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [1.2.0] - 2026-03-30
+
+### Added
 - **Image Preview & Slideshow**: Click any image in a message to open a full-size preview. Includes a slideshow with `Adw.Carousel` to cycle through all images in the message using swipe or arrow keys.
 - **Skill Prompt Syntax Highlighting**: The skill editor now uses `GtkSource.View` for the system prompt, providing markdown syntax highlighting and automatic theme synchronization with the app's global style.
 - **Model Update Notifications**: A banner now appears at the top of the chat when an update is available for the currently selected model. Includes an **Update** button that opens the pull dialog pre-filled with the model name.
@@ -26,8 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Preferences Confirmation Placement**: Destructive confirmation dialogs (Clear Chats, Clear Stats) now correctly appear centered over the Preferences window instead of the main application window.
-- **History Pagination**: Fixed an issue where the "Load More" banner would display incorrectly and load duplicate messages by tracking the start index instead of message count.
+- **History Pagination & Visibility**: Fixed issues where the "Load More" banner would display incorrectly, load duplicate messages, or appear on empty conversations. Refactored history state management to be more robust against layout shifts.
 - **Skill Mentions**: The `@persona` trigger is no longer removed from the user's message text when submitted, ensuring it remains visible in the chat history.
+
 ### Removed
 
 ## [1.1.0] - 2026-03-30
