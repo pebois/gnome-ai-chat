@@ -236,6 +236,58 @@ export class Ollama {
     return []
   }
 
+  public async checkUpdate(model: string): Promise<boolean> {
+    try {
+      const url = `${this.url}/api/tags`
+      const msg = Soup.Message.new('GET', url)
+      const bytes = await this._session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null)
+      if (msg.get_status() !== Soup.Status.OK || !bytes) {
+        return false
+      }
+
+      const decoder = new TextDecoder()
+      const data = bytes.toArray()
+      if (!data) {
+        return false
+      }
+
+      const response = JSON.parse(decoder.decode(data)) as { models?: { name: string; digest: string }[] }
+      const localModel = response.models?.find((m) => {
+        return m.name === model
+      })
+      if (!localModel || !localModel.digest) {
+        return false
+      }
+
+      let name = model
+      let tag = 'latest'
+      if (name.includes(':')) {
+        const parts = name.split(':')
+        name = parts[0]
+        tag = parts[1]
+      }
+
+      let registryUrl = `https://registry.ollama.ai/v2/library/${name}/manifests/${tag}`
+      if (name.includes('/')) {
+        registryUrl = `https://registry.ollama.ai/v2/${name}/manifests/${tag}`
+      }
+
+      const remoteMsg = Soup.Message.new('HEAD', registryUrl)
+      remoteMsg.request_headers.append('Accept', 'application/vnd.docker.distribution.manifest.v2+json')
+      await this._session.send_and_read_async(remoteMsg, GLib.PRIORITY_DEFAULT, null)
+
+      if (remoteMsg.get_status() === Soup.Status.OK) {
+        const remoteDigest = remoteMsg.response_headers.get_one('Docker-Content-Digest')
+        if (remoteDigest && remoteDigest !== localModel.digest) {
+          return true
+        }
+      }
+    } catch (err) {
+      console.error('Error checking update:', err)
+    }
+    return false
+  }
+
   public async chat(props: OllamaChatProps): Promise<OllamaMessage[]> {
     const requestMessages: OllamaMessage[] = []
     if (props.system) {
