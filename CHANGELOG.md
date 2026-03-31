@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-03-31
+
+### Fixed
+- **Code Block Syntax Highlighting**: Fixed an issue where the `GtkSource.Buffer` language was not correctly updated when reusing code block widgets during content streaming.
+
 ## [1.3.0] - 2026-03-31
 
 ### Added
