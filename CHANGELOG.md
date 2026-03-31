@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Restore Default Skills**: New action in Settings > Data to reset all builtin skills to their defaults while keeping custom skills.
 
 ### Changed
+- **Memory Sub-commands**: Pre-filled prompts for `/memory` sub-commands now include the `@memory` trigger at the start to automatically activate the Memory skill.
 - **Skills Storage**: Skills are now stored in a separate `skills.json` file instead of inside `settings.json`.
 - **Skills Editor Delete**: Delete button is only shown for custom skills; builtin skills cannot be deleted.
 - **Skills Editor Reset**: Per-skill reset button (content header) only shown for builtin skills that differ from their defaults.
