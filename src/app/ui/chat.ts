@@ -299,7 +299,14 @@ export class Chat {
         return textLower.startsWith(`@${s.name.toLowerCase()}`)
       })
       if (skill) {
-        conversation.system = `${this._app.settings.system}\n\n${skill.prompt}`
+        conversation.system = [
+          this._app.settings.system,
+          '---',
+          `## Active Skill: ${skill.name}`,
+          skill.description ? `*${skill.description}*` : '',
+          skill.prompt,
+          '> The skill instructions above take precedence over the general guidelines.'
+        ].filter(Boolean).join('\n\n')
         text = text.slice(skill.name.length + 1).trim()
 
         if (!text) {
