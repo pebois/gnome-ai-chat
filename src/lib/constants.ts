@@ -77,7 +77,6 @@ export const DEFAULT_OPTIONS = {
 export const DEFAULT_SETTINGS = {
   url: DEFAULT_OLLAMA_URL,
   system: DEFAULT_SYSTEM_PROMPT,
-  skills: DEFAULT_SKILLS,
   options: DEFAULT_OPTIONS,
   think: DEFAULT_THINK,
   stream: DEFAULT_STREAM,

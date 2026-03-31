@@ -37,6 +37,7 @@ const commands: Command[] = [
   { name: 'pull', description: 'Pull a new model', icon: 'folder-download-symbolic' },
   { name: 'quit', description: 'Exit the application', icon: 'application-exit-symbolic' },
   { name: 'settings', description: 'Open preferences', icon: 'preferences-system-symbolic' },
+  { name: 'skills', description: 'Open skills editor', icon: 'avatar-default-symbolic' },
   { name: 'shortcuts', description: 'Open keyboard shortcuts', icon: 'preferences-desktop-keyboard-shortcuts-symbolic' },
   { name: 'stats', description: 'Open performance statistics', icon: 'resources-symbolic' }
 ]

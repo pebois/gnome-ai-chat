@@ -1,0 +1,379 @@
+import Adw from 'gi://Adw?version=1'
+import Gtk from 'gi://Gtk?version=4.0'
+import GtkSource from 'gi://GtkSource?version=5'
+import Pango from 'gi://Pango'
+
+import type { AppInterface } from '@/app/index.js'
+import { DEFAULT_SKILLS, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
+import type { StorageSkill } from '@/lib/storage.js'
+import { showDestructiveConfirmation } from '@/lib/ui.js'
+
+export function showSkillsWindow(app: AppInterface): void {
+  const win = new Adw.Window({
+    title: 'Skills',
+    default_width: 750,
+    default_height: 550
+  })
+
+  let selectedId: string | null = null
+  let isSaving = false
+  let searchText = ''
+  const rowToSkillId = new Map<Gtk.ListBoxRow, string>()
+  const defaultIds = new Set(DEFAULT_SKILLS.map((s) => s.id))
+
+  const sidebarPage = new Adw.NavigationPage({ title: 'Skills' })
+  const sidebarToolbar = new Adw.ToolbarView()
+  sidebarPage.set_child(sidebarToolbar)
+
+  const sidebarHeader = new Adw.HeaderBar()
+  sidebarHeader.add_css_class('flat')
+
+  const addBtn = new Gtk.Button({
+    icon_name: 'list-add-symbolic',
+    tooltip_text: 'New skill',
+    valign: Gtk.Align.CENTER
+  })
+  addBtn.add_css_class('flat')
+  sidebarHeader.pack_start(addBtn)
+
+  const searchBtn = new Gtk.ToggleButton({
+    icon_name: 'system-search-symbolic',
+    tooltip_text: 'Search skills',
+    valign: Gtk.Align.CENTER
+  })
+  searchBtn.add_css_class('flat')
+  sidebarHeader.pack_end(searchBtn)
+
+  sidebarToolbar.add_top_bar(sidebarHeader)
+
+  const searchEntry = new Gtk.SearchEntry({ hexpand: true })
+  const searchBar = new Gtk.SearchBar({ child: searchEntry, key_capture_widget: win })
+  searchBar.connect_entry(searchEntry)
+  sidebarToolbar.add_top_bar(searchBar)
+
+  const listBox = new Gtk.ListBox({ selection_mode: Gtk.SelectionMode.SINGLE })
+  listBox.add_css_class('navigation-sidebar')
+
+  const listScrolled = new Gtk.ScrolledWindow({
+    vexpand: true,
+    hscrollbar_policy: Gtk.PolicyType.NEVER
+  })
+  listScrolled.set_child(listBox)
+  sidebarToolbar.set_content(listScrolled)
+
+  const contentPage = new Adw.NavigationPage({ title: 'Editor' })
+  const contentToolbar = new Adw.ToolbarView()
+  contentPage.set_child(contentToolbar)
+
+  const contentHeader = new Adw.HeaderBar()
+
+  const deleteBtn = new Gtk.Button({
+    icon_name: 'user-trash-symbolic',
+    tooltip_text: 'Delete skill',
+    valign: Gtk.Align.CENTER
+  })
+  deleteBtn.add_css_class('flat')
+  deleteBtn.add_css_class('destructive-action')
+  contentHeader.pack_end(deleteBtn)
+
+  const contentResetBtn = new Gtk.Button({
+    icon_name: 'edit-undo-symbolic',
+    tooltip_text: 'Reset skill to default',
+    valign: Gtk.Align.CENTER
+  })
+  contentResetBtn.add_css_class('flat')
+  contentHeader.pack_end(contentResetBtn)
+
+  contentToolbar.add_top_bar(contentHeader)
+
+  const contentBox = new Gtk.Box({
+    orientation: Gtk.Orientation.VERTICAL,
+    spacing: 12,
+    margin_top: 12,
+    margin_bottom: 12,
+    margin_start: 12,
+    margin_end: 12
+  })
+
+  const metaGroup = new Adw.PreferencesGroup()
+  const nameRow = new Adw.EntryRow({ title: 'Name' })
+  const descRow = new Adw.EntryRow({ title: 'Description' })
+  metaGroup.add(nameRow)
+  metaGroup.add(descRow)
+  contentBox.append(metaGroup)
+
+  const lm = GtkSource.LanguageManager.get_default()
+  const buffer = new GtkSource.Buffer()
+  const lang = lm.get_language('markdown')
+  if (lang) buffer.set_language(lang)
+
+  const sm = GtkSource.StyleSchemeManager.get_default()
+  const scheme = sm.get_scheme(app.settings.syntax || DEFAULT_SYNTAX_THEME)
+  if (scheme) buffer.set_style_scheme(scheme)
+
+  const sourceView = new GtkSource.View({
+    buffer,
+    wrap_mode: Gtk.WrapMode.WORD_CHAR,
+    left_margin: 12,
+    right_margin: 12,
+    top_margin: 12,
+    bottom_margin: 12,
+    monospace: true,
+    vexpand: true
+  })
+
+  const editorScrolled = new Gtk.ScrolledWindow({
+    vexpand: true,
+    hscrollbar_policy: Gtk.PolicyType.NEVER
+  })
+  editorScrolled.add_css_class('view')
+  editorScrolled.add_css_class('frame')
+  editorScrolled.set_child(sourceView)
+  contentBox.append(editorScrolled)
+
+  contentToolbar.set_content(contentBox)
+
+  const splitView = new Adw.NavigationSplitView({
+    sidebar: sidebarPage,
+    content: contentPage
+  })
+  win.set_content(splitView)
+
+  function skillDiffersFromDefault(skill: StorageSkill): boolean {
+    const def = DEFAULT_SKILLS.find((s) => s.id === skill.id)
+    if (!def) return false
+    return skill.name !== def.name
+      || (skill.description ?? '') !== (def.description ?? '')
+      || skill.prompt !== def.prompt
+  }
+
+  function loadSkillIntoEditor(skill: StorageSkill | null): void {
+    nameRow.set_text(skill?.name ?? '')
+    descRow.set_text(skill?.description ?? '')
+    buffer.set_text(skill?.prompt ?? '', -1)
+
+    const active = skill !== null
+    nameRow.sensitive = active
+    descRow.sensitive = active
+    sourceView.sensitive = active
+
+    const isCustom = active && !defaultIds.has(skill!.id)
+    deleteBtn.visible = isCustom
+    deleteBtn.sensitive = isCustom
+
+    const isBuiltin = active && defaultIds.has(skill!.id)
+    contentResetBtn.visible = isBuiltin
+    contentResetBtn.sensitive = isBuiltin && skillDiffersFromDefault(skill!)
+  }
+
+  function addHeaderRow(label: string): void {
+    const headerLabel = new Gtk.Label({ label, xalign: 0 })
+    headerLabel.add_css_class('dim-label')
+    headerLabel.add_css_class('caption-heading')
+    listBox.append(new Gtk.ListBoxRow({
+      child: headerLabel,
+      activatable: false,
+      selectable: false
+    }))
+  }
+
+  function addSkillRow(skill: StorageSkill): void {
+    const label = new Gtk.Label({
+      label: skill.name,
+      xalign: 0,
+      ellipsize: Pango.EllipsizeMode.END
+    })
+    const row = new Gtk.ListBoxRow({
+      child: label,
+      tooltip_text: skill.name
+    })
+    rowToSkillId.set(row, skill.id)
+    listBox.append(row)
+  }
+
+  function refreshList(): void {
+    isSaving = true
+    rowToSkillId.clear()
+
+    let child = listBox.get_first_child()
+    while (child) {
+      listBox.remove(child)
+      child = listBox.get_first_child()
+    }
+
+    const skills = app.skills ?? []
+    let builtins = skills.filter((s) => defaultIds.has(s.id))
+    let customs = skills.filter((s) => !defaultIds.has(s.id))
+
+    if (searchText) {
+      builtins = builtins.filter((s) => s.name.toLowerCase().includes(searchText))
+      customs = customs.filter((s) => s.name.toLowerCase().includes(searchText))
+    }
+
+    if (skills.length === 0) {
+      selectedId = null
+      loadSkillIntoEditor(null)
+      isSaving = false
+      return
+    }
+
+    if (builtins.length > 0) {
+      addHeaderRow('Builtins')
+      builtins.forEach(addSkillRow)
+    }
+    if (customs.length > 0) {
+      addHeaderRow('Custom')
+      customs.forEach(addSkillRow)
+    }
+
+    const skill = selectedId !== null ? (app.skills.find((s) => s.id === selectedId) ?? null) : null
+    if (skill) {
+      for (const [row, id] of rowToSkillId) {
+        if (id === selectedId) {
+          listBox.select_row(row)
+          loadSkillIntoEditor(skill)
+          break
+        }
+      }
+    } else {
+      selectedId = null
+      loadSkillIntoEditor(null)
+    }
+
+    isSaving = false
+  }
+
+  function saveCurrentSkill(): void {
+    if (isSaving || selectedId === null) return
+    const skill = app.skills.find((s) => s.id === selectedId)
+    if (!skill) return
+
+    const newName = nameRow.get_text().trim()
+    if (!newName) return
+
+    skill.name = newName
+    skill.description = descRow.get_text().trim()
+    skill.prompt = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false)
+
+    for (const [row, id] of rowToSkillId) {
+      if (id === selectedId) {
+        (row.get_child() as Gtk.Label).label = newName
+        row.tooltip_text = newName
+        break
+      }
+    }
+
+    const isBuiltin = defaultIds.has(skill.id)
+    contentResetBtn.visible = isBuiltin
+    contentResetBtn.sensitive = isBuiltin && skillDiffersFromDefault(skill)
+
+    app.saveSkills()
+  }
+
+  searchBtn.connect('toggled', () => {
+    searchBar.search_mode_enabled = searchBtn.active
+  })
+  searchBar.connect('notify::search-mode-enabled', () => {
+    searchBtn.active = searchBar.search_mode_enabled
+    if (!searchBar.search_mode_enabled) {
+      searchEntry.set_text('')
+      searchText = ''
+      refreshList()
+    }
+  })
+  searchEntry.connect('search-changed', () => {
+    searchText = searchEntry.get_text().toLowerCase().trim()
+    refreshList()
+  })
+
+  listBox.connect('row-selected', (_lb, row) => {
+    if (isSaving) return
+    if (!row) {
+      isSaving = true
+      selectedId = null
+      loadSkillIntoEditor(null)
+      isSaving = false
+      return
+    }
+    const skillId = rowToSkillId.get(row)
+    if (!skillId) return
+    isSaving = true
+    selectedId = skillId
+    loadSkillIntoEditor(app.skills.find((s) => s.id === skillId) ?? null)
+    isSaving = false
+  })
+
+  nameRow.connect('notify::text', saveCurrentSkill)
+  descRow.connect('notify::text', saveCurrentSkill)
+  buffer.connect('changed', saveCurrentSkill)
+
+  addBtn.connect('clicked', () => {
+    if (!app.skills) app.skills = []
+    const placeholder: StorageSkill = {
+      id: `skill-${Date.now()}`,
+      name: 'New Skill',
+      description: '',
+      prompt: ''
+    }
+    app.skills.push(placeholder)
+    app.skills.sort((a, b) => a.name.localeCompare(b.name))
+    app.saveSkills()
+    selectedId = placeholder.id
+    refreshList()
+    nameRow.grab_focus()
+  })
+
+  deleteBtn.connect('clicked', () => {
+    if (selectedId === null) return
+    const idx = app.skills.findIndex((s) => s.id === selectedId)
+    if (idx === -1) return
+    const skillName = app.skills[idx].name
+    showDestructiveConfirmation(
+      win,
+      'Delete Skill',
+      `Are you sure you want to delete "${skillName}"? This cannot be undone.`,
+      () => {
+        const i = app.skills.findIndex((s) => s.id === selectedId)
+        if (i === -1) return
+        app.skills.splice(i, 1)
+        app.saveSkills()
+        selectedId = app.skills.length > 0 ? app.skills[Math.max(0, i - 1)].id : null
+        refreshList()
+      }
+    )
+  })
+
+  contentResetBtn.connect('clicked', () => {
+    if (selectedId === null) return
+    const idx = app.skills.findIndex((s) => s.id === selectedId)
+    if (idx === -1) return
+    const skill = app.skills[idx]
+    const defaultSkill = DEFAULT_SKILLS.find((s) => s.id === skill.id)
+    if (!defaultSkill) return
+    showDestructiveConfirmation(
+      win,
+      'Reset Skill',
+      `Are you sure you want to reset "${skill.name}" to its default? This cannot be undone.`,
+      () => {
+        const i = app.skills.findIndex((s) => s.id === selectedId)
+        if (i === -1) return
+        app.skills[i] = { ...defaultSkill }
+        app.saveSkills()
+        refreshList()
+      }
+    )
+  })
+
+  const syntaxSignalId = app.connect('syntax-changed', (_: number, theme: string) => {
+    const newScheme = sm.get_scheme(theme)
+    if (newScheme) buffer.set_style_scheme(newScheme)
+  })
+  win.connect('destroy', () => app.disconnect(syntaxSignalId))
+
+  if ((app.skills ?? []).length > 0) {
+    selectedId = app.skills[0].id
+  }
+  refreshList()
+
+  win.present()
+}

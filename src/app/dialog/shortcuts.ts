@@ -13,6 +13,10 @@ export function showShortcutsDialog(app: AppInterface): void {
     accelerator: '<Primary>comma'
   }))
   sectionApp.add(new Adw.ShortcutsItem({
+    title: 'Skills Editor',
+    accelerator: '<Primary>e'
+  }))
+  sectionApp.add(new Adw.ShortcutsItem({
     title: 'Shortcuts',
     accelerator: '<Primary>question'
   }))

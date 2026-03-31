@@ -16,9 +16,10 @@ import type { Sidebar } from '@/app/ui/sidebar.js'
 import { showAboutWindow } from '@/app/window/about.js'
 import { AppWindow } from '@/app/window/main.js'
 import { showPreferencesWindow } from '@/app/window/preferences.js'
+import { showSkillsWindow } from '@/app/window/skills.js'
 import { APPLICATION_ID, DEFAULT_CHAT_MODEL, DEFAULT_SETTINGS } from '@/lib/constants.js'
 import { Ollama } from '@/lib/ollama.js'
-import type { StorageConversation, StorageSettings } from '@/lib/storage.js'
+import type { StorageConversation, StorageSettings, StorageSkill } from '@/lib/storage.js'
 import { Storage } from '@/lib/storage.js'
 import { Tracker } from '@/lib/tracker.js'
 import { createSimpleAction } from '@/lib/ui.js'
@@ -36,6 +37,7 @@ export interface AppInterface {
   readonly ollama: Ollama
   readonly settings: StorageSettings
   readonly sidebar: Sidebar
+  readonly skills: StorageSkill[]
   readonly storage: Storage
   readonly supportsVision: boolean
   readonly toolModels: string[]
@@ -53,6 +55,7 @@ export interface AppInterface {
   getShortcut(action_name: string): string | null
   init: () => Promise<void>
   saveSettings(): void
+  saveSkills(): void
   sendNotification(id: string, notification: Gio.Notification): void
   setConversation(id: number): Promise<void>
   setConversationTitle(conv: StorageConversation, title: string): void
@@ -78,6 +81,7 @@ export class App extends Adw.Application implements AppInterface {
   public model: string
   public models: string[]
   public ollama: Ollama
+  public skills: StorageSkill[] = []
   public storage: Storage
   public supportsVision = true
   public toolModels: string[] = []
@@ -268,6 +272,10 @@ export class App extends Adw.Application implements AppInterface {
     this.ollama.url = this._settings.url
     this.window.updateCssClass()
     this.storage.saveSettings(this._settings)
+  }
+
+  public saveSkills(): void {
+    this.storage.saveSkills(this.skills)
   }
 
   public setModel(model: string): void {
@@ -462,6 +470,12 @@ export class App extends Adw.Application implements AppInterface {
     this.add_action(statsAction)
     this.set_accels_for_action('app.stats', ['<Primary>i'])
 
+    const skillsAction = createSimpleAction('skills', () => {
+      return showSkillsWindow(this)
+    })
+    this.add_action(skillsAction)
+    this.set_accels_for_action('app.skills', ['<Primary>e'])
+
     const themeAction = new Gio.SimpleAction({
       name: 'theme',
       parameter_type: GLib.VariantType.new('i'),
@@ -572,6 +586,7 @@ export class App extends Adw.Application implements AppInterface {
 
   private async _loadSettings(): Promise<void> {
     await this.storage.loadSettings()
+    this.skills = await this.storage.getSkills()
     this.ollama.url = this._settings.url
   }
 

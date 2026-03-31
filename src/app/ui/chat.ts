@@ -89,6 +89,7 @@ export class Chat {
     menu.append_submenu('Style', themeMenu)
 
     menu.append_item(createMenuItem('Settings', 'app.settings', 'preferences-system-symbolic'))
+    menu.append_item(createMenuItem('Skills', 'app.skills', 'avatar-default-symbolic'))
     menu.append_item(createMenuItem('Keyboard Shortcuts', 'app.shortcuts', 'preferences-desktop-keyboard-shortcuts-symbolic'))
     menu.append_item(createMenuItem('Running Models', 'app.ps', 'processor-symbolic'))
     menu.append_item(createMenuItem('Pull Model', 'app.pull', 'folder-download-symbolic'))
@@ -295,7 +296,7 @@ export class Chat {
 
     if (text.startsWith('@')) {
       const textLower = text.toLowerCase()
-      const skill = this._app.settings.skills.find((s) => {
+      const skill = this._app.skills.find((s) => {
         return textLower.startsWith(`@${s.name.toLowerCase()}`)
       })
       if (skill) {

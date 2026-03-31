@@ -8,12 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Skills Editor**: Dedicated full-size window (`Ctrl+E`) with a sidebar skill list and a GtkSource markdown editor. Accessible from the main menu, keyboard shortcut, and `/skills` slash command.
+- **Skill Sidebar Groups**: Skills are grouped into "Builtins" and "Custom" sections in the sidebar.
+- **Skill Sidebar Search**: Search bar (toggle button) in the skills sidebar header to filter skills by name.
+- **Skills Slash Command**: `/skills` command added to the command palette.
+- **Skills Keyboard Shortcut**: `Ctrl+E` opens the Skills Editor; entry added to the Keyboard Shortcuts dialog.
+- **Restore Default Skills**: New action in Settings > Data to reset all builtin skills to their defaults while keeping custom skills.
 
 ### Changed
-
-### Fixed
+- **Skills Storage**: Skills are now stored in a separate `skills.json` file instead of inside `settings.json`.
+- **Skills Editor Delete**: Delete button is only shown for custom skills; builtin skills cannot be deleted.
+- **Skills Editor Reset**: Per-skill reset button (content header) only shown for builtin skills that differ from their defaults.
+- **Preferences Skills Tab**: Removed — skill editing moved to the dedicated Skills Editor window.
+- **Modular Skill Prompts**: Default skill prompts extracted into individual files under `src/lib/skills/`.
+- **Preferences Data Tab**: "Clear All Chats" and "Clear Usage Statistics" grouped together; "Maintenance" section removed.
 
 ### Removed
+- **Skill Edit Dialog** (`src/app/dialog/skill.ts`): Replaced by the dedicated Skills Editor window.
 
 ## [1.2.1] - 2026-03-30
 
