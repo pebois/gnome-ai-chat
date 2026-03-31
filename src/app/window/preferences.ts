@@ -4,7 +4,6 @@ import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 import GtkSource from 'gi://GtkSource?version=5'
 
-import { showSkillDialog } from '@/app/dialog/skill.js'
 import type { AppInterface } from '@/app/index.js'
 import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_SKILLS, DEFAULT_STREAM, DEFAULT_SYNTAX_THEME, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
 import { think_types } from '@/lib/storage.js'
@@ -27,7 +26,6 @@ export class Preferences {
     this._setupGeneral()
     this._setupAppearance()
     this._setupPrompt()
-    this._setupSkills()
     this._setupAdvanced()
     this._setupData()
   }
@@ -256,119 +254,6 @@ export class Preferences {
     group.add(scrolled)
   }
 
-  private _setupSkills(): void {
-    const page = new Adw.PreferencesPage({
-      title: 'Skills',
-      icon_name: 'avatar-default-symbolic'
-    })
-    this._window.add(page)
-
-    const group = new Adw.PreferencesGroup({
-      title: 'Configured Skills'
-    })
-    page.add(group)
-
-    const listBox = new Gtk.ListBox({
-      selection_mode: Gtk.SelectionMode.NONE
-    })
-    listBox.add_css_class('boxed-list')
-    group.add(listBox)
-
-    const headerBox = new Gtk.Box({ spacing: 6 })
-
-    const addBtn = new Gtk.Button({
-      icon_name: 'list-add-symbolic',
-      tooltip_text: 'Add new skill',
-      valign: Gtk.Align.CENTER
-    })
-    addBtn.add_css_class('flat')
-    addBtn.connect('clicked', () => {
-      showSkillDialog(this._app, this._window, undefined, () => {
-        return this._refreshSkills(group, listBox)
-      })
-    })
-    headerBox.append(addBtn)
-
-    const resetBtn = this._createResetButton(() => {
-      this._app.settings.skills = [...DEFAULT_SKILLS]
-      this._app.saveSettings()
-      this._refreshSkills(group, listBox)
-    })
-    headerBox.append(resetBtn)
-
-    group.set_header_suffix(headerBox)
-
-    this._refreshSkills(group, listBox)
-  }
-
-  private _refreshSkills(group: Adw.PreferencesGroup, listBox: Gtk.ListBox): void {
-    const isDefault = JSON.stringify(this._app.settings.skills) === JSON.stringify(DEFAULT_SKILLS)
-    const headerBox = group.get_header_suffix() as Gtk.Box
-    if (headerBox) {
-      const resetBtn = headerBox.get_last_child() as Gtk.Button
-      if (resetBtn) {
-        resetBtn.sensitive = !isDefault
-      }
-    }
-
-    let child = listBox.get_first_child()
-    while (child) {
-      listBox.remove(child)
-      child = listBox.get_first_child()
-    }
-
-    if (!this._app.settings.skills) {
-      this._app.settings.skills = []
-    }
-
-    if (this._app.settings.skills.length === 0) {
-      const emptyRow = new Adw.ActionRow({
-        title: 'No skills added yet',
-        subtitle: 'Click the + button to add one.'
-      })
-      listBox.append(emptyRow)
-      return
-    }
-
-    for (let i = 0; i < this._app.settings.skills.length; i++) {
-      const skill = this._app.settings.skills[i]
-      const row = new Adw.ActionRow({
-        title: skill.name,
-        subtitle: skill.description || skill.prompt
-      })
-
-      const box = new Gtk.Box({ spacing: 6 })
-
-      const editBtn = new Gtk.Button({
-        icon_name: 'document-edit-symbolic',
-        valign: Gtk.Align.CENTER
-      })
-      editBtn.add_css_class('flat')
-      editBtn.connect('clicked', () => {
-        showSkillDialog(this._app, this._window, i, () => {
-          return this._refreshSkills(group, listBox)
-        })
-      })
-      box.append(editBtn)
-
-      const delBtn = new Gtk.Button({
-        icon_name: 'user-trash-symbolic',
-        valign: Gtk.Align.CENTER
-      })
-      delBtn.add_css_class('flat')
-      delBtn.add_css_class('destructive-action')
-      delBtn.connect('clicked', () => {
-        this._app.settings.skills.splice(i, 1)
-        this._app.saveSettings()
-        this._refreshSkills(group, listBox)
-      })
-      box.append(delBtn)
-
-      row.add_suffix(box)
-      listBox.append(row)
-    }
-  }
-
   private _setupData(): void {
     const page = new Adw.PreferencesPage({
       title: 'Data',
@@ -382,7 +267,7 @@ export class Preferences {
     page.add(searchGroup)
 
     const indexRow = new Adw.ActionRow({
-      title: 'Vector Indexing'
+      title: 'Conversations'
     })
     const indexBox = new Gtk.Box({
       orientation: Gtk.Orientation.HORIZONTAL,
@@ -436,11 +321,6 @@ export class Preferences {
     clearRow.add_suffix(clearBtn)
     group.add(clearRow)
 
-    const maintenanceGroup = new Adw.PreferencesGroup({
-      title: 'Maintenance'
-    })
-    page.add(maintenanceGroup)
-
     const clearStatsRow = new Adw.ActionRow({
       title: 'Clear Usage Statistics'
     })
@@ -461,7 +341,46 @@ export class Preferences {
       )
     })
     clearStatsRow.add_suffix(clearStatsBtn)
-    maintenanceGroup.add(clearStatsRow)
+    group.add(clearStatsRow)
+
+    const skillsGroup = new Adw.PreferencesGroup({
+      title: 'Skills'
+    })
+    page.add(skillsGroup)
+
+    const restoreSkillsRow = new Adw.ActionRow({
+      title: 'Restore Default Skills'
+    })
+    const restoreSkillsBtn = new Gtk.Button({
+      label: 'Restore defaults',
+      valign: Gtk.Align.CENTER
+    })
+    restoreSkillsBtn.add_css_class('row-button')
+    restoreSkillsBtn.connect('clicked', () => {
+      showDestructiveConfirmation(
+        this._window,
+        'Restore Default Skills',
+        'Are you sure you want to reset all builtin skills to their defaults? This cannot be undone.',
+        () => {
+          for (const def of DEFAULT_SKILLS) {
+            const idx = this._app.skills.findIndex((s) => {
+              return s.id === def.id
+            })
+            if (idx !== -1) {
+              this._app.skills[idx] = { ...def }
+            } else {
+              this._app.skills.push({ ...def })
+            }
+          }
+          this._app.skills.sort((a, b) => {
+            return a.name.localeCompare(b.name)
+          })
+          this._app.saveSkills()
+        }
+      )
+    })
+    restoreSkillsRow.add_suffix(restoreSkillsBtn)
+    skillsGroup.add(restoreSkillsRow)
   }
 
   private _setupAdvanced(): void {

@@ -1,7 +1,7 @@
 import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
-import { APPLICATION_ID, DEFAULT_EMBEDDING_MODEL, DEFAULT_SETTINGS } from '@/lib/constants.js'
+import { APPLICATION_ID, DEFAULT_EMBEDDING_MODEL, DEFAULT_SETTINGS, DEFAULT_SKILLS } from '@/lib/constants.js'
 import { debug } from '@/lib/debug.js'
 import type { Ollama, OllamaMessage } from '@/lib/ollama.js'
 import { debounce, type DebouncedFunction } from '@/lib/timeout.js'
@@ -31,7 +31,6 @@ export interface StorageSkill {
 export interface StorageSettings {
   url: string
   system: string
-  skills: StorageSkill[]
   stream: boolean
   think: StorageThink
   theme: number
@@ -66,10 +65,12 @@ export class Storage {
   private _configDir: string
   private _conversationsFile: Gio.File
   private _settingsFile: Gio.File
+  private _skillsFile: Gio.File
   private _statsFile: Gio.File
   private _settings: StorageSettings
   private _conversationsState: StorageState = { saving: false, pending: false }
   private _settingsState: StorageState = { saving: false, pending: false }
+  private _skillsState: StorageState = { saving: false, pending: false }
   private _statsState: StorageState = { saving: false, pending: false }
   private _messagesStates: Map<number, StorageState> = new Map()
 
@@ -78,6 +79,7 @@ export class Storage {
     this._configDir = GLib.build_filenamev([GLib.get_user_data_dir(), APPLICATION_ID])
     this._conversationsFile = Gio.File.new_for_path(GLib.build_filenamev([this._configDir, 'conversations.json']))
     this._settingsFile = Gio.File.new_for_path(GLib.build_filenamev([this._configDir, 'settings.json']))
+    this._skillsFile = Gio.File.new_for_path(GLib.build_filenamev([this._configDir, 'skills.json']))
     this._statsFile = Gio.File.new_for_path(GLib.build_filenamev([this._configDir, 'stats.json']))
   }
 
@@ -190,12 +192,21 @@ export class Storage {
         ...(data?.options || {})
       }
     })
+  }
 
-    if (this._settings.skills) {
-      this._settings.skills.sort((a, b) => {
+  public async getSkills(): Promise<StorageSkill[]> {
+    const data = await this._read<StorageSkill[]>(this._skillsFile)
+    if (data && data.length > 0) {
+      return data.sort((a, b) => {
         return a.name.localeCompare(b.name)
       })
     }
+    return JSON.parse(JSON.stringify(DEFAULT_SKILLS)) as StorageSkill[]
+  }
+
+  public saveSkills(skills: StorageSkill[]): void {
+    this._skillsState.data = JSON.stringify(skills)
+    this._save(this._skillsFile, this._skillsState)
   }
 
   public saveSettings(settings: StorageSettings): void {
@@ -224,6 +235,7 @@ export class Storage {
 
     processState(this._conversationsFile, this._conversationsState)
     processState(this._settingsFile, this._settingsState)
+    processState(this._skillsFile, this._skillsState)
     processState(this._statsFile, this._statsState)
 
     for (const [id, state] of this._messagesStates) {
