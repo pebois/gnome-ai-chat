@@ -286,6 +286,13 @@ export class Message {
             const { code, language } = this._parseCodeBlock(chunk)
             part.expanderRow!.set_title(language || 'text')
             part.buffer!.set_text(code, -1)
+
+            const lm = GtkSource.LanguageManager.get_default()
+            const langId = getLanguageId(language)
+            const lang = lm.get_language(langId) || lm.get_language('text')
+            if (part.buffer!.get_language() !== lang) {
+              part.buffer!.set_language(lang)
+            }
           } else {
             part.contentLabel!.set_label(markdownToPango(chunk))
           }
