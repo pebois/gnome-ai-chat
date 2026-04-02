@@ -1,3 +1,4 @@
+import type { AppInterface } from '@/app/index.js'
 import { handle_run_automation_command, run_automation_command } from '@/lib/tools/automation.js'
 import { handle_list_directory, handle_read_file, handle_run_shell_command, handle_write_file, list_directory, read_file, run_shell_command, write_file } from '@/lib/tools/code.js'
 import { get_app_details, handle_get_app_details, handle_launch_app, handle_launch_app_action, handle_list_installed_apps, launch_app, launch_app_action, list_installed_apps } from '@/lib/tools/desktop.js'
@@ -39,7 +40,7 @@ export const tools = [
   write_file
 ]
 
-export async function onToolCall(name: string, args: Record<string, unknown>): Promise<string> {
+export async function onToolCall(app: AppInterface, name: string, args: Record<string, unknown>): Promise<string> {
   switch (name) {
     case 'get_user_timezone':
       return handle_get_user_timezone()
@@ -72,11 +73,11 @@ export async function onToolCall(name: string, args: Record<string, unknown>): P
     case 'read_file':
       return handle_read_file(args)
     case 'write_file':
-      return handle_write_file(args)
+      return handle_write_file(app, args)
     case 'list_directory':
       return handle_list_directory(args)
     case 'run_shell_command':
-      return handle_run_shell_command(args)
+      return handle_run_shell_command(app, args)
     case 'create_entities':
       return handle_create_entities(args)
     case 'create_relations':

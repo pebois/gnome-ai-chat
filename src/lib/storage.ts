@@ -21,6 +21,10 @@ export const think_types = ['none', 'low', 'medium', 'high'] as const
 
 export type StorageThink = typeof think_types[number]
 
+export const permission_tiers = ['ask', 'auto-accept'] as const
+
+export type StoragePermissionTier = typeof permission_tiers[number]
+
 export interface StorageSkill {
   id: string
   name: string
@@ -37,6 +41,10 @@ export interface StorageSettings {
   syntax: string
   debug: boolean
   options: Record<string, number>
+  permissions: {
+    terminal: StoragePermissionTier
+    files: StoragePermissionTier
+  }
 }
 
 export interface StorageConversation {
@@ -190,6 +198,10 @@ export class Storage {
       options: {
         ...DEFAULT_SETTINGS.options,
         ...(data?.options || {})
+      },
+      permissions: {
+        ...DEFAULT_SETTINGS.permissions,
+        ...(data?.permissions || {})
       }
     })
   }

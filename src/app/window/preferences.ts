@@ -6,7 +6,7 @@ import GtkSource from 'gi://GtkSource?version=5'
 
 import type { AppInterface } from '@/app/index.js'
 import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_SKILLS, DEFAULT_STREAM, DEFAULT_SYNTAX_THEME, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
-import { think_types } from '@/lib/storage.js'
+import { permission_tiers, think_types } from '@/lib/storage.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
 
 export class Preferences {
@@ -26,6 +26,7 @@ export class Preferences {
     this._setupGeneral()
     this._setupAppearance()
     this._setupPrompt()
+    this._setupPermissions()
     this._setupAdvanced()
     this._setupData()
   }
@@ -102,6 +103,44 @@ export class Preferences {
     })
     thinkRow.add_suffix(thinkReset)
     thinkGroup.add(thinkRow)
+  }
+
+  private _setupPermissions(): void {
+    const page = new Adw.PreferencesPage({
+      title: 'Permissions',
+      icon_name: 'security-high-symbolic'
+    })
+    this._window.add(page)
+
+    const permissionsGroup = new Adw.PreferencesGroup({
+      title: 'Tool Permissions',
+      description: 'Require permission before executing potentially destructive actions.'
+    })
+    page.add(permissionsGroup)
+
+    const terminalRow = new Adw.ComboRow({
+      title: 'Terminal Commands',
+      model: Gtk.StringList.new(['Ask', 'Auto-accept']),
+      selected: permission_tiers.indexOf(this._app.settings.permissions?.terminal ?? 'ask')
+    })
+    terminalRow.connect('notify::selected', () => {
+      const val = permission_tiers[terminalRow.selected]
+      this._app.settings.permissions.terminal = val
+      this._app.saveSettings()
+    })
+    permissionsGroup.add(terminalRow)
+
+    const filesRow = new Adw.ComboRow({
+      title: 'File Edits',
+      model: Gtk.StringList.new(['Ask', 'Auto-accept']),
+      selected: permission_tiers.indexOf(this._app.settings.permissions?.files ?? 'ask')
+    })
+    filesRow.connect('notify::selected', () => {
+      const val = permission_tiers[filesRow.selected]
+      this._app.settings.permissions.files = val
+      this._app.saveSettings()
+    })
+    permissionsGroup.add(filesRow)
   }
 
   private _setupAppearance(): void {

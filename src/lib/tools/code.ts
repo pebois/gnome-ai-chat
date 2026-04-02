@@ -1,6 +1,7 @@
 import Gio, { type File } from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
+import type { AppInterface } from '@/app/index.js'
 import type { OllamaTool } from '@/lib/ollama.js'
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish')
@@ -103,11 +104,21 @@ export function handle_read_file(args: Record<string, unknown>): Promise<string>
   }
 }
 
-export async function handle_write_file(args: Record<string, unknown>): Promise<string> {
+export async function handle_write_file(app: AppInterface, args: Record<string, unknown>): Promise<string> {
   const filePath = args.file_path as string
   const content = args.content as string
   if (!filePath) {
     return 'Error: file_path is required.'
+  }
+
+  if (app.settings.permissions?.files !== 'auto-accept') {
+    const allowed = await app.requestToolPermission(
+      'Allow File Edit?',
+      `The model wants to write to the following file:\n\n${filePath}`
+    )
+    if (!allowed) {
+      return 'Error: User denied permission to write file.'
+    }
   }
 
   try {
@@ -165,10 +176,20 @@ export async function handle_list_directory(args: Record<string, unknown>): Prom
   }
 }
 
-export async function handle_run_shell_command(args: Record<string, unknown>): Promise<string> {
+export async function handle_run_shell_command(app: AppInterface, args: Record<string, unknown>): Promise<string> {
   const command = args.command as string
   if (!command) {
     return 'Error: command is required.'
+  }
+
+  if (app.settings.permissions?.terminal !== 'auto-accept') {
+    const allowed = await app.requestToolPermission(
+      'Allow Terminal Command?',
+      `The model wants to execute the following terminal command:\n\n${command}`
+    )
+    if (!allowed) {
+      return 'Error: User denied permission to run command.'
+    }
   }
 
   try {

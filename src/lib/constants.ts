@@ -82,7 +82,11 @@ export const DEFAULT_SETTINGS = {
   stream: DEFAULT_STREAM,
   theme: DEFAULT_THEME,
   syntax: DEFAULT_SYNTAX_THEME,
-  debug: DEFAULT_DEBUG
+  debug: DEFAULT_DEBUG,
+  permissions: {
+    terminal: 'ask',
+    files: 'ask'
+  }
 } as StorageSettings
 
 export const DEFAULT_STATS = {
