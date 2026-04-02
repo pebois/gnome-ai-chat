@@ -90,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Syntax Highlighting Themes**: Choose from all available GtkSourceView style schemes (defaulting to `Adwaita-dark`) in Appearance settings.
 - **`/compress` Command**: Strip reasoning blocks and tool history from the current conversation to stay within context limits.
 - **Persistent Web Caching**: RFC-compliant HTTP cache via `Soup.Cache` for the web fetching tool, persisted across sessions.
-- **Wayland Desktop Automation**: `run_automation_command` tool using `ydotool`, with a new `@automation` skill for screenshot-based coordinate analysis.
+- **Wayland Desktop Automation**: `run_automation_command` tool using Wayland portals, with a new `@automation` skill for screenshot-based coordinate analysis.
 - **`@canvas` Skill**: Specialized skill for generating and rendering high-quality, self-contained HTML/JS applications, games, and visualizations using the `render_html` tool.
 - **`@memory` Skill**: Knowledge Graph specialist skill that proactively persists facts and relationships about the user using the new memory tools.
 - **Alphabetical Skill Sorting**: Skills are now sorted alphabetically in the autocomplete menu and settings for easier navigation.
