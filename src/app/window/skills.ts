@@ -19,7 +19,9 @@ export function showSkillsWindow(app: AppInterface): void {
   let isSaving = false
   let searchText = ''
   const rowToSkillId = new Map<Gtk.ListBoxRow, string>()
-  const defaultIds = new Set(DEFAULT_SKILLS.map((s) => s.id))
+  const defaultIds = new Set(DEFAULT_SKILLS.map((s) => {
+    return s.id
+  }))
 
   const sidebarPage = new Adw.NavigationPage({ title: 'Skills' })
   const sidebarToolbar = new Adw.ToolbarView()
@@ -105,11 +107,15 @@ export function showSkillsWindow(app: AppInterface): void {
   const lm = GtkSource.LanguageManager.get_default()
   const buffer = new GtkSource.Buffer()
   const lang = lm.get_language('markdown')
-  if (lang) buffer.set_language(lang)
+  if (lang) {
+    buffer.set_language(lang)
+  }
 
   const sm = GtkSource.StyleSchemeManager.get_default()
   const scheme = sm.get_scheme(app.settings.syntax || DEFAULT_SYNTAX_THEME)
-  if (scheme) buffer.set_style_scheme(scheme)
+  if (scheme) {
+    buffer.set_style_scheme(scheme)
+  }
 
   const sourceView = new GtkSource.View({
     buffer,
@@ -140,8 +146,12 @@ export function showSkillsWindow(app: AppInterface): void {
   win.set_content(splitView)
 
   function skillDiffersFromDefault(skill: StorageSkill): boolean {
-    const def = DEFAULT_SKILLS.find((s) => s.id === skill.id)
-    if (!def) return false
+    const def = DEFAULT_SKILLS.find((s) => {
+      return s.id === skill.id
+    })
+    if (!def) {
+      return false
+    }
     return skill.name !== def.name
       || (skill.description ?? '') !== (def.description ?? '')
       || skill.prompt !== def.prompt
@@ -157,13 +167,13 @@ export function showSkillsWindow(app: AppInterface): void {
     descRow.sensitive = active
     sourceView.sensitive = active
 
-    const isCustom = active && !defaultIds.has(skill!.id)
+    const isCustom = active && !defaultIds.has(skill.id)
     deleteBtn.visible = isCustom
     deleteBtn.sensitive = isCustom
 
-    const isBuiltin = active && defaultIds.has(skill!.id)
+    const isBuiltin = active && defaultIds.has(skill.id)
     contentResetBtn.visible = isBuiltin
-    contentResetBtn.sensitive = isBuiltin && skillDiffersFromDefault(skill!)
+    contentResetBtn.sensitive = isBuiltin && skillDiffersFromDefault(skill)
   }
 
   function addHeaderRow(label: string): void {
@@ -202,12 +212,20 @@ export function showSkillsWindow(app: AppInterface): void {
     }
 
     const skills = app.skills ?? []
-    let builtins = skills.filter((s) => defaultIds.has(s.id))
-    let customs = skills.filter((s) => !defaultIds.has(s.id))
+    let builtins = skills.filter((s) => {
+      return defaultIds.has(s.id)
+    })
+    let customs = skills.filter((s) => {
+      return !defaultIds.has(s.id)
+    })
 
     if (searchText) {
-      builtins = builtins.filter((s) => s.name.toLowerCase().includes(searchText))
-      customs = customs.filter((s) => s.name.toLowerCase().includes(searchText))
+      builtins = builtins.filter((s) => {
+        return s.name.toLowerCase().includes(searchText)
+      })
+      customs = customs.filter((s) => {
+        return s.name.toLowerCase().includes(searchText)
+      })
     }
 
     if (skills.length === 0) {
@@ -226,7 +244,11 @@ export function showSkillsWindow(app: AppInterface): void {
       customs.forEach(addSkillRow)
     }
 
-    const skill = selectedId !== null ? (app.skills.find((s) => s.id === selectedId) ?? null) : null
+    const skill = selectedId !== null
+      ? (app.skills.find((s) => {
+          return s.id === selectedId
+        }) ?? null)
+      : null
     if (skill) {
       for (const [row, id] of rowToSkillId) {
         if (id === selectedId) {
@@ -244,12 +266,20 @@ export function showSkillsWindow(app: AppInterface): void {
   }
 
   function saveCurrentSkill(): void {
-    if (isSaving || selectedId === null) return
-    const skill = app.skills.find((s) => s.id === selectedId)
-    if (!skill) return
+    if (isSaving || selectedId === null) {
+      return
+    }
+    const skill = app.skills.find((s) => {
+      return s.id === selectedId
+    })
+    if (!skill) {
+      return
+    }
 
     const newName = nameRow.get_text().trim()
-    if (!newName) return
+    if (!newName) {
+      return
+    }
 
     skill.name = newName
     skill.description = descRow.get_text().trim()
@@ -287,7 +317,9 @@ export function showSkillsWindow(app: AppInterface): void {
   })
 
   listBox.connect('row-selected', (_lb, row) => {
-    if (isSaving) return
+    if (isSaving) {
+      return
+    }
     if (!row) {
       isSaving = true
       selectedId = null
@@ -296,10 +328,14 @@ export function showSkillsWindow(app: AppInterface): void {
       return
     }
     const skillId = rowToSkillId.get(row)
-    if (!skillId) return
+    if (!skillId) {
+      return
+    }
     isSaving = true
     selectedId = skillId
-    loadSkillIntoEditor(app.skills.find((s) => s.id === skillId) ?? null)
+    loadSkillIntoEditor(app.skills.find((s) => {
+      return s.id === skillId
+    }) ?? null)
     isSaving = false
   })
 
@@ -308,7 +344,9 @@ export function showSkillsWindow(app: AppInterface): void {
   buffer.connect('changed', saveCurrentSkill)
 
   addBtn.connect('clicked', () => {
-    if (!app.skills) app.skills = []
+    if (!app.skills) {
+      app.skills = []
+    }
     const placeholder: StorageSkill = {
       id: `skill-${Date.now()}`,
       name: 'New Skill',
@@ -316,7 +354,9 @@ export function showSkillsWindow(app: AppInterface): void {
       prompt: ''
     }
     app.skills.push(placeholder)
-    app.skills.sort((a, b) => a.name.localeCompare(b.name))
+    app.skills.sort((a, b) => {
+      return a.name.localeCompare(b.name)
+    })
     app.saveSkills()
     selectedId = placeholder.id
     refreshList()
@@ -324,17 +364,27 @@ export function showSkillsWindow(app: AppInterface): void {
   })
 
   deleteBtn.connect('clicked', () => {
-    if (selectedId === null) return
-    const idx = app.skills.findIndex((s) => s.id === selectedId)
-    if (idx === -1) return
+    if (selectedId === null) {
+      return
+    }
+    const idx = app.skills.findIndex((s) => {
+      return s.id === selectedId
+    })
+    if (idx === -1) {
+      return
+    }
     const skillName = app.skills[idx].name
     showDestructiveConfirmation(
       win,
       'Delete Skill',
       `Are you sure you want to delete "${skillName}"? This cannot be undone.`,
       () => {
-        const i = app.skills.findIndex((s) => s.id === selectedId)
-        if (i === -1) return
+        const i = app.skills.findIndex((s) => {
+          return s.id === selectedId
+        })
+        if (i === -1) {
+          return
+        }
         app.skills.splice(i, 1)
         app.saveSkills()
         selectedId = app.skills.length > 0 ? app.skills[Math.max(0, i - 1)].id : null
@@ -344,19 +394,33 @@ export function showSkillsWindow(app: AppInterface): void {
   })
 
   contentResetBtn.connect('clicked', () => {
-    if (selectedId === null) return
-    const idx = app.skills.findIndex((s) => s.id === selectedId)
-    if (idx === -1) return
+    if (selectedId === null) {
+      return
+    }
+    const idx = app.skills.findIndex((s) => {
+      return s.id === selectedId
+    })
+    if (idx === -1) {
+      return
+    }
     const skill = app.skills[idx]
-    const defaultSkill = DEFAULT_SKILLS.find((s) => s.id === skill.id)
-    if (!defaultSkill) return
+    const defaultSkill = DEFAULT_SKILLS.find((s) => {
+      return s.id === skill.id
+    })
+    if (!defaultSkill) {
+      return
+    }
     showDestructiveConfirmation(
       win,
       'Reset Skill',
       `Are you sure you want to reset "${skill.name}" to its default? This cannot be undone.`,
       () => {
-        const i = app.skills.findIndex((s) => s.id === selectedId)
-        if (i === -1) return
+        const i = app.skills.findIndex((s) => {
+          return s.id === selectedId
+        })
+        if (i === -1) {
+          return
+        }
         app.skills[i] = { ...defaultSkill }
         app.saveSkills()
         refreshList()
@@ -366,9 +430,13 @@ export function showSkillsWindow(app: AppInterface): void {
 
   const syntaxSignalId = app.connect('syntax-changed', (_: number, theme: string) => {
     const newScheme = sm.get_scheme(theme)
-    if (newScheme) buffer.set_style_scheme(newScheme)
+    if (newScheme) {
+      buffer.set_style_scheme(newScheme)
+    }
   })
-  win.connect('destroy', () => app.disconnect(syntaxSignalId))
+  win.connect('destroy', () => {
+    return app.disconnect(syntaxSignalId)
+  })
 
   if ((app.skills ?? []).length > 0) {
     selectedId = app.skills[0].id

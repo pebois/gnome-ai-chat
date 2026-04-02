@@ -8,7 +8,7 @@ A simple chat application for GNOME built with TypeScript (compiled to GJS), Gtk
 - **Smart Model Management**: Automatically detect local models, pull new ones from the registry with live progress, and monitor detailed VRAM/CPU memory footprints.
 - **Intelligent Search**: Find past conversations using semantic vector search—it understands the meaning of your queries, not just keywords. Background indexing ensures results are always up to date without slowing down your exit.
 - **Power-User Workflow**: Fast slash commands with dynamic filtering, full keyboard navigation, and `Tab` completion. Quickly fetch Hacker News headlines or compress conversations to save context.
-- **Agentic Capabilities**: Give your models the power to fetch web pages (with persistent caching), search local files, launch apps, perform complex math, take screenshots, and even programmatically control your desktop via `ydotool` automation.
+- **Agentic Capabilities**: Give your models the power to fetch web pages (with persistent caching), search local files, launch apps, perform complex math, take screenshots, and even programmatically control your desktop via Wayland portal automation.
 - **Interactive HTML Canvas**: Generate and render high-quality, self-contained HTML/JS applications, games, or data visualizations directly in a native native WebKitGTK preview window via the `render_html` tool and `@canvas` skill.
 - **Custom @ Skills**: Instantly switch personas using `@` skills (e.g., `@coder`, `@writer`, `@automation`, `@canvas`). Manage and define your own custom system prompts natively in Preferences with alphabetical sorting for easy navigation.
 - **Rich Conversations**: Full support for multimodal image attachments, **text file attachments** (Markdown, CSV, JSON, Code), native syntax-highlighted code blocks with one-click copy, and configurable reasoning levels for "thinking" models.
@@ -33,12 +33,12 @@ A simple chat application for GNOME built with TypeScript (compiled to GJS), Gtk
 
     On Fedora:
     ```bash
-    sudo dnf install gjs gtk4-devel libadwaita-devel webkitgtk6.0-devel ydotool gtksourceview5-devel
+    sudo dnf install gjs gtk4-devel libadwaita-devel webkitgtk6.0-devel gtksourceview5-devel
     ```
 
     On Ubuntu:
     ```bash
-    sudo apt install gjs libgtk-4-dev libadwaita-1-dev gir1.2-webkit-6.0 libwebkitgtk-6.0-dev ydotool gir1.2-gtksource-5 libgtksourceview-5-dev
+    sudo apt install gjs libgtk-4-dev libadwaita-1-dev gir1.2-webkit-6.0 libwebkitgtk-6.0-dev gir1.2-gtksource-5 libgtksourceview-5-dev
     ```
 
 ## Installation & Running the App
