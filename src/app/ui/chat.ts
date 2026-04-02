@@ -410,7 +410,9 @@ export class Chat {
             }
           }
         },
-        onToolCall,
+        onToolCall: (name, args) => {
+          return onToolCall(this._app, name, args)
+        },
         cancellable: this._cancellable
       })
       for (const msg of messages) {

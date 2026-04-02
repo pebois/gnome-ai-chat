@@ -67,6 +67,7 @@ export interface AppInterface {
   showToast(message: string, error?: boolean): void
   toggleDebug(): void
   toggleSidebar(): void
+  requestToolPermission(heading: string, body: string): Promise<boolean>
 }
 
 export class App extends Adw.Application implements AppInterface {
@@ -407,6 +408,31 @@ export class App extends Adw.Application implements AppInterface {
     } catch (e) {
       console.error('Failed to load application icon resources:', e)
     }
+  }
+
+  public requestToolPermission(heading: string, body: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const activeWindow = this.active_window
+      if (!activeWindow) {
+        resolve(false)
+        return
+      }
+
+      const alertDialog = new Adw.AlertDialog({
+        heading,
+        body
+      })
+
+      alertDialog.add_response('cancel', 'Deny')
+      alertDialog.add_response('confirm', 'Allow')
+      alertDialog.set_response_appearance('confirm', Adw.ResponseAppearance.DESTRUCTIVE)
+
+      alertDialog.connect('response', (_, response) => {
+        resolve(response === 'confirm')
+      })
+
+      alertDialog.present(activeWindow)
+    })
   }
 
   private _setupActions(): void {
