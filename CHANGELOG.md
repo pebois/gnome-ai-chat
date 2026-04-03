@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-04-03
+
+### Added
+- **Local RAG (Chat with your Files)**: Index local folders into a private SQLite vector store. Use the `@files` skill to ground model answers in your actual code and documentation without cloud uploads.
+- **Tool Execution Permissions**: Added a security layer that prompts for approval before running shell commands or writing files. Includes a new settings page to manage permissions and an auto-accept toggle for trusted workflows.
+- **Project Path Management**: New UI in Preferences > Data to manage, remove, and re-index local project paths for the vector store.
+- **Enhanced Icon Assets**: Reorganized icon resources with multiple sizes and a theme index for better GNOME theme integration.
+
+### Changed
+- **Native Wayland Automation**: Moved desktop automation from external dependencies to native Wayland portals for better security and compatibility.
+- **Refined Appearance Settings**: Updated the appearance settings UI with new symbolic icons and improved layout.
+
+### Fixed
+- **Standardized Code Style**: Unified logic and formatting within the Skills Editor and core automation tools.
+
 ## [1.3.1] - 2026-03-31
 
 ### Fixed
