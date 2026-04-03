@@ -1,5 +1,6 @@
 import GLib from 'gi://GLib?version=2.0'
 
+import type { AppInterface } from '@/app/index.js'
 import type { OllamaTool } from '@/lib/ollama.js'
 import { takeScreenshot } from '@/lib/screenshot.js'
 
@@ -17,7 +18,7 @@ export const take_screenshot: OllamaTool = {
   function: {
     name: 'take_screenshot',
     parameters: {},
-    description: 'Takes a screenshot of the entire screen and returns the file URI where it was saved.'
+    description: 'Takes a screenshot of the entire screen. The screenshot will be automatically attached to the conversation for you to analyze. Returns the file URI.'
   }
 }
 
@@ -30,11 +31,12 @@ export function handle_get_system_info(): string {
   return `OS: ${osName}\nHostname: ${hostname}`
 }
 
-export async function handle_take_screenshot(): Promise<string> {
+export async function handle_take_screenshot(app: AppInterface): Promise<string> {
   try {
     const file = await takeScreenshot()
     if (file) {
-      return `Screenshot saved to ${file.get_uri()}`
+      app.chat.input.attachments.addFile(file)
+      return `Screenshot taken and automatically attached. URI: ${file.get_uri()}`
     }
     return 'Screenshot failed or cancelled.'
   } catch (e) {

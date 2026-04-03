@@ -70,7 +70,7 @@ export async function onToolCall(app: AppInterface, name: string, args: Record<s
     case 'calculate':
       return handle_calculate(args)
     case 'take_screenshot':
-      return handle_take_screenshot()
+      return handle_take_screenshot(app)
     case 'render_html':
       return handle_render_html(args)
     case 'read_file':
