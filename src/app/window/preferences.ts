@@ -146,7 +146,7 @@ export class Preferences {
   private _setupAppearance(): void {
     const page = new Adw.PreferencesPage({
       title: 'Appearance',
-      icon_name: 'dark-mode-symbolic'
+      icon_name: 'preferences-desktop-appearance-symbolic'
     })
     this._window.add(page)
 
@@ -322,8 +322,8 @@ export class Preferences {
       valign: Gtk.Align.CENTER
     })
     indexBtn.connect('clicked', () => {
-      if (this._indexingCancellable) {
-        this._indexingCancellable.cancel()
+      if (this._convIndexingCancellable) {
+        this._convIndexingCancellable.cancel()
         return
       }
       return this._indexConversations(indexBtn, progressBar)
@@ -332,6 +332,45 @@ export class Preferences {
     indexBox.append(indexBtn)
     indexRow.add_suffix(indexBox)
     searchGroup.add(indexRow)
+
+    const filesIndexRow = new Adw.ActionRow({
+      title: 'Local RAG Files'
+    })
+    const filesIndexBox = new Gtk.Box({
+      orientation: Gtk.Orientation.HORIZONTAL,
+      spacing: 12,
+      valign: Gtk.Align.CENTER
+    })
+    const filesIndexBtn = new Gtk.Button({
+      label: 'Full Re-index'
+    })
+    const filesProgressBar = new Gtk.ProgressBar({
+      visible: false,
+      hexpand: true,
+      valign: Gtk.Align.CENTER
+    })
+
+    const indexingId = this._app.connect('files-indexing-changed', (_, active, fraction) => {
+      filesIndexBtn.set_label(active ? 'Stop' : 'Full Re-index')
+      filesProgressBar.set_visible(active)
+      filesProgressBar.set_fraction(fraction)
+    })
+
+    this._window.connect('destroy', () => {
+      this._app.disconnect(indexingId)
+    })
+
+    filesIndexBtn.connect('clicked', () => {
+      if (filesProgressBar.visible) {
+        this._app.cancelFilesIndexing()
+      } else {
+        void this._app.indexFiles()
+      }
+    })
+    filesIndexBox.append(filesProgressBar)
+    filesIndexBox.append(filesIndexBtn)
+    filesIndexRow.add_suffix(filesIndexBox)
+    searchGroup.add(filesIndexRow)
 
     const group = new Adw.PreferencesGroup({
       title: 'Chat History'
@@ -524,34 +563,34 @@ export class Preferences {
     return btn
   }
 
-  private _indexingCancellable: Gio.Cancellable | null = null
+  private _convIndexingCancellable: Gio.Cancellable | null = null
 
   private async _indexConversations(btn: Gtk.Button, progressBar: Gtk.ProgressBar): Promise<void> {
     const oldLabel = btn.get_label()
     btn.set_label('Stop')
     progressBar.set_fraction(0)
     progressBar.set_visible(true)
-    this._indexingCancellable = new Gio.Cancellable()
+    this._convIndexingCancellable = new Gio.Cancellable()
 
     try {
-      await this._app.storage.index(this._app.ollama, this._app.conversations, true, this._indexingCancellable, (fraction) => {
+      await this._app.storage.index(this._app.ollama, this._app.conversations, true, this._convIndexingCancellable, (fraction) => {
         progressBar.set_fraction(fraction)
       })
 
-      if (this._indexingCancellable.is_cancelled()) {
+      if (this._convIndexingCancellable.is_cancelled()) {
         this._app.showToast('Indexing cancelled')
       } else {
         this._app.showToast('Indexing completed')
       }
     } catch (err) {
       if (!(err instanceof GLib.Error && err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED))) {
-        console.error('Failed to index:', err)
-        this._app.showToast('Indexing failed', true)
+        console.error('Failed to index conversations:', err)
+        this._app.showToast('Conversations indexing failed', true)
       }
     } finally {
       btn.set_label(oldLabel ?? '')
       progressBar.set_visible(false)
-      this._indexingCancellable = null
+      this._convIndexingCancellable = null
     }
   }
 }

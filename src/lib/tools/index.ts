@@ -2,7 +2,7 @@ import type { AppInterface } from '@/app/index.js'
 import { handle_run_automation_command, run_automation_command } from '@/lib/tools/automation.js'
 import { handle_list_directory, handle_read_file, handle_run_shell_command, handle_write_file, list_directory, read_file, run_shell_command, write_file } from '@/lib/tools/code.js'
 import { get_app_details, handle_get_app_details, handle_launch_app, handle_launch_app_action, handle_list_installed_apps, launch_app, launch_app_action, list_installed_apps } from '@/lib/tools/desktop.js'
-import { handle_search_files, search_files } from '@/lib/tools/files.js'
+import { handle_search_files, handle_search_vector_index, search_files, search_vector_index } from '@/lib/tools/files.js'
 import { handle_render_html, render_html } from '@/lib/tools/html.js'
 import { calculate, handle_calculate, handle_roll_die, roll_die } from '@/lib/tools/math.js'
 import { add_observations, create_entities, create_relations, delete_entities, delete_observations, delete_relations, handle_add_observations, handle_create_entities, handle_create_relations, handle_delete_entities, handle_delete_observations, handle_delete_relations, handle_open_nodes, handle_read_graph, handle_search_nodes, open_nodes, read_graph, search_nodes } from '@/lib/tools/memory.js'
@@ -36,6 +36,7 @@ export const tools = [
   run_shell_command,
   search_files,
   search_nodes,
+  search_vector_index,
   take_screenshot,
   write_file
 ]
@@ -60,6 +61,8 @@ export async function onToolCall(app: AppInterface, name: string, args: Record<s
       return handle_launch_app_action(args)
     case 'search_files':
       return handle_search_files(args)
+    case 'search_vector_index':
+      return handle_search_vector_index(app, args)
     case 'run_automation_command':
       return handle_run_automation_command(args)
     case 'fetch_web_page':

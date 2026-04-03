@@ -22,6 +22,14 @@ const commands: Command[] = [
   { name: 'clear', description: 'Clear current conversation', icon: 'edit-clear-all-symbolic' },
   { name: 'compress', description: 'Strip think and tools from conversation', icon: 'package-x-generic-symbolic' },
   { name: 'debug', description: 'Toggle debug mode', icon: 'bug-symbolic' },
+  {
+    name: 'files',
+    description: 'Manage Local RAG files and folders',
+    icon: 'folder-symbolic',
+    subCommands: [
+      { name: 'manage', description: 'Open the indexed folders management window', icon: 'preferences-system-symbolic' }
+    ]
+  },
   { name: 'hn', description: 'Get Hacker News headlines', icon: 'newspaper-symbolic' },
   {
     name: 'memory',
@@ -166,7 +174,9 @@ export class Commands {
     this._popover.popdown()
     const parts = commandPath.split(' ')
     const commandName = parts[0]
-    const parameter = parts.length > 1 ? GLib.Variant.new_string(commandPath) : null
+    const parameter = (parts.length > 1 || ['memory', 'files'].includes(commandName))
+      ? GLib.Variant.new_string(commandPath)
+      : null
     this._app.activateAction(commandName, parameter)
 
     const buffer = this._textView.get_buffer()
