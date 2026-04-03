@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- **Ollama Client Refactoring**: Optimized the `Ollama` client by moving skill detection and system prompt construction into the internal request builder. The system message is now unconditionally rebuilt for every API call, ensuring consistent persona application during complex tool-call sequences. Simplified the public `chat` method by merging recursive logic and removing redundant message injection.
+- **Refined Message Styling**: Removed redundant padding from chat messages and cleaned up unused CSS classes for a sharper UI.
 
 ## [1.4.0] - 2026-04-03
 

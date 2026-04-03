@@ -285,7 +285,7 @@ export class Chat {
     }
 
     const buffer = this._input.getBuffer()
-    let text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false).trim()
+    const text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false).trim()
     const conversation = this._app.conversation
 
     if (!text || !conversation) {
@@ -294,31 +294,6 @@ export class Chat {
     }
 
     const isFirstMessage = conversation.messages.length === 0
-
-    if (text.startsWith('@')) {
-      const textLower = text.toLowerCase()
-      const skill = this._app.skills.find((s) => {
-        return textLower.startsWith(`@${s.name.toLowerCase()}`)
-      })
-      if (skill) {
-        conversation.system = [
-          this._app.settings.system,
-          '---',
-          `## Active Skill: ${skill.name}`,
-          skill.description ? `*${skill.description}*` : '',
-          skill.prompt,
-          '> The skill instructions above take precedence over the general guidelines.'
-        ].filter(Boolean).join('\n\n')
-        text = text.slice(skill.name.length + 1).trim()
-
-        if (!text) {
-          this._app.storage.saveConversations(this._app.conversations)
-          buffer.set_text('', -1)
-          this._input.grabFocus()
-          return
-        }
-      }
-    }
 
     if (isFirstMessage) {
       conversation.model = this._app.model
@@ -371,11 +346,12 @@ export class Chat {
     try {
       const messages = await this._app.ollama.chat({
         model: this._app.model ?? DEFAULT_CHAT_MODEL,
-        system: conversation.system ?? this._app.settings.system,
+        system: this._app.settings.system,
         stream: this._app.settings.stream,
         think: this._app.settings.think,
         options: this._app.settings.options,
         messages: conversation.messages,
+        skills: this._app.skills,
         tools,
         onNewResponse: () => {
           if (this._app.conversation?.id !== conversation.id) {

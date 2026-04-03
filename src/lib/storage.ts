@@ -53,7 +53,6 @@ export interface StorageConversation {
   model: string
   created_at: string
   updated_at?: string
-  system?: string
   embeddings?: number[]
 }
 
