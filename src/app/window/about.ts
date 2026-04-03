@@ -1,7 +1,7 @@
 import Adw from 'gi://Adw?version=1'
 
 import type { AppInterface } from '@/app/index.js'
-import { APPLICATION_ID, APPLICATION_NAME } from '@/lib/constants.js'
+import { APPLICATION_ID, APPLICATION_NAME, VERSION } from '@/lib/constants.js'
 
 export function showAboutWindow(app: AppInterface): void {
   const about = new Adw.AboutWindow({
@@ -9,7 +9,7 @@ export function showAboutWindow(app: AppInterface): void {
     application_name: APPLICATION_NAME,
     application_icon: APPLICATION_ID,
     developer_name: 'Pierre-Emmanuel Bois',
-    version: '1.1.0',
+    version: VERSION,
     comments: 'A GNOME chat application that talks to a local Ollama server.',
     website: 'https://github.com/pebois/gnome-ai-chat',
     issue_url: 'https://github.com/pebois/gnome-ai-chat/issues',
