@@ -57,11 +57,6 @@ export const css = /* css */`
   color: @accent_fg_color;
 }
 
-.assistant-message {
-  padding-top: 12px;
-  padding-bottom: 2px;
-}
-
 .message-canvas {
   border-radius: 12px;
   background: @shade_color;
