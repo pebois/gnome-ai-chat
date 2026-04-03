@@ -1,11 +1,59 @@
 import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
+import type { AppInterface } from '@/app/index.js'
+import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import type { OllamaTool } from '@/lib/ollama.js'
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish')
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish')
 Gio._promisify(Gio.FileEnumerator.prototype, 'close_async', 'close_finish')
+
+export const search_vector_index: OllamaTool = {
+  type: 'function',
+  function: {
+    name: 'search_vector_index',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'The search query to match against file contents.'
+        }
+      },
+      required: ['query']
+    },
+    description: 'Searches the local vector index of project files using semantic similarity. Returns the most relevant file chunks.'
+  }
+}
+
+export async function handle_search_vector_index(app: AppInterface, args: Record<string, unknown>): Promise<string> {
+  const { query } = args as { query: string }
+  if (!query) {
+    return 'Error: query is required.'
+  }
+
+  try {
+    const resp = await app.ollama.embed({
+      model: DEFAULT_EMBEDDING_MODEL,
+      input: query
+    })
+    if (!resp || !resp.embeddings || resp.embeddings.length === 0) {
+      return 'Error: Failed to generate embedding for query.'
+    }
+
+    const results = app.vectorStore.search(resp.embeddings[0], 5)
+    if (results.length === 0) {
+      return 'No relevant files found in the index.'
+    }
+
+    return results.map((r) => {
+      return `File: ${r.file_path}\nScore: ${r.score.toFixed(3)}\nContent:\n${r.content}\n---`
+    }).join('\n')
+  } catch (e) {
+    return `Search failed: ${e instanceof Error ? e.message : String(e)}`
+  }
+}
 
 export const search_files: OllamaTool = {
   type: 'function',

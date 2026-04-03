@@ -21,6 +21,10 @@ export function showShortcutsDialog(app: AppInterface): void {
     accelerator: '<Primary>question'
   }))
   sectionApp.add(new Adw.ShortcutsItem({
+    title: 'Indexed Folders',
+    accelerator: '<Primary><Shift>f'
+  }))
+  sectionApp.add(new Adw.ShortcutsItem({
     title: 'Running Models',
     accelerator: '<Primary>p'
   }))

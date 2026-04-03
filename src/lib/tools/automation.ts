@@ -40,8 +40,11 @@ async function callPortal(
   options: Record<string, GLib.Variant> = {}
 ): Promise<Record<string, GLib.Variant>> {
   const connection = Gio.DBus.session
+  if (!connection) {
+    throw new Error('No DBus session connection')
+  }
   const token = 'gnomeaichat_' + Math.floor(Math.random() * 1000000)
-  const uniqueName = connection.get_unique_name().replace(/\./g, '_').replace(':', '')
+  const uniqueName = (connection.get_unique_name() ?? 'unknown').replace(/\./g, '_').replace(':', '')
   const requestPath = `/org/freedesktop/portal/desktop/request/${uniqueName}/${token}`
 
   options['handle_token'] = GLib.Variant.new_string(token)
@@ -131,6 +134,9 @@ export async function handle_run_automation_command(args: Record<string, unknown
     const session = await ensureSession()
     const action = args.action as string
     const connection = Gio.DBus.session
+    if (!connection) {
+      throw new Error('No DBus session connection')
+    }
 
     if (action === 'move') {
       const x = args.x as number ?? 0

@@ -344,9 +344,6 @@ export function showSkillsWindow(app: AppInterface): void {
   buffer.connect('changed', saveCurrentSkill)
 
   addBtn.connect('clicked', () => {
-    if (!app.skills) {
-      app.skills = []
-    }
     const placeholder: StorageSkill = {
       id: `skill-${Date.now()}`,
       name: 'New Skill',

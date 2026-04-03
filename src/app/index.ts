@@ -5,6 +5,7 @@ import GLib from 'gi://GLib?version=2.0'
 import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 
+import { showFilesDialog } from '@/app/dialog/files.js'
 import { showRunningModelsDialog } from '@/app/dialog/ps.js'
 import { showPullDialog } from '@/app/dialog/pull.js'
 import { showShortcutsDialog } from '@/app/dialog/shortcuts.js'
@@ -24,6 +25,7 @@ import { Storage } from '@/lib/storage.js'
 import { Tracker } from '@/lib/tracker.js'
 import { createSimpleAction } from '@/lib/ui.js'
 import { convertMessageToTitle, pangoEscape } from '@/lib/utils.js'
+import { VectorStore } from '@/lib/vector_store.js'
 
 export interface AppInterface {
   readonly chat: Chat
@@ -39,20 +41,24 @@ export interface AppInterface {
   readonly sidebar: Sidebar
   readonly skills: StorageSkill[]
   readonly storage: Storage
+  readonly vectorStore: VectorStore
   readonly supportsVision: boolean
   readonly toolModels: string[]
   readonly tracker: Tracker
   readonly window: AppWindow
 
   activateAction(action_name: string, parameter: GLib.Variant | null): void
+  cancelFilesIndexing(): void
   clearAllConversations(): Promise<void>
   connect(sigName: 'busy-changed', callback: (_: number, isBusy: boolean) => void): number
   connect(sigName: 'capabilities-changed', callback: (_: number) => void): number
+  connect(sigName: 'files-indexing-changed', callback: (_: number, active: boolean, fraction: number) => void): number
   connect(sigName: 'syntax-changed', callback: (_: number, theme: string) => void): number
   connect(sigName: string, callback: (...args: unknown[]) => void): number
   disconnect(id: number): void
   focusInput(): void
   getShortcut(action_name: string): string | null
+  indexFiles(): Promise<void>
   init: () => Promise<void>
   saveSettings(): void
   saveSkills(): void
@@ -74,6 +80,7 @@ export class App extends Adw.Application implements AppInterface {
   private _active: boolean
   private _settings: StorageSettings
   private _isExiting: boolean = false
+  private _filesIndexingCancellable: Gio.Cancellable | null = null
 
   public conversation?: ChatConversation
   public conversations: StorageConversation[]
@@ -84,6 +91,7 @@ export class App extends Adw.Application implements AppInterface {
   public ollama: Ollama
   public skills: StorageSkill[] = []
   public storage: Storage
+  public vectorStore: VectorStore
   public supportsVision = true
   public toolModels: string[] = []
   public tracker: Tracker
@@ -100,6 +108,7 @@ export class App extends Adw.Application implements AppInterface {
     this.model = DEFAULT_CHAT_MODEL
     this.conversations = []
     this.storage = new Storage(this._settings)
+    this.vectorStore = new VectorStore(this._settings)
     this.tracker = new Tracker(this.storage)
     this.ollama = new Ollama(this._settings, this.tracker)
   }
@@ -369,6 +378,42 @@ export class App extends Adw.Application implements AppInterface {
     await this.sidebar.createNewConversation()
   }
 
+  public cancelFilesIndexing(): void {
+    if (this._filesIndexingCancellable) {
+      this._filesIndexingCancellable.cancel()
+    }
+  }
+
+  public async indexFiles(): Promise<void> {
+    if (this._filesIndexingCancellable) {
+      return
+    }
+
+    this._filesIndexingCancellable = new Gio.Cancellable()
+    this.emit('files-indexing-changed', true, 0)
+
+    try {
+      const paths = this.vectorStore.getPaths()
+      await this.vectorStore.indexPaths(this.ollama, paths, this._filesIndexingCancellable, (fraction) => {
+        this.emit('files-indexing-changed', true, fraction)
+      })
+
+      if (this._filesIndexingCancellable.is_cancelled()) {
+        this.showToast('Files indexing cancelled')
+      } else {
+        this.showToast('Files indexing completed')
+      }
+    } catch (err) {
+      if (!(err instanceof GLib.Error && err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED))) {
+        console.error('Failed to index files:', err)
+        this.showToast('Files indexing failed', true)
+      }
+    } finally {
+      this._filesIndexingCancellable = null
+      this.emit('files-indexing-changed', false, 0)
+    }
+  }
+
   public sendNotification(id: string | null, notification: Gio.Notification): void {
     this.send_notification(id, notification)
   }
@@ -576,6 +621,32 @@ export class App extends Adw.Application implements AppInterface {
     })
     this.add_action(memoryAction)
 
+    const filesAction = new Gio.SimpleAction({
+      name: 'files',
+      parameter_type: GLib.VariantType.new('s')
+    })
+    filesAction.connect('activate', (_action, parameter) => {
+      let subCommand = 'manage'
+      if (parameter) {
+        const variant = parameter
+        const text = variant.get_string()[0]
+        const parts = text.split(' ')
+        if (parts.length >= 2) {
+          subCommand = parts[1].toLowerCase()
+        } else if (parts.length === 1 && parts[0] && !parts[0].startsWith('/') && parts[0] !== 'files') {
+          subCommand = parts[0].toLowerCase()
+        }
+      }
+
+      if (subCommand === 'manage') {
+        showFilesDialog(this)
+      } else {
+        this.showToast(`Unknown files command: ${subCommand}`)
+      }
+    })
+    this.add_action(filesAction)
+    this.set_accels_for_action('app.files(\'manage\')', ['<Primary><Shift>f'])
+
     const compressAction = createSimpleAction('compress', () => {
       if (!this.conversation) {
         return
@@ -647,6 +718,9 @@ GObject.registerClass({
   Signals: {
     'busy-changed': {
       param_types: [GObject.TYPE_BOOLEAN]
+    },
+    'files-indexing-changed': {
+      param_types: [GObject.TYPE_BOOLEAN, GObject.TYPE_DOUBLE]
     },
     'capabilities-changed': {
       param_types: []
