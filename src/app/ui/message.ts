@@ -308,7 +308,6 @@ export class Message {
       if (isCode) {
         const { code, language } = this._parseCodeBlock(chunk)
         const [listBox, expander] = createBoxedExpanderRow(language || 'text', 'text-x-generic-symbolic')
-        listBox.add_css_class('code-block-list')
         expander.set_expanded(true)
 
         const copyBtn = new Gtk.Button({
