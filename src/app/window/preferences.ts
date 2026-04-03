@@ -146,7 +146,7 @@ export class Preferences {
   private _setupAppearance(): void {
     const page = new Adw.PreferencesPage({
       title: 'Appearance',
-      icon_name: 'preferences-desktop-appearance-symbolic'
+      icon_name: 'dark-mode-symbolic'
     })
     this._window.add(page)
 
