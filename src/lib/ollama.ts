@@ -15,6 +15,7 @@ export interface OllamaChatProps extends OllamaChatRequest {
   onMessageChunk?: (response: OllamaChatResponse) => void
   onToolCall?: (name: string, args: Record<string, unknown>) => Promise<string>
   cancellable: Gio.Cancellable
+  skills?: { name: string; description?: string; prompt: string }[]
 }
 
 export interface OllamaChatRequest {
@@ -289,16 +290,8 @@ export class Ollama {
   }
 
   public async chat(props: OllamaChatProps): Promise<OllamaMessage[]> {
-    const requestMessages: OllamaMessage[] = []
-    if (props.system) {
-      requestMessages.push({ role: 'system', content: props.system })
-    }
-    requestMessages.push(...(props.messages || []))
-    return this._doChat(props, requestMessages)
-  }
-
-  private async _doChat(props: OllamaChatProps, messages: OllamaMessage[]): Promise<OllamaMessage[]> {
     props.onNewResponse?.()
+    const messages = props.messages || []
     const message = await this._doChatRequest(props, messages)
     if (!message) {
       return []
@@ -322,7 +315,7 @@ export class Ollama {
     const toolDurationMs = (endToolTime - startToolTime) / 1000
     this._tracker.recordToolCall(toolDurationMs)
 
-    const next = await this._doChat(props, [...messages, message, ...toolMessages])
+    const next = await this.chat({ ...props, messages: [...messages, message, ...toolMessages] })
     return [message, ...toolMessages, ...next]
   }
 
@@ -433,9 +426,38 @@ export class Ollama {
       return processed
     })
 
+    let skillPrompt = ''
+    if (props.skills) {
+      const lastUserMsg = [...processedMessages].reverse().find((m) => {
+        return m.role === 'user'
+      })
+      if (lastUserMsg && lastUserMsg.content.startsWith('@')) {
+        const textLower = lastUserMsg.content.toLowerCase()
+        const skill = props.skills.find((s) => {
+          return textLower.startsWith(`@${s.name.toLowerCase()}`)
+        })
+        if (skill) {
+          skillPrompt = [
+            `## Active Skill: ${skill.name}`,
+            skill.description ? `*${skill.description}*` : '',
+            skill.prompt
+          ].filter(Boolean).join('\n\n')
+        }
+      }
+    }
+
+    const finalMessages = processedMessages.filter((m) => {
+      return m.role !== 'system'
+    })
+
+    const systemContent = [props.system, skillPrompt].filter(Boolean).join('\n\n')
+    if (systemContent) {
+      finalMessages.unshift({ role: 'system', content: systemContent })
+    }
+
     const req: OllamaChatRequest = {
       model: props.model,
-      messages: processedMessages,
+      messages: finalMessages,
       stream: props.stream !== false
     }
 

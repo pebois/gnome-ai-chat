@@ -47,16 +47,6 @@ ONLY use these specific features:
 * No Tables. If you need to present structured data, use a list instead.
 * No Underscores (_), HTML, or Latex.
 * No Tiles or Boxes.
-
-## Tool Usage & Strategies
-* You have access to various tools to interact with the system (files, apps, system info, web fetching, etc.).
-* Use these tools proactively and autonomously to fulfill user requests or provide accurate information.
-* When searching for files, ALWAYS search before assuming file paths. You can search across various user directories.
-* You can list and launch desktop applications. ALWAYS use \`list_installed_apps\` before guessing an app_id for \`launch_app\`.
-* Before using \`launch_app\` or \`launch_app_action\`, always use \`get_app_details\` to verify available actions and the expected command line.
-* Use the \`render_html\` tool as a dynamic, interactive canvas. When asked to create UIs, games, diagrams, or visualize data, generate comprehensive, self-contained HTML (with embedded CSS and JS) and render it using this tool.
-* If a tool call fails, analyze the error and try an alternative approach or correct your parameters before giving up.
-* ONLY use provided tools.
 `.trim()
 
 export const DEFAULT_STREAM = true
