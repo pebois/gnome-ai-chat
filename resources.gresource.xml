@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/io/github/pebois/gnome-ai-chat/">
-    <file>icons/scalable/actions/package-x-generic-symbolic.svg</file>
-    <file>icons/scalable/actions/newspaper-symbolic.svg</file>
-    <file>icons/scalable/actions/bug-symbolic.svg</file>
-    <file>icons/scalable/actions/dark-mode-symbolic.svg</file>
-    <file>icons/scalable/actions/note-symbolic.svg</file>
-    <file>icons/scalable/actions/paper-plane-symbolic.svg</file>
-    <file>icons/scalable/actions/processor-symbolic.svg</file>
-    <file>icons/scalable/actions/resources-symbolic.svg</file>
-    <file>icons/scalable/apps/io.github.pebois.gnome-ai-chat.svg</file>
+  <gresource prefix="/io/github/pebois/gnome-ai-chat/icons">
+    <file alias="index.theme">icons/index.theme</file>
+    <file alias="scalable/actions/package-x-generic-symbolic.svg">icons/scalable/actions/package-x-generic-symbolic.svg</file>
+    <file alias="scalable/actions/newspaper-symbolic.svg">icons/scalable/actions/newspaper-symbolic.svg</file>
+    <file alias="scalable/actions/bug-symbolic.svg">icons/scalable/actions/bug-symbolic.svg</file>
+    <file alias="scalable/actions/dark-mode-symbolic.svg">icons/scalable/actions/dark-mode-symbolic.svg</file>
+    <file alias="scalable/actions/note-symbolic.svg">icons/scalable/actions/note-symbolic.svg</file>
+    <file alias="scalable/actions/paper-plane-symbolic.svg">icons/scalable/actions/paper-plane-symbolic.svg</file>
+    <file alias="scalable/actions/processor-symbolic.svg">icons/scalable/actions/processor-symbolic.svg</file>
+    <file alias="scalable/actions/resources-symbolic.svg">icons/scalable/actions/resources-symbolic.svg</file>
+    <file alias="scalable/apps/io.github.pebois.gnome-ai-chat.svg">icons/scalable/apps/io.github.pebois.gnome-ai-chat.svg</file>
+    <file alias="hicolor/48x48/apps/io.github.pebois.gnome-ai-chat.png">icons/hicolor/48x48/apps/io.github.pebois.gnome-ai-chat.png</file>
+    <file alias="hicolor/128x128/apps/io.github.pebois.gnome-ai-chat.png">icons/hicolor/128x128/apps/io.github.pebois.gnome-ai-chat.png</file>
+    <file alias="hicolor/256x256/apps/io.github.pebois.gnome-ai-chat.png">icons/hicolor/256x256/apps/io.github.pebois.gnome-ai-chat.png</file>
   </gresource>
 </gresources>
