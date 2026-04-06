@@ -6,9 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.5.0] - 2026-04-06
+
+### Added
+- **SQLite Database Migration**: Migrated data storage from legacy JSON files to a robust SQLite database. This includes specialized stores for conversations, settings, skills, and memory, with centralized data models and automatic cleanup of old data files on startup. All data operations are now fully asynchronous.
+- **Semantic Skill Search**: Implemented semantic matching for skills using local text embeddings. Added a manual re-indexing tool to the Data settings and updated the search interface to support both keyword and conceptual discovery.
+- **Auto-Attach Screenshots**: Enhanced the screenshot tool to automatically attach captured images to the chat input, simplifying the workflow for visual analysis.
+
 ### Changed
-- **Ollama Client Refactoring**: Optimized the `Ollama` client by moving skill detection and system prompt construction into the internal request builder. The system message is now unconditionally rebuilt for every API call, ensuring consistent persona application during complex tool-call sequences. Simplified the public `chat` method by merging recursive logic and removing redundant message injection.
-- **Refined Message Styling**: Removed redundant padding from chat messages and cleaned up unused CSS classes for a sharper UI.
+- **Ollama Client Refactoring**: Optimized the `Ollama` client by moving skill detection to the internal request builder and rebuilding the system prompt for every request. This ensures consistent persona application during complex tool-call sequences.
+- **Improved Code Block Parsing**: Switched to a more reliable line-by-line parsing strategy with support for nested blocks, varying backtick lengths, better language tag detection, and improved whitespace management.
+- **Enhanced Skills Editor**: Refined the Skills Editor UI with expanding layouts, context menus for item management, and new internal shortcuts for search and creation. Updated the global shortcut for opening the editor.
+- **Refined UI Styling**: Removed redundant padding from chat messages and cleaned up unused CSS classes and storage properties for a sharper interface.
 
 ## [1.4.0] - 2026-04-03
 
