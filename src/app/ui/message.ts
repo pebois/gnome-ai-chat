@@ -239,19 +239,16 @@ export class Message {
   }
 
   private _parseCodeBlock(block: string): { language: string; code: string } {
-    let raw = block
-    if (raw.startsWith('```')) {
-      raw = raw.slice(3)
-    }
-    const lines = raw.split('\n')
+    const lines = block.split('\n')
     const firstLine = lines.shift() || ''
-    const language = firstLine.trim()
+    const match = firstLine.match(/^\s*(```+)(.*)/)
+    const openingBackticks = match ? match[1] : '```'
+    const language = match ? match[2].trim() : ''
 
-    if (lines.length > 0 && lines[lines.length - 1].trim().endsWith('```')) {
-      const last = lines.pop()!
-      const remainder = last.slice(0, -3).trim()
-      if (remainder) {
-        lines.push(remainder)
+    if (lines.length > 0) {
+      const lastLine = lines[lines.length - 1].trim()
+      if (lastLine.startsWith(openingBackticks)) {
+        lines.pop()
       }
     }
     return { language, code: lines.join('\n') }
@@ -266,18 +263,61 @@ export class Message {
       return
     }
 
-    const rawChunks = message.content.split(/(```[\s\S]*?(?:```|$))/g)
-    const chunks = rawChunks
+    const chunks: string[] = []
+    const rawLines = message.content.split('\n')
+    let currentChunk: string[] = []
+    let inCodeBlock = false
+    let openingBackticks = ''
+    let nestingLevel = 0
+
+    for (const line of rawLines) {
+      if (!inCodeBlock) {
+        const match = line.match(/^\s*(```+)(.*)/)
+        if (match) {
+          if (currentChunk.length > 0) {
+            chunks.push(currentChunk.join('\n'))
+          }
+          currentChunk = [line]
+          inCodeBlock = true
+          openingBackticks = match[1]
+          nestingLevel = 1
+        } else {
+          currentChunk.push(line)
+        }
+      } else {
+        currentChunk.push(line)
+        const match = line.match(/^\s*(```+)(.*)/)
+        if (match && match[1].length >= openingBackticks.length) {
+          const content = match[2].trim()
+          if (content.length > 0) {
+            nestingLevel++
+          } else {
+            nestingLevel--
+            if (nestingLevel === 0) {
+              chunks.push(currentChunk.join('\n'))
+              currentChunk = []
+              inCodeBlock = false
+              openingBackticks = ''
+            }
+          }
+        }
+      }
+    }
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk.join('\n'))
+    }
+
+    const processedChunks = chunks
       .map((c) => {
-        return c.startsWith('```') ? c : c.trim()
+        return c.match(/^\s*```/) ? c : c.trim()
       })
       .filter((c) => {
         return c.length > 0
       })
 
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i]
-      const isCode = chunk.startsWith('```')
+    for (let i = 0; i < processedChunks.length; i++) {
+      const chunk = processedChunks[i]
+      const isCode = !!chunk.match(/^\s*```/)
 
       if (i < this._contentParts.length) {
         const part = this._contentParts[i]
