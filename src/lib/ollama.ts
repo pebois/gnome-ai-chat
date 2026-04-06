@@ -4,6 +4,7 @@ import Soup from 'gi://Soup?version=3.0'
 
 import type { Settings, Think } from '@/lib/db/types.js'
 import { debug } from '@/lib/debug.js'
+import { buildSkillPrompt } from '@/lib/skills/index.js'
 import type { Tracker } from '@/lib/tracker.js'
 
 Gio._promisify(Soup.Session.prototype, 'send_async', 'send_finish')
@@ -437,11 +438,7 @@ export class Ollama {
           return textLower.startsWith(`@${s.name.toLowerCase()}`)
         })
         if (skill) {
-          skillPrompt = [
-            `## Active Skill: ${skill.name}`,
-            skill.description ? `*${skill.description}*` : '',
-            skill.prompt
-          ].filter(Boolean).join('\n\n')
+          skillPrompt = buildSkillPrompt(skill)
         }
       }
     }

@@ -61,7 +61,7 @@ export class Database {
     const sql = `
       PRAGMA foreign_keys = ON;
       CREATE TABLE IF NOT EXISTS kv_store (key TEXT PRIMARY KEY, value TEXT);
-      CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY, name TEXT, description TEXT, prompt TEXT);
+      CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY, name TEXT, description TEXT, prompt TEXT, embeddings TEXT);
       CREATE TABLE IF NOT EXISTS conversations (id INTEGER PRIMARY KEY, title TEXT, model TEXT, created_at TEXT, updated_at TEXT, embeddings TEXT);
       CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER, role TEXT, content TEXT, images TEXT, files TEXT, thinking TEXT, tool_calls TEXT, tool_name TEXT, FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE);
       CREATE TABLE IF NOT EXISTS memory_entities (name TEXT PRIMARY KEY, entityType TEXT);

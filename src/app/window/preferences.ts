@@ -7,6 +7,7 @@ import GtkSource from 'gi://GtkSource?version=5'
 import type { AppInterface } from '@/app/index.js'
 import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_SKILLS, DEFAULT_STREAM, DEFAULT_SYNTAX_THEME, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
+import { skillsStore } from '@/lib/db/skills.js'
 import { permission_tiers, think_types } from '@/lib/db/types.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
 
@@ -20,7 +21,7 @@ export class Preferences {
       title: 'Settings',
       modal: true,
       transient_for: app.window,
-      default_width: 500,
+      default_width: 600,
       default_height: 600
     })
 
@@ -334,6 +335,34 @@ export class Preferences {
     indexRow.add_suffix(indexBox)
     searchGroup.add(indexRow)
 
+    const skillsIndexRow = new Adw.ActionRow({
+      title: 'Skills'
+    })
+    const skillsIndexBox = new Gtk.Box({
+      orientation: Gtk.Orientation.HORIZONTAL,
+      spacing: 12,
+      valign: Gtk.Align.CENTER
+    })
+    const skillsIndexBtn = new Gtk.Button({
+      label: 'Full Re-index'
+    })
+    const skillsProgressBar = new Gtk.ProgressBar({
+      visible: false,
+      hexpand: true,
+      valign: Gtk.Align.CENTER
+    })
+    skillsIndexBtn.connect('clicked', () => {
+      if (this._skillsIndexingCancellable) {
+        this._skillsIndexingCancellable.cancel()
+        return
+      }
+      return this._indexSkills(skillsIndexBtn, skillsProgressBar)
+    })
+    skillsIndexBox.append(skillsProgressBar)
+    skillsIndexBox.append(skillsIndexBtn)
+    skillsIndexRow.add_suffix(skillsIndexBox)
+    searchGroup.add(skillsIndexRow)
+
     const filesIndexRow = new Adw.ActionRow({
       title: 'Local RAG Files'
     })
@@ -372,6 +401,45 @@ export class Preferences {
     filesIndexBox.append(filesIndexBtn)
     filesIndexRow.add_suffix(filesIndexBox)
     searchGroup.add(filesIndexRow)
+
+    const skillsGroup = new Adw.PreferencesGroup({
+      title: 'Skills'
+    })
+    page.add(skillsGroup)
+
+    const restoreSkillsRow = new Adw.ActionRow({
+      title: 'Restore Default Skills'
+    })
+    const restoreSkillsBtn = new Gtk.Button({
+      label: 'Restore defaults',
+      valign: Gtk.Align.CENTER
+    })
+    restoreSkillsBtn.add_css_class('row-button')
+    restoreSkillsBtn.connect('clicked', () => {
+      showDestructiveConfirmation(
+        this._window,
+        'Restore Default Skills',
+        'Are you sure you want to reset all builtin skills to their defaults? This cannot be undone.',
+        () => {
+          for (const def of DEFAULT_SKILLS) {
+            const idx = this._app.skills.findIndex((s) => {
+              return s.id === def.id
+            })
+            if (idx !== -1) {
+              this._app.skills[idx] = { ...def }
+            } else {
+              this._app.skills.push({ ...def })
+            }
+          }
+          this._app.skills.sort((a, b) => {
+            return a.name.localeCompare(b.name)
+          })
+          this._app.saveSkills()
+        }
+      )
+    })
+    restoreSkillsRow.add_suffix(restoreSkillsBtn)
+    skillsGroup.add(restoreSkillsRow)
 
     const group = new Adw.PreferencesGroup({
       title: 'Chat History'
@@ -421,45 +489,6 @@ export class Preferences {
     })
     clearStatsRow.add_suffix(clearStatsBtn)
     group.add(clearStatsRow)
-
-    const skillsGroup = new Adw.PreferencesGroup({
-      title: 'Skills'
-    })
-    page.add(skillsGroup)
-
-    const restoreSkillsRow = new Adw.ActionRow({
-      title: 'Restore Default Skills'
-    })
-    const restoreSkillsBtn = new Gtk.Button({
-      label: 'Restore defaults',
-      valign: Gtk.Align.CENTER
-    })
-    restoreSkillsBtn.add_css_class('row-button')
-    restoreSkillsBtn.connect('clicked', () => {
-      showDestructiveConfirmation(
-        this._window,
-        'Restore Default Skills',
-        'Are you sure you want to reset all builtin skills to their defaults? This cannot be undone.',
-        () => {
-          for (const def of DEFAULT_SKILLS) {
-            const idx = this._app.skills.findIndex((s) => {
-              return s.id === def.id
-            })
-            if (idx !== -1) {
-              this._app.skills[idx] = { ...def }
-            } else {
-              this._app.skills.push({ ...def })
-            }
-          }
-          this._app.skills.sort((a, b) => {
-            return a.name.localeCompare(b.name)
-          })
-          this._app.saveSkills()
-        }
-      )
-    })
-    restoreSkillsRow.add_suffix(restoreSkillsBtn)
-    skillsGroup.add(restoreSkillsRow)
   }
 
   private _setupAdvanced(): void {
@@ -565,6 +594,7 @@ export class Preferences {
   }
 
   private _convIndexingCancellable: Gio.Cancellable | null = null
+  private _skillsIndexingCancellable: Gio.Cancellable | null = null
 
   private async _indexConversations(btn: Gtk.Button, progressBar: Gtk.ProgressBar): Promise<void> {
     const oldLabel = btn.get_label()
@@ -592,6 +622,35 @@ export class Preferences {
       btn.set_label(oldLabel ?? '')
       progressBar.set_visible(false)
       this._convIndexingCancellable = null
+    }
+  }
+
+  private async _indexSkills(btn: Gtk.Button, progressBar: Gtk.ProgressBar): Promise<void> {
+    const oldLabel = btn.get_label()
+    btn.set_label('Stop')
+    progressBar.set_fraction(0)
+    progressBar.set_visible(true)
+    this._skillsIndexingCancellable = new Gio.Cancellable()
+
+    try {
+      await skillsStore.indexSkills(this._app.ollama, this._app.skills, true, this._skillsIndexingCancellable, (fraction) => {
+        progressBar.set_fraction(fraction)
+      })
+
+      if (this._skillsIndexingCancellable.is_cancelled()) {
+        this._app.showToast('Skills indexing cancelled')
+      } else {
+        this._app.showToast('Skills indexing completed')
+      }
+    } catch (err) {
+      if (!(err instanceof GLib.Error && err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED))) {
+        console.error('Failed to index skills:', err)
+        this._app.showToast('Skills indexing failed', true)
+      }
+    } finally {
+      btn.set_label(oldLabel ?? '')
+      progressBar.set_visible(false)
+      this._skillsIndexingCancellable = null
     }
   }
 }

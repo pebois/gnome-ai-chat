@@ -16,3 +16,12 @@ export const DEFAULT_SKILLS: Skill[] = [
   reviewer,
   writer
 ]
+
+export const buildSkillPrompt = (skill: { name: string; description?: string; prompt: string }): string => {
+  return [
+    `## Active Skill: ${skill.name}`,
+    skill.description ? `*${skill.description}*` : '',
+    skill.prompt,
+    `**Note**: You were activated because the user mentioned \`@${skill.name}\` at the beginning of their message. Please address their request natively without getting confused by the trigger text.`
+  ].filter(Boolean).join('\n\n')
+}
