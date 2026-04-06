@@ -82,12 +82,6 @@ export class Sidebar {
     this._app = app
   }
 
-  public setBusy(busy: boolean): void {
-    if (this._box) {
-      this._box.set_sensitive(!busy)
-    }
-  }
-
   public setup(box: Gtk.Box, window: Gtk.Window): void {
     this._box = box
     const navigationHeader = new Adw.HeaderBar()
@@ -269,6 +263,19 @@ export class Sidebar {
     }
   }
 
+  public async selectConversationById(id: number): Promise<void> {
+    const conv = this._app.conversations.find((c) => {
+      return c.id === id
+    })
+    if (conv) {
+      await this._selectConversation(conv)
+      const row = this._getRow(conv)
+      if (row) {
+        this._conversationList.select_row(row)
+      }
+    }
+  }
+
   public async createNewConversation(): Promise<void> {
     const now = new Date().toISOString()
     const conversation: Conversation = {
@@ -390,7 +397,7 @@ export class Sidebar {
 
     const summarizeAction = createSimpleAction('summarize', async () => {
       try {
-        this._app.setSummarizing(true)
+        this._app.setSummarizing(conversation.id, true)
         const messages = await conversationsStore.getMessages(conversation.id)
         if (messages.length > 0) {
           const summary = await summarizeConversation({ ollama: this._app.ollama, messages })
@@ -404,7 +411,7 @@ export class Sidebar {
         console.error('Failed to summarize conversation:', err)
         this._app.showToast('Failed to generate summary', true)
       } finally {
-        this._app.setSummarizing(false)
+        this._app.setSummarizing(conversation.id, false)
       }
     })
     actionGroup.add_action(summarizeAction)

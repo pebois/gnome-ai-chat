@@ -32,7 +32,7 @@ export class Chat {
   private _inputClamp!: Adw.Clamp
   private _scrollButton!: Gtk.Button
   private _shouldShowScrollButton = false
-  private _cancellable?: Gio.Cancellable
+  private _cancellables: Map<number, Gio.Cancellable> = new Map()
   private _isInputCentered: boolean = false
   private _centerAnim?: Adw.TimedAnimation
   private _updateBanner!: Adw.Banner
@@ -273,23 +273,32 @@ export class Chat {
       this._history.loadMessages(conversation)
       this._centerInput(false)
     }
+
+    const isGenerating = this._app.isGeneratingMessage(conversation.id)
+    this._input.setSensitive(!isGenerating)
+    this._input.setSendMode(isGenerating ? 'stop' : 'send')
     this._input.grabFocus()
   }
 
   public async sendMessage(): Promise<void> {
-    if (this._app.isGeneratingMessage) {
-      if (this._cancellable) {
-        this._cancellable.cancel()
-        this._cancellable = undefined
-      }
-      return
-    }
-
     const buffer = this._input.getBuffer()
     const text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false).trim()
     const conversation = this._app.conversation
 
-    if (!text || !conversation) {
+    if (!conversation) {
+      return
+    }
+
+    if (this._app.isGeneratingMessage(conversation.id)) {
+      const cancellable = this._cancellables.get(conversation.id)
+      if (cancellable) {
+        cancellable.cancel()
+        this._cancellables.delete(conversation.id)
+      }
+      return
+    }
+
+    if (!text) {
       this._input.grabFocus()
       return
     }
@@ -303,7 +312,7 @@ export class Chat {
       this._centerInput(false)
     }
 
-    this._app.setGeneratingMessage(true)
+    this._app.setGeneratingMessage(conversation.id, true)
     buffer.set_text('', -1)
     this._input.setSensitive(false)
     this._input.setSendMode('stop')
@@ -337,7 +346,8 @@ export class Chat {
 
     this._history.scrollToBottom()
 
-    this._cancellable = new Gio.Cancellable()
+    const cancellable = new Gio.Cancellable()
+    this._cancellables.set(conversation.id, cancellable)
 
     let currentMessageComponent: Message | undefined
     let fullContent = ''
@@ -391,13 +401,13 @@ export class Chat {
         onToolCall: (name, args) => {
           return onToolCall(this._app, name, args)
         },
-        cancellable: this._cancellable
+        cancellable
       })
       for (const msg of messages) {
         conversation.messages.push(msg)
       }
 
-      if (this._cancellable?.is_cancelled() && currentMessageComponent && (fullContent || fullThinking || fullToolCalls.length > 0)) {
+      if (cancellable.is_cancelled() && currentMessageComponent && (fullContent || fullThinking || fullToolCalls.length > 0)) {
         conversation.messages.push({
           role: 'assistant',
           content: fullContent,
@@ -417,15 +427,16 @@ export class Chat {
       }
       void conversationsStore.saveConversations(this._app.conversations)
 
-      if (!this._app.window.is_active) {
+      if (!this._app.window.is_active || this._app.conversation?.id !== conversation.id) {
         const notification = new Gio.Notification()
         notification.set_title('Gnome AI Chat')
         notification.set_body('The assistant has finished responding.')
-        this._app.sendNotification('message-completed', notification)
+        notification.set_default_action_and_target('app.open-conversation', GLib.Variant.new_string(conversation.id.toString()))
+        this._app.sendNotification(`message-completed-${conversation.id}`, notification)
       }
 
       if (isFirstMessage) {
-        this._app.setSummarizing(true)
+        this._app.setSummarizing(conversation.id, true)
         void summarizeConversation({ ollama: this._app.ollama, messages: conversation.messages })
           .then((summary) => {
             if (summary) {
@@ -438,7 +449,7 @@ export class Chat {
             console.error('Failed to auto-summarize conversation:', err)
           })
           .finally(() => {
-            this._app.setSummarizing(false)
+            this._app.setSummarizing(conversation.id, false)
           })
       }
     } catch (err) {
@@ -446,12 +457,14 @@ export class Chat {
       const errorMessage = err instanceof Error ? err.message : String(err)
       this._app.showToast(errorMessage, true)
     } finally {
-      this._app.setGeneratingMessage(false)
-      this._cancellable = undefined
-      this._input.setSensitive(true)
-      this._input.grabFocus()
-      this._input.setSendMode('send')
-      this._history.scrollToBottom()
+      this._app.setGeneratingMessage(conversation.id, false)
+      this._cancellables.delete(conversation.id)
+      if (this._app.conversation?.id === conversation.id) {
+        this._input.setSensitive(true)
+        this._input.grabFocus()
+        this._input.setSendMode('send')
+        this._history.scrollToBottom()
+      }
     }
   }
 
@@ -465,7 +478,7 @@ export class Chat {
 
   public startFromMessage(message: OllamaMessage): void {
     const conversation = this._app.conversation
-    if (!conversation || this._app.isGeneratingMessage) {
+    if (!conversation || this._app.isGeneratingMessage(conversation.id)) {
       return
     }
     const index = conversation.messages.indexOf(message)
