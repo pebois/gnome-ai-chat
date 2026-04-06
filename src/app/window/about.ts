@@ -9,11 +9,12 @@ export function showAboutWindow(app: AppInterface): void {
     application_name: APPLICATION_NAME,
     application_icon: APPLICATION_ID,
     developer_name: 'Pierre-Emmanuel Bois',
+    copyright: '© 2024–2026 Pierre-Emmanuel Bois',
     version: VERSION,
     comments: 'A GNOME chat application that talks to a local Ollama server.',
     website: 'https://github.com/pebois/gnome-ai-chat',
     issue_url: 'https://github.com/pebois/gnome-ai-chat/issues',
-    license_type: 0
+    license_type: 8
   })
   if (app.settings.debug) {
     about.add_css_class('devel')
