@@ -237,8 +237,9 @@ export class Preferences {
     const scrolled = new Gtk.ScrolledWindow({
       propagate_natural_height: true,
       min_content_height: 200,
-      max_content_height: 400,
-      hscrollbar_policy: Gtk.PolicyType.NEVER
+      hscrollbar_policy: Gtk.PolicyType.NEVER,
+      vexpand: true,
+      hexpand: true
     })
     scrolled.add_css_class('view')
     scrolled.add_css_class('frame')
@@ -263,7 +264,9 @@ export class Preferences {
       right_margin: 12,
       top_margin: 12,
       bottom_margin: 12,
-      monospace: true
+      monospace: true,
+      vexpand: true,
+      hexpand: true
     })
     buffer.set_text(this._app.settings.system, -1)
 

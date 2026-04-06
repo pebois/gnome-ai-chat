@@ -1,4 +1,6 @@
 import Adw from 'gi://Adw?version=1'
+import Gdk from 'gi://Gdk'
+import Gio from 'gi://Gio'
 import Gtk from 'gi://Gtk?version=4.0'
 import GtkSource from 'gi://GtkSource?version=5'
 import Pango from 'gi://Pango'
@@ -7,7 +9,7 @@ import type { AppInterface } from '@/app/index.js'
 import { DEFAULT_EMBEDDING_MODEL, DEFAULT_SKILLS, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
 import type { Skill } from '@/lib/db/types.js'
 import { debounce } from '@/lib/timeout.js'
-import { showDestructiveConfirmation } from '@/lib/ui.js'
+import { createMenuItem, createSimpleAction, setupContextMenu, showDestructiveConfirmation } from '@/lib/ui.js'
 import { cosineSimilarity } from '@/lib/utils.js'
 
 export function showSkillsWindow(app: AppInterface): void {
@@ -70,7 +72,7 @@ export function showSkillsWindow(app: AppInterface): void {
 
   const addBtn = new Gtk.Button({
     icon_name: 'list-add-symbolic',
-    tooltip_text: 'New skill',
+    tooltip_text: 'New skill (ctrl+n)',
     valign: Gtk.Align.CENTER
   })
   addBtn.add_css_class('flat')
@@ -78,7 +80,7 @@ export function showSkillsWindow(app: AppInterface): void {
 
   const searchBtn = new Gtk.ToggleButton({
     icon_name: 'system-search-symbolic',
-    tooltip_text: 'Search skills',
+    tooltip_text: 'Search skills (ctrl+f)',
     valign: Gtk.Align.CENTER
   })
   searchBtn.add_css_class('flat')
@@ -87,7 +89,7 @@ export function showSkillsWindow(app: AppInterface): void {
   sidebarToolbar.add_top_bar(sidebarHeader)
 
   const searchEntry = new Gtk.SearchEntry({ hexpand: true })
-  const searchBar = new Gtk.SearchBar({ child: searchEntry, key_capture_widget: win })
+  const searchBar = new Gtk.SearchBar({ child: searchEntry })
   searchBar.connect_entry(searchEntry)
   sidebarToolbar.add_top_bar(searchBar)
 
@@ -183,6 +185,67 @@ export function showSkillsWindow(app: AppInterface): void {
   })
   win.set_content(splitView)
 
+  function createNewSkill(): void {
+    const placeholder: Skill = {
+      id: `skill-${Date.now()}`,
+      name: 'New Skill',
+      description: '',
+      prompt: ''
+    }
+    app.skills.push(placeholder)
+    app.skills.sort((a, b) => {
+      return a.name.localeCompare(b.name)
+    })
+    app.saveSkills()
+    selectedId = placeholder.id
+    refreshList()
+    nameRow.grab_focus()
+  }
+
+  function deleteSkill(id: string): void {
+    const idx = app.skills.findIndex((s) => {
+      return s.id === id
+    })
+    if (idx === -1) {
+      return
+    }
+    const skillName = app.skills[idx].name
+    showDestructiveConfirmation(
+      win,
+      'Delete Skill',
+      `Are you sure you want to delete "${skillName}"? This cannot be undone.`,
+      () => {
+        const i = app.skills.findIndex((s) => {
+          return s.id === id
+        })
+        if (i === -1) {
+          return
+        }
+        app.skills.splice(i, 1)
+        app.saveSkills()
+        if (selectedId === id) {
+          selectedId = app.skills.length > 0 ? app.skills[Math.max(0, i - 1)].id : null
+        }
+        refreshList()
+      }
+    )
+  }
+
+  const winKeyCtrl = new Gtk.EventControllerKey()
+  winKeyCtrl.connect('key-pressed', (_ctrl, keyval, _keycode, state) => {
+    const isCtrl = !!(state & Gdk.ModifierType.CONTROL_MASK)
+    if (isCtrl && keyval === Gdk.KEY_f) {
+      searchBtn.active = !searchBtn.active
+      return true
+    }
+    if (isCtrl && keyval === Gdk.KEY_n) {
+      createNewSkill()
+      return true
+    }
+    return false
+  })
+  win.add_controller(winKeyCtrl)
+
   function skillDiffersFromDefault(skill: Skill): boolean {
     const def = DEFAULT_SKILLS.find((s) => {
       return s.id === skill.id
@@ -236,6 +299,26 @@ export function showSkillsWindow(app: AppInterface): void {
       tooltip_text: skill.name
     })
     rowToSkillId.set(row, skill.id)
+
+    if (!defaultIds.has(skill.id)) {
+      const actionGroup = new Gio.SimpleActionGroup()
+      const deleteAction = createSimpleAction('delete', () => {
+        return deleteSkill(skill.id)
+      })
+      actionGroup.add_action(deleteAction)
+      row.insert_action_group('skill', actionGroup)
+
+      const menu = new Gio.Menu()
+      menu.append_item(createMenuItem('Delete Skill', 'skill.delete', 'user-trash-symbolic'))
+
+      const popover = Gtk.PopoverMenu.new_from_model(menu)
+      popover.set_parent(row)
+      popover.set_has_arrow(false)
+      popover.set_position(Gtk.PositionType.BOTTOM)
+
+      setupContextMenu(row, popover)
+    }
+
     listBox.append(row)
   }
 
@@ -390,51 +473,12 @@ export function showSkillsWindow(app: AppInterface): void {
   descRow.connect('notify::text', saveCurrentSkill)
   buffer.connect('changed', saveCurrentSkill)
 
-  addBtn.connect('clicked', () => {
-    const placeholder: Skill = {
-      id: `skill-${Date.now()}`,
-      name: 'New Skill',
-      description: '',
-      prompt: ''
-    }
-    app.skills.push(placeholder)
-    app.skills.sort((a, b) => {
-      return a.name.localeCompare(b.name)
-    })
-    app.saveSkills()
-    selectedId = placeholder.id
-    refreshList()
-    nameRow.grab_focus()
-  })
+  addBtn.connect('clicked', createNewSkill)
 
   deleteBtn.connect('clicked', () => {
-    if (selectedId === null) {
-      return
+    if (selectedId !== null) {
+      deleteSkill(selectedId)
     }
-    const idx = app.skills.findIndex((s) => {
-      return s.id === selectedId
-    })
-    if (idx === -1) {
-      return
-    }
-    const skillName = app.skills[idx].name
-    showDestructiveConfirmation(
-      win,
-      'Delete Skill',
-      `Are you sure you want to delete "${skillName}"? This cannot be undone.`,
-      () => {
-        const i = app.skills.findIndex((s) => {
-          return s.id === selectedId
-        })
-        if (i === -1) {
-          return
-        }
-        app.skills.splice(i, 1)
-        app.saveSkills()
-        selectedId = app.skills.length > 0 ? app.skills[Math.max(0, i - 1)].id : null
-        refreshList()
-      }
-    )
   })
 
   contentResetBtn.connect('clicked', () => {
