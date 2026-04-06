@@ -19,29 +19,30 @@ import { AppWindow } from '@/app/window/main.js'
 import { showPreferencesWindow } from '@/app/window/preferences.js'
 import { showSkillsWindow } from '@/app/window/skills.js'
 import { APPLICATION_ID, DEFAULT_CHAT_MODEL, DEFAULT_SETTINGS } from '@/lib/constants.js'
+import { conversationsStore } from '@/lib/db/conversations.js'
+import { filesStore } from '@/lib/db/files.js'
+import { db } from '@/lib/db/index.js'
+import { settingsStore } from '@/lib/db/settings.js'
+import { skillsStore } from '@/lib/db/skills.js'
+import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
 import { Ollama } from '@/lib/ollama.js'
-import type { StorageConversation, StorageSettings, StorageSkill } from '@/lib/storage.js'
-import { Storage } from '@/lib/storage.js'
 import { Tracker } from '@/lib/tracker.js'
 import { createSimpleAction } from '@/lib/ui.js'
 import { convertMessageToTitle, pangoEscape } from '@/lib/utils.js'
-import { VectorStore } from '@/lib/vector_store.js'
 
 export interface AppInterface {
   readonly chat: Chat
   readonly conversation?: ChatConversation
-  readonly conversations: StorageConversation[]
+  readonly conversations: Conversation[]
   readonly isBusy: boolean
   readonly isGeneratingMessage: boolean
   readonly isSummarizing: boolean
   readonly model: string
   readonly models: string[]
   readonly ollama: Ollama
-  readonly settings: StorageSettings
+  readonly settings: Settings
   readonly sidebar: Sidebar
-  readonly skills: StorageSkill[]
-  readonly storage: Storage
-  readonly vectorStore: VectorStore
+  readonly skills: Skill[]
   readonly supportsVision: boolean
   readonly toolModels: string[]
   readonly tracker: Tracker
@@ -64,7 +65,7 @@ export interface AppInterface {
   saveSkills(): void
   sendNotification(id: string, notification: Gio.Notification): void
   setConversation(id: number): Promise<void>
-  setConversationTitle(conv: StorageConversation, title: string): void
+  setConversationTitle(conv: Conversation, title: string): void
   setGeneratingMessage(active: boolean): void
   setModel(model: string): void
   setSummarizing(active: boolean): void
@@ -78,20 +79,18 @@ export interface AppInterface {
 
 export class App extends Adw.Application implements AppInterface {
   private _active: boolean
-  private _settings: StorageSettings
+  private _settings: Settings
   private _isExiting: boolean = false
   private _filesIndexingCancellable: Gio.Cancellable | null = null
 
   public conversation?: ChatConversation
-  public conversations: StorageConversation[]
+  public conversations: Conversation[]
   public isGeneratingMessage = false
   public isSummarizing = false
   public model: string
   public models: string[]
   public ollama: Ollama
-  public skills: StorageSkill[] = []
-  public storage: Storage
-  public vectorStore: VectorStore
+  public skills: Skill[] = []
   public supportsVision = true
   public toolModels: string[] = []
   public tracker: Tracker
@@ -107,9 +106,7 @@ export class App extends Adw.Application implements AppInterface {
     this.models = []
     this.model = DEFAULT_CHAT_MODEL
     this.conversations = []
-    this.storage = new Storage(this._settings)
-    this.vectorStore = new VectorStore(this._settings)
-    this.tracker = new Tracker(this.storage)
+    this.tracker = new Tracker()
     this.ollama = new Ollama(this._settings, this.tracker)
   }
 
@@ -121,8 +118,8 @@ export class App extends Adw.Application implements AppInterface {
     return this.window.sidebar
   }
 
-  public get settings(): StorageSettings {
-    return this._settings
+  public get settings(): Settings {
+    return settingsStore.settings
   }
 
   public get isBusy(): boolean {
@@ -201,6 +198,7 @@ export class App extends Adw.Application implements AppInterface {
   public async init(): Promise<void> {
     this.window.setState('loading')
     try {
+      await db.initDb()
       await this._loadSettings()
 
       Adw.StyleManager.get_default().set_color_scheme(this._settings.theme)
@@ -235,21 +233,20 @@ export class App extends Adw.Application implements AppInterface {
     if (this._isExiting) {
       return
     }
+
     this._isExiting = true
 
     this.window.hide()
     this.hold()
 
     try {
-      await this.storage.index(this.ollama, this.conversations, false)
+      await conversationsStore.indexConversations(this.ollama, this.conversations, false)
     } catch (err) {
       console.error('Failed to index on quit:', err)
     }
 
-    this.storage.saveConversations(this.conversations)
-    this.storage.saveSettings(this._settings)
-
-    await this.storage.flush()
+    await conversationsStore.saveConversations(this.conversations)
+    await settingsStore.saveSettings(this._settings)
 
     this.sidebar.clearList()
 
@@ -281,11 +278,11 @@ export class App extends Adw.Application implements AppInterface {
   public saveSettings(): void {
     this.ollama.url = this._settings.url
     this.window.updateCssClass()
-    this.storage.saveSettings(this._settings)
+    void settingsStore.saveSettings(this._settings)
   }
 
   public saveSkills(): void {
-    this.storage.saveSkills(this.skills)
+    void skillsStore.saveSkills(this.skills)
   }
 
   public setModel(model: string): void {
@@ -309,7 +306,7 @@ export class App extends Adw.Application implements AppInterface {
   public setTheme(theme: number): void {
     this._settings.theme = theme
     Adw.StyleManager.get_default().set_color_scheme(theme)
-    this.storage.saveSettings(this._settings)
+    void settingsStore.saveSettings(this._settings)
     const action = this.lookup_action('theme') as Gio.SimpleAction | null
     if (action) {
       action.set_state(GLib.Variant.new_int32(theme))
@@ -318,7 +315,7 @@ export class App extends Adw.Application implements AppInterface {
 
   public setSyntax(theme: string): void {
     this._settings.syntax = theme
-    this.storage.saveSettings(this._settings)
+    void settingsStore.saveSettings(this._settings)
     this.emit('syntax-changed', theme)
   }
 
@@ -329,11 +326,11 @@ export class App extends Adw.Application implements AppInterface {
     } else {
       this.window.remove_css_class('devel')
     }
-    this.storage.saveSettings(this._settings)
+    void settingsStore.saveSettings(this._settings)
     this.showToast(`Debug mode ${this._settings.debug ? 'enabled' : 'disabled'}`)
   }
 
-  public setConversationTitle(conversation: StorageConversation, title: string): void {
+  public setConversationTitle(conversation: Conversation, title: string): void {
     const converted = convertMessageToTitle(title)
     conversation.title = converted
     const conv = this.conversations.find((c) => {
@@ -364,7 +361,7 @@ export class App extends Adw.Application implements AppInterface {
     if (!conv) {
       return
     }
-    const messages = await this.storage.getMessages(conv.id)
+    const messages = await conversationsStore.getMessages(conv.id)
     const conversation = { ...conv, messages }
     this.conversation = conversation
     this.model = conversation.model
@@ -372,7 +369,7 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   public async clearAllConversations(): Promise<void> {
-    this.storage.saveConversations([])
+    await conversationsStore.saveConversations([])
     this.conversations = []
     this.sidebar.clearList()
     await this.sidebar.createNewConversation()
@@ -393,8 +390,8 @@ export class App extends Adw.Application implements AppInterface {
     this.emit('files-indexing-changed', true, 0)
 
     try {
-      const paths = this.vectorStore.getPaths()
-      await this.vectorStore.indexPaths(this.ollama, paths, this._filesIndexingCancellable, (fraction) => {
+      const paths = await filesStore.getPaths()
+      await filesStore.indexPaths(this.ollama, paths, this._filesIndexingCancellable, (fraction) => {
         this.emit('files-indexing-changed', true, fraction)
       })
 
@@ -665,7 +662,7 @@ export class App extends Adw.Application implements AppInterface {
         })
 
       this.conversation.messages = compressedMessages
-      this.storage.saveMessages(this.conversation.id, compressedMessages)
+      void conversationsStore.saveMessages(this.conversation.id, compressedMessages)
       this.conversation.updated_at = new Date().toISOString()
       const conv = this.conversations.find((c) => {
         return c.id === this.conversation?.id
@@ -674,7 +671,7 @@ export class App extends Adw.Application implements AppInterface {
         conv.updated_at = this.conversation.updated_at
         this.sidebar.updateConversation(conv)
       }
-      this.storage.saveConversations(this.conversations)
+      void conversationsStore.saveConversations(this.conversations)
       this.chat.loadMessages(this.conversation)
       this.showToast('Conversation compressed')
     })
@@ -682,8 +679,8 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   private async _loadSettings(): Promise<void> {
-    await this.storage.loadSettings()
-    this.skills = await this.storage.getSkills()
+    await settingsStore.loadSettings()
+    this.skills = await skillsStore.getSkills()
     this.ollama.url = this._settings.url
   }
 
@@ -703,7 +700,7 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   private async _loadConversations(): Promise<void> {
-    this.conversations = await this.storage.getConversations()
+    this.conversations = await conversationsStore.getConversations()
     this.sidebar.populateList()
     if (this.conversations.length > 0) {
       await this.sidebar.selectFirst()

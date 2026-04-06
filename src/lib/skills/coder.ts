@@ -1,6 +1,6 @@
-import type { StorageSkill } from '@/lib/storage.js'
+import type { Skill } from '@/lib/db/types.js'
 
-export const coder: StorageSkill = {
+export const coder: Skill = {
   id: 'coder',
   name: 'Coder',
   description: 'Expert software engineer. Concise, idiomatic, and correct code.',

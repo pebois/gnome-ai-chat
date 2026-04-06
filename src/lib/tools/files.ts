@@ -3,6 +3,7 @@ import GLib from 'gi://GLib?version=2.0'
 
 import type { AppInterface } from '@/app/index.js'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
+import { filesStore } from '@/lib/db/files.js'
 import type { OllamaTool } from '@/lib/ollama.js'
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish')
@@ -42,7 +43,7 @@ export async function handle_search_vector_index(app: AppInterface, args: Record
       return 'Error: Failed to generate embedding for query.'
     }
 
-    const results = app.vectorStore.search(resp.embeddings[0], 5)
+    const results = await filesStore.search(resp.embeddings[0], 5)
     if (results.length === 0) {
       return 'No relevant files found in the index.'
     }

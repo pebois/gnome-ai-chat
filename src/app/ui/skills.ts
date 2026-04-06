@@ -2,7 +2,7 @@ import Gdk from 'gi://Gdk'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/app/index.js'
-import type { StorageSkill } from '@/lib/storage.js'
+import type { Skill } from '@/lib/db/types.js'
 
 export class Skills {
   private _app: AppInterface
@@ -10,7 +10,7 @@ export class Skills {
   private _parent: Gtk.Widget
   private _popover!: Gtk.Popover
   private _listBox!: Gtk.ListBox
-  private _matches: StorageSkill[] = []
+  private _matches: Skill[] = []
 
   constructor(app: AppInterface, textView: Gtk.TextView, parent: Gtk.Widget) {
     this._app = app
@@ -111,7 +111,7 @@ export class Skills {
     return this._popover.get_visible()
   }
 
-  public execute(_skill: StorageSkill): void {
+  public execute(_skill: Skill): void {
     this._popover.popdown()
     this._textView.grab_focus()
   }

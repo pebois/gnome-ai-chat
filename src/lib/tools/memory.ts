@@ -1,5 +1,5 @@
-import type { Entity, Relation } from '@/lib/memory.js'
-import { memoryManager } from '@/lib/memory.js'
+import { memoryStore } from '@/lib/db/memory.js'
+import type { Entity, Relation } from '@/lib/db/types.js'
 import type { OllamaTool } from '@/lib/ollama.js'
 
 export const create_entities: OllamaTool = {
@@ -198,7 +198,7 @@ export const open_nodes: OllamaTool = {
 export async function handle_create_entities(args: Record<string, unknown>): Promise<string> {
   try {
     const entities = (args.entities as Entity[]) || []
-    const added = await memoryManager.createEntities(entities)
+    const added = await memoryStore.createEntities(entities)
     return added.length > 0 ? `Successfully created entities: ${JSON.stringify(added)}` : 'No new entities were created (they may already exist).'
   } catch (err) {
     return `Error creating entities: ${err instanceof Error ? err.message : String(err)}`
@@ -208,7 +208,7 @@ export async function handle_create_entities(args: Record<string, unknown>): Pro
 export async function handle_create_relations(args: Record<string, unknown>): Promise<string> {
   try {
     const relations = (args.relations as Relation[]) || []
-    const added = await memoryManager.createRelations(relations)
+    const added = await memoryStore.createRelations(relations)
     return added.length > 0 ? `Successfully created relations: ${JSON.stringify(added)}` : 'No new relations were created (they may already exist).'
   } catch (err) {
     return `Error creating relations: ${err instanceof Error ? err.message : String(err)}`
@@ -218,7 +218,7 @@ export async function handle_create_relations(args: Record<string, unknown>): Pr
 export async function handle_add_observations(args: Record<string, unknown>): Promise<string> {
   try {
     const observations = (args.observations as { entityName: string; contents: string[] }[]) || []
-    const results = await memoryManager.addObservations(observations)
+    const results = await memoryStore.addObservations(observations)
     return results.length > 0 ? `Successfully added observations: ${JSON.stringify(results)}` : 'No new observations were added.'
   } catch (err) {
     return `Error adding observations: ${err instanceof Error ? err.message : String(err)}`
@@ -228,7 +228,7 @@ export async function handle_add_observations(args: Record<string, unknown>): Pr
 export async function handle_delete_entities(args: Record<string, unknown>): Promise<string> {
   try {
     const entityNames = (args.entityNames as string[]) || []
-    await memoryManager.deleteEntities(entityNames)
+    await memoryStore.deleteEntities(entityNames)
     return 'Entities deleted successfully.'
   } catch (err) {
     return `Error deleting entities: ${err instanceof Error ? err.message : String(err)}`
@@ -238,7 +238,7 @@ export async function handle_delete_entities(args: Record<string, unknown>): Pro
 export async function handle_delete_observations(args: Record<string, unknown>): Promise<string> {
   try {
     const deletions = (args.deletions as { entityName: string; observations: string[] }[]) || []
-    await memoryManager.deleteObservations(deletions)
+    await memoryStore.deleteObservations(deletions)
     return 'Observations deleted successfully.'
   } catch (err) {
     return `Error deleting observations: ${err instanceof Error ? err.message : String(err)}`
@@ -248,7 +248,7 @@ export async function handle_delete_observations(args: Record<string, unknown>):
 export async function handle_delete_relations(args: Record<string, unknown>): Promise<string> {
   try {
     const relations = (args.relations as Relation[]) || []
-    await memoryManager.deleteRelations(relations)
+    await memoryStore.deleteRelations(relations)
     return 'Relations deleted successfully.'
   } catch (err) {
     return `Error deleting relations: ${err instanceof Error ? err.message : String(err)}`
@@ -257,7 +257,7 @@ export async function handle_delete_relations(args: Record<string, unknown>): Pr
 
 export async function handle_read_graph(): Promise<string> {
   try {
-    const graph = await memoryManager.readGraph()
+    const graph = await memoryStore.readGraph()
     return JSON.stringify(graph)
   } catch (err) {
     return `Error reading graph: ${err instanceof Error ? err.message : String(err)}`
@@ -267,7 +267,7 @@ export async function handle_read_graph(): Promise<string> {
 export async function handle_search_nodes(args: Record<string, unknown>): Promise<string> {
   try {
     const query = (args.query as string) || ''
-    const result = await memoryManager.searchNodes(query)
+    const result = await memoryStore.searchNodes(query)
     return JSON.stringify(result)
   } catch (err) {
     return `Error searching nodes: ${err instanceof Error ? err.message : String(err)}`
@@ -277,7 +277,7 @@ export async function handle_search_nodes(args: Record<string, unknown>): Promis
 export async function handle_open_nodes(args: Record<string, unknown>): Promise<string> {
   try {
     const names = (args.names as string[]) || []
-    const result = await memoryManager.openNodes(names)
+    const result = await memoryStore.openNodes(names)
     return JSON.stringify(result)
   } catch (err) {
     return `Error opening nodes: ${err instanceof Error ? err.message : String(err)}`

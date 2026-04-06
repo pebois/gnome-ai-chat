@@ -6,10 +6,10 @@ import type { AppInterface } from '@/app/index.js'
 import { Message } from '@/app/ui/message.js'
 import { ScrollManager } from '@/app/ui/scroll.js'
 import { DEFAULT_LIMIT } from '@/lib/constants.js'
+import type { Conversation } from '@/lib/db/types.js'
 import type { OllamaMessage } from '@/lib/ollama.js'
-import type { StorageConversation } from '@/lib/storage.js'
 
-export interface ChatConversation extends StorageConversation {
+export interface ChatConversation extends Conversation {
   messages: OllamaMessage[]
 }
 

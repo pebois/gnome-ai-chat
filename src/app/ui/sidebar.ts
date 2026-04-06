@@ -6,13 +6,14 @@ import Pango from 'gi://Pango'
 import type { AppInterface } from '@/app/index.js'
 import { summarizeConversation } from '@/lib/agent/summarize.js'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
-import type { StorageConversation } from '@/lib/storage.js'
+import { conversationsStore } from '@/lib/db/conversations.js'
+import type { Conversation } from '@/lib/db/types.js'
 import { debounce } from '@/lib/timeout.js'
 import { createMenuItem, createSimpleAction, setupContextMenu } from '@/lib/ui.js'
 import { convertSummaryToTitle, cosineSimilarity, getDateGroup } from '@/lib/utils.js'
 
 type ConversationRow = Gtk.ListBoxRow & {
-  conversation?: StorageConversation
+  conversation?: Conversation
   isHeader?: boolean
   group?: string
   label: Gtk.Label
@@ -230,7 +231,7 @@ export class Sidebar {
       return dateB - dateA
     })
 
-    const grouped = new Map<string, StorageConversation[]>()
+    const grouped = new Map<string, Conversation[]>()
     for (const conv of sortedConvs) {
       const group = getDateGroup(conv.updated_at || conv.created_at)
       if (!grouped.has(group)) {
@@ -270,7 +271,7 @@ export class Sidebar {
 
   public async createNewConversation(): Promise<void> {
     const now = new Date().toISOString()
-    const conversation: StorageConversation = {
+    const conversation: Conversation = {
       id: Date.now(),
       title: 'New chat',
       model: this._app.model,
@@ -278,7 +279,7 @@ export class Sidebar {
       updated_at: now
     }
     this._app.conversations.unshift(conversation)
-    this._app.storage.saveConversations(this._app.conversations)
+    void conversationsStore.saveConversations(this._app.conversations)
     this.populateList()
     await this._selectConversation(conversation)
     const row = this._getRow(conversation)
@@ -287,7 +288,7 @@ export class Sidebar {
     }
   }
 
-  public setConversationTitle(conversation: StorageConversation, title: string): void {
+  public setConversationTitle(conversation: Conversation, title: string): void {
     const row = this._getRow(conversation)
     if (row) {
       row.label.set_label(title)
@@ -295,7 +296,7 @@ export class Sidebar {
     }
   }
 
-  public updateConversation(conversation: StorageConversation): void {
+  public updateConversation(conversation: Conversation): void {
     const row = this._getRow(conversation)
     if (row) {
       const newGroup = getDateGroup(conversation.updated_at || conversation.created_at)
@@ -313,7 +314,7 @@ export class Sidebar {
     }
   }
 
-  private async _selectConversation(conversation: StorageConversation): Promise<void> {
+  private async _selectConversation(conversation: Conversation): Promise<void> {
     if (this._app.conversation?.id === conversation.id) {
       this._app.chat.scrollToBottom()
       return
@@ -321,11 +322,12 @@ export class Sidebar {
     await this._app.setConversation(conversation.id)
   }
 
-  private async _deleteConversation(conversation: StorageConversation): Promise<void> {
+  private async _deleteConversation(conversation: Conversation): Promise<void> {
     const index = this._app.conversations.indexOf(conversation)
     if (index > -1) {
       this._app.conversations.splice(index, 1)
-      await this._app.storage.deleteMessages(conversation.id)
+      await conversationsStore.deleteMessages(conversation.id)
+      await conversationsStore.deleteConversation(conversation.id)
     }
 
     this._app.showToast('Conversation deleted')
@@ -351,7 +353,7 @@ export class Sidebar {
       }
     }
 
-    this._app.storage.saveConversations(this._app.conversations)
+    void conversationsStore.saveConversations(this._app.conversations)
   }
 
   private _createHeaderRow(label: string): ConversationRow {
@@ -372,7 +374,7 @@ export class Sidebar {
     return row
   }
 
-  private _createRow(conversation: StorageConversation): Gtk.ListBoxRow {
+  private _createRow(conversation: Conversation): Gtk.ListBoxRow {
     const row = new Gtk.ListBoxRow({
       tooltip_text: conversation.title
     }) as ConversationRow
@@ -389,13 +391,13 @@ export class Sidebar {
     const summarizeAction = createSimpleAction('summarize', async () => {
       try {
         this._app.setSummarizing(true)
-        const messages = await this._app.storage.getMessages(conversation.id)
+        const messages = await conversationsStore.getMessages(conversation.id)
         if (messages.length > 0) {
           const summary = await summarizeConversation({ ollama: this._app.ollama, messages })
           if (summary) {
             const title = convertSummaryToTitle(summary)
             this._app.setConversationTitle(conversation, title)
-            this._app.storage.saveConversations(this._app.conversations)
+            void conversationsStore.saveConversations(this._app.conversations)
           }
         }
       } catch (err) {
@@ -444,7 +446,7 @@ export class Sidebar {
     }
   }
 
-  private _getRow(conversation: StorageConversation): ConversationRow | undefined {
+  private _getRow(conversation: Conversation): ConversationRow | undefined {
     for (let w = this._conversationList.get_first_child(); w; w = w.get_next_sibling()) {
       const row = w as ConversationRow
       if (row.conversation && row.conversation.id === conversation.id) {

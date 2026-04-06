@@ -5,7 +5,7 @@ import Pango from 'gi://Pango'
 
 import type { AppInterface } from '@/app/index.js'
 import { DEFAULT_SKILLS, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
-import type { StorageSkill } from '@/lib/storage.js'
+import type { Skill } from '@/lib/db/types.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
 
 export function showSkillsWindow(app: AppInterface): void {
@@ -145,7 +145,7 @@ export function showSkillsWindow(app: AppInterface): void {
   })
   win.set_content(splitView)
 
-  function skillDiffersFromDefault(skill: StorageSkill): boolean {
+  function skillDiffersFromDefault(skill: Skill): boolean {
     const def = DEFAULT_SKILLS.find((s) => {
       return s.id === skill.id
     })
@@ -157,7 +157,7 @@ export function showSkillsWindow(app: AppInterface): void {
       || skill.prompt !== def.prompt
   }
 
-  function loadSkillIntoEditor(skill: StorageSkill | null): void {
+  function loadSkillIntoEditor(skill: Skill | null): void {
     nameRow.set_text(skill?.name ?? '')
     descRow.set_text(skill?.description ?? '')
     buffer.set_text(skill?.prompt ?? '', -1)
@@ -187,7 +187,7 @@ export function showSkillsWindow(app: AppInterface): void {
     }))
   }
 
-  function addSkillRow(skill: StorageSkill): void {
+  function addSkillRow(skill: Skill): void {
     const label = new Gtk.Label({
       label: skill.name,
       xalign: 0,
@@ -344,7 +344,7 @@ export function showSkillsWindow(app: AppInterface): void {
   buffer.connect('changed', saveCurrentSkill)
 
   addBtn.connect('clicked', () => {
-    const placeholder: StorageSkill = {
+    const placeholder: Skill = {
       id: `skill-${Date.now()}`,
       name: 'New Skill',
       description: '',

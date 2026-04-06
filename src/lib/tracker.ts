@@ -1,23 +1,22 @@
 import GLib from 'gi://GLib?version=2.0'
 
 import { DEFAULT_STATS } from '@/lib/constants.js'
-import type { Storage, StoragePerformanceStats } from '@/lib/storage.js'
+import { settingsStore } from '@/lib/db/settings.js'
+import type { PerformanceStats } from '@/lib/db/types.js'
 
 export class Tracker {
-  private _stats: StoragePerformanceStats
+  private _stats: PerformanceStats
   private _startTime: number
-  private _storage: Storage
 
-  constructor(storage: Storage) {
+  constructor() {
     this._stats = DEFAULT_STATS
     this._startTime = GLib.get_monotonic_time()
-    this._storage = storage
     void this._load()
   }
 
   private async _load(): Promise<void> {
     try {
-      const data = await this._storage.getStats()
+      const data = await settingsStore.getStats()
       if (data) {
         this._stats = {
           wallTimeMs: data.wallTimeMs || 0,
@@ -31,7 +30,7 @@ export class Tracker {
     }
   }
 
-  public getStats(): StoragePerformanceStats {
+  public getStats(): PerformanceStats {
     const currentUptimeMs = (GLib.get_monotonic_time() - this._startTime) / 1000
     return {
       ...this._stats,
@@ -80,6 +79,6 @@ export class Tracker {
     this._stats.wallTimeMs = statsToSave.wallTimeMs
     this._startTime = GLib.get_monotonic_time()
 
-    this._storage.saveStats(this._stats)
+    void settingsStore.saveStats(this._stats)
   }
 }
