@@ -14,9 +14,12 @@ This is a GNOME desktop application built with TypeScript, GJS, GTK4, and Libadw
 - **Comprehensive Analytics**: Monitor performance with detailed statistics on API latency, tool execution times, and per-model token consumption.
 - **Advanced Chat Controls**: Full-featured chat management including search, message copying, session restarting, keyboard shortcuts, and smart bottom-scrolling.
 - **Quick Slash Commands**: Execute powerful inline actions (e.g., `/hn` for Hacker News, `/compress` to optimize context) with a dynamic, filterable autocomplete interface.
+- **Local RAG (Chat with your Files)**: Index local folders into a private SQLite vector store to ground model answers in actual code and documentation without cloud uploads.
+- **Skills Editor**: Dedicated, full-size window with markdown syntax highlighting for creating and managing custom persona instructions and system prompts.
+- **Auto-Attach Screenshots**: Effortlessly capture and include screen contents directly in the chat input for visual analysis.
 - **Semantic History Search**: Locate past conversations conceptually using local vector embeddings, grouped chronologically, with seamless background indexing.
 - **Resource Monitoring**: Track active models and their hardware footprint (VRAM, CPU, Total Memory, and TTL) through the 'Running Models' view.
-- **Privacy-First Storage**: 100% local, private data persistence with robust state flushing to prevent data loss upon exit.
+- **Privacy-First Storage**: 100% local, private data persistence using a robust SQLite database to prevent data loss and support efficient, centralized state management.
 
 ## Technologies
 - **Language**: TypeScript (compiled to JavaScript for GJS)
@@ -75,11 +78,11 @@ src/
     index.ts            # App (Adw.Application) — thin orchestrator
     global.css.ts       # bundled CSS
     dialog/
+      files.ts          # local RAG paths management dialog
       image.ts          # image preview and slideshow dialog
       ps.ts             # running models dialog (memory and expiration)
       pull.ts           # model pull dialog (with progress and speed tracking)
       shortcuts.ts      # keyboard shortcuts dialog
-      skill.ts          # skill management dialog
       stats.ts          # performance and usage statistics dialog
       toolcall.ts       # tool call and response details dialog
     page/
@@ -97,14 +100,32 @@ src/
       models.ts         # Models dropdown component
       scroll.ts         # ScrollManager for "stick to bottom" logic
       sidebar.ts        # Sidebar class — left-pane and conversation lifecycle
-      skills.ts         # Skills UI components
+      skills.ts         # Skills Editor UI components
     window/
       about.ts          # about dialog
       main.ts           # AppWindow class — main window orchestrator
       preferences.ts    # preferences dialog (General, Prompt, Data, Advanced, Vector Indexing)
+      skills.ts         # Skills Editor window orchestrator
   lib/
     agent/
       summarize.ts      # AI agent for conversation titles
+    db/
+      conversations.ts  # conversation data store
+      files.ts          # local file RAG vector store
+      index.ts          # SQLite database connection and migration logic
+      memory.ts         # knowledge graph data store
+      settings.ts       # user preferences store
+      skills.ts         # custom skills store
+      types.ts          # database schemas
+    skills/
+      automation.ts     # default instructions for automation
+      canvas.ts         # default instructions for canvas rendering
+      coder.ts          # default instructions for coding
+      files.ts          # default instructions for file search
+      index.ts          # skill initialization logic
+      memory.ts         # default instructions for memory management
+      reviewer.ts       # default instructions for code review
+      writer.ts         # default instructions for writing
     tools/
       index.ts          # tools export and runner
       automation.ts     # desktop automation tools
@@ -123,7 +144,6 @@ src/
     memory.ts           # semantic memory logic
     ollama.ts           # Ollama HTTP API client
     screenshot.ts       # screenshot capture logic
-    storage.ts          # local JSON persistence with debounced writes
     timeout.ts          # async utilities (debounce, poll, sleep)
     tracker.ts          # performance and usage tracking logic
     ui.ts               # UI utility helpers (actions, confirmation dialogs)
@@ -137,12 +157,12 @@ src/
 ### Architecture & State
 - **Orchestration**: `App` (implementing `AppInterface`) is the central source of truth and mediator. All persistent settings and global state transitions flow through it. Use `app.settings` for direct access and `app.saveSettings()` to persist changes. The `handleQuit` lifecycle ensures background indexing and data flushing.
 - **Component isolation**: UI components like `Chat`, `Sidebar`, `Input`, `History`, and `Images` should be passed the `AppInterface` to access shared state and actions, but should manage their own internal widget lifecycle.
-- **Data persistence**: Use the `Storage` class for all filesystem I/O. Data is stored in the user's data directory. The `flush()` method ensures all debounced writes are completed before shutdown.
+- **Data persistence**: Use the `Database` class and specialized stores in `src/lib/db/` for all data persistence. Data is stored in the user's data directory using SQLite. The `flush()` method ensures all pending database operations are completed before shutdown.
 
 ### GJS & GNOME Specifics
 - **GObject Lifecycle**: Always use `GObject.registerClass` for custom widgets or application classes that need to integrate with the GObject type system.
 - **Signal Connections**: When connecting to signals (e.g., `button.connect('clicked', ...)`), ensure that any long-running or repeated connections are properly managed to avoid memory leaks.
-- **Promisification**: Leverage `Gio._promisify` (already set up in `lib/ollama.ts` and `lib/storage.ts`) to avoid callback hell. Do not use sync methods for I/O on the main thread.
+- **Promisification**: Leverage `Gio._promisify` (already set up in `lib/ollama.ts` and database modules) to avoid callback hell. Do not use sync methods for I/O on the main thread.
 - **Markup**: All user-facing text that may contain formatting should be escaped via `pangoEscape()` before being passed to `markdownToPango()` to prevent XSS-like markup injection.
 
 ### UI Patterns
@@ -155,6 +175,7 @@ src/
 - **Definition**: New tools must be defined as an `OllamaTool` object in a relevant file under `lib/tools/`.
 - **Registration**: Export the tool and its handler, then register it in `lib/tools/index.ts` within the `onToolCall` dispatcher.
 - **Execution**: Handlers should return a `string` (or a `Promise<string>`). Web fetching utilizes a singleton `Soup.Session` with `Soup.Cache` for efficiency.
+- **Security & Permissions**: High-risk tools (like shell commands or file writes) must integrate with the Tool Execution Permissions layer to prompt users for approval before executing side effects.
 
 ### Testing & Quality
 - **No Mocks**: Tests must use real components and logic. For network calls, use the actual `Ollama` client pointing to a local instance or expect it to be available.
