@@ -542,7 +542,7 @@ export class App extends Adw.Application implements AppInterface {
       return showSkillsWindow(this)
     })
     this.add_action(skillsAction)
-    this.set_accels_for_action('app.skills', ['<Primary>e'])
+    this.set_accels_for_action('app.skills', ['<Primary><Shift>s'])
 
     const themeAction = new Gio.SimpleAction({
       name: 'theme',

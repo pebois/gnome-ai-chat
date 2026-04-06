@@ -14,7 +14,7 @@ export function showShortcutsDialog(app: AppInterface): void {
   }))
   sectionApp.add(new Adw.ShortcutsItem({
     title: 'Skills Editor',
-    accelerator: '<Primary>e'
+    accelerator: '<Primary><Shift>s'
   }))
   sectionApp.add(new Adw.ShortcutsItem({
     title: 'Shortcuts',
