@@ -132,13 +132,13 @@ export class Message {
     this._widget.append(this._thinkingListBox)
 
     this._thinkingLabel = new Gtk.Label({
-      label: markdownToPango(message.thinking || ''),
-      use_markup: true,
+      use_markup: false,
       wrap: true,
       wrap_mode: Pango.WrapMode.WORD_CHAR,
       xalign: 0,
       selectable: true
     })
+    this._thinkingLabel.set_text(message.thinking || '')
     this._thinkingLabel.add_css_class('dim-label')
     this._thinkingLabel.add_css_class('thinking-label')
     this._thinkingExpander.add_row(this._thinkingLabel)
@@ -334,7 +334,7 @@ export class Message {
               part.buffer!.set_language(lang)
             }
           } else {
-            part.contentLabel!.set_label(markdownToPango(chunk))
+            part.contentLabel!.set_markup(markdownToPango(chunk))
           }
           continue
         } else {
@@ -405,13 +405,13 @@ export class Message {
         })
       } else {
         const label = new Gtk.Label({
-          label: markdownToPango(chunk),
           use_markup: true,
           wrap: true,
           wrap_mode: Pango.WrapMode.WORD_CHAR,
           xalign: 0,
           selectable: true
         })
+        label.set_markup(markdownToPango(chunk))
         this._contentBox.append(label)
         this._contentParts.push({
           type: 'text',
@@ -599,7 +599,7 @@ export class Message {
   public update(updated: OllamaMessage): void {
     this._currentMessage = updated
     this._thinkingListBox.set_visible(!!updated.thinking?.length)
-    this._thinkingLabel.set_markup(markdownToPango(updated.thinking || ''))
+    this._thinkingLabel.set_text(updated.thinking || '')
     this._toolCallsListBox.set_visible(!!updated.tool_calls?.length)
     this._updateToolCalls(updated.tool_calls)
 

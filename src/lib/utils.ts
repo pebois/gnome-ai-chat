@@ -109,6 +109,7 @@ export function pangoEscape(text: string): string {
     return ''
   }
   return text
+    .replace(/\x00/g, '') // Strip null characters to prevent truncation in C-based Pango functions
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -140,7 +141,7 @@ export function markdownToPango(text: string): string {
   // Extract code spans as placeholders so inline formatting can't match inside them
   const codeSpans: string[] = []
   const ph = (i: number) => {
-    return `\x00${i}\x00`
+    return `\x02${i}\x02`
   }
 
   escaped = escaped.replace(/```([\s\S]*?)```/g, (_match, code: string) => {
@@ -176,7 +177,7 @@ export function markdownToPango(text: string): string {
   escaped = escaped.replace(/(^|[^*\w])\*([^*\n]+?)\*(?![*\w])/gm, '$1<i>$2</i>')
 
   // Restore code spans
-  escaped = escaped.replace(/\x00(\d+)\x00/g, (_match: string, i: string) => {
+  escaped = escaped.replace(/\x02(\d+)\x02/g, (_match: string, i: string) => {
     return codeSpans[parseInt(i)]
   })
 
