@@ -63,9 +63,7 @@ export function showSkillsWindow(app: AppInterface): void {
     return s.id
   }))
 
-  const sidebarPage = new Adw.NavigationPage({ title: 'Skills' })
   const sidebarToolbar = new Adw.ToolbarView()
-  sidebarPage.set_child(sidebarToolbar)
 
   const sidebarHeader = new Adw.HeaderBar()
   sidebarHeader.add_css_class('flat')
@@ -103,11 +101,16 @@ export function showSkillsWindow(app: AppInterface): void {
   listScrolled.set_child(listBox)
   sidebarToolbar.set_content(listScrolled)
 
-  const contentPage = new Adw.NavigationPage({ title: 'Editor' })
   const contentToolbar = new Adw.ToolbarView()
-  contentPage.set_child(contentToolbar)
 
   const contentHeader = new Adw.HeaderBar()
+
+  const toggleSidebarBtn = new Gtk.ToggleButton({
+    icon_name: 'sidebar-show-symbolic',
+    tooltip_text: 'Toggle Sidebar (ctrl+b)',
+    active: true
+  })
+  contentHeader.pack_start(toggleSidebarBtn)
 
   const deleteBtn = new Gtk.Button({
     icon_name: 'user-trash-symbolic',
@@ -179,11 +182,20 @@ export function showSkillsWindow(app: AppInterface): void {
 
   contentToolbar.set_content(contentBox)
 
-  const splitView = new Adw.NavigationSplitView({
-    sidebar: sidebarPage,
-    content: contentPage
+  const splitView = new Adw.OverlaySplitView({
+    min_sidebar_width: 200,
+    sidebar_width_fraction: 0.25
   })
+  splitView.set_sidebar(sidebarToolbar)
+  splitView.set_content(contentToolbar)
   win.set_content(splitView)
+
+  toggleSidebarBtn.connect('toggled', () => {
+    splitView.show_sidebar = toggleSidebarBtn.active
+  })
+  splitView.connect('notify::show-sidebar', () => {
+    toggleSidebarBtn.active = splitView.show_sidebar
+  })
 
   function createNewSkill(): void {
     const placeholder: Skill = {
@@ -234,6 +246,10 @@ export function showSkillsWindow(app: AppInterface): void {
   const winKeyCtrl = new Gtk.EventControllerKey()
   winKeyCtrl.connect('key-pressed', (_ctrl, keyval, _keycode, state) => {
     const isCtrl = !!(state & Gdk.ModifierType.CONTROL_MASK)
+    if (isCtrl && keyval === Gdk.KEY_b) {
+      toggleSidebarBtn.active = !toggleSidebarBtn.active
+      return true
+    }
     if (isCtrl && keyval === Gdk.KEY_f) {
       searchBtn.active = !searchBtn.active
       return true
