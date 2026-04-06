@@ -9,6 +9,7 @@ export interface Skill {
   name: string
   description?: string
   prompt: string
+  embeddings?: number[]
 }
 
 export interface Settings {

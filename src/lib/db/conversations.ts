@@ -37,7 +37,7 @@ export class ConversationsStore {
     const ids = conversations.map((c) => {
       return c.id
     }).join(',')
-    
+
     await db.execSql(`DELETE FROM conversations WHERE id NOT IN (${ids});`)
 
     const values = conversations.map((c) => {

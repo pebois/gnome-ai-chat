@@ -4,20 +4,58 @@ import GtkSource from 'gi://GtkSource?version=5'
 import Pango from 'gi://Pango'
 
 import type { AppInterface } from '@/app/index.js'
-import { DEFAULT_SKILLS, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
+import { DEFAULT_EMBEDDING_MODEL, DEFAULT_SKILLS, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
 import type { Skill } from '@/lib/db/types.js'
+import { debounce } from '@/lib/timeout.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
+import { cosineSimilarity } from '@/lib/utils.js'
 
 export function showSkillsWindow(app: AppInterface): void {
   const win = new Adw.Window({
     title: 'Skills',
-    default_width: 750,
-    default_height: 550
+    default_width: 800,
+    default_height: 600
   })
 
   let selectedId: string | null = null
   let isSaving = false
   let searchText = ''
+  let searchEmbedding: number[] | null = null
+  const searchSimilarities = new Map<string, number>()
+
+  const performSearch = debounce(async () => {
+    if (!searchText) {
+      searchEmbedding = null
+      searchSimilarities.clear()
+      refreshList()
+      return
+    }
+    try {
+      const response = await app.ollama.embed({
+        model: DEFAULT_EMBEDDING_MODEL,
+        input: searchText
+      })
+      if (response && response.embeddings && response.embeddings.length > 0) {
+        searchEmbedding = response.embeddings[0]
+        searchSimilarities.clear()
+        for (const skill of app.skills) {
+          if (skill.embeddings) {
+            const similarity = cosineSimilarity(searchEmbedding, skill.embeddings)
+            searchSimilarities.set(skill.id, similarity)
+          } else {
+            searchSimilarities.set(skill.id, 0)
+          }
+        }
+        refreshList()
+      }
+    } catch (err) {
+      console.error('Failed to perform semantic search:', err)
+      searchEmbedding = null
+      searchSimilarities.clear()
+      refreshList()
+    }
+  }, 100)
+
   const rowToSkillId = new Map<Gtk.ListBoxRow, string>()
   const defaultIds = new Set(DEFAULT_SKILLS.map((s) => {
     return s.id
@@ -221,10 +259,16 @@ export function showSkillsWindow(app: AppInterface): void {
 
     if (searchText) {
       builtins = builtins.filter((s) => {
-        return s.name.toLowerCase().includes(searchText)
+        const textMatch = s.name.toLowerCase().includes(searchText)
+        const similarity = searchSimilarities.get(s.id) || 0
+        const semanticMatch = similarity >= 0.5
+        return textMatch || semanticMatch
       })
       customs = customs.filter((s) => {
-        return s.name.toLowerCase().includes(searchText)
+        const textMatch = s.name.toLowerCase().includes(searchText)
+        const similarity = searchSimilarities.get(s.id) || 0
+        const semanticMatch = similarity >= 0.5
+        return textMatch || semanticMatch
       })
     }
 
@@ -308,12 +352,15 @@ export function showSkillsWindow(app: AppInterface): void {
     if (!searchBar.search_mode_enabled) {
       searchEntry.set_text('')
       searchText = ''
+      searchEmbedding = null
+      searchSimilarities.clear()
       refreshList()
     }
   })
   searchEntry.connect('search-changed', () => {
     searchText = searchEntry.get_text().toLowerCase().trim()
     refreshList()
+    performSearch()
   })
 
   listBox.connect('row-selected', (_lb, row) => {
