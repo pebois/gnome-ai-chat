@@ -35,8 +35,6 @@ export interface AppInterface {
   readonly conversation?: ChatConversation
   readonly conversations: Conversation[]
   readonly isBusy: boolean
-  readonly isGeneratingMessage: boolean
-  readonly isSummarizing: boolean
   readonly model: string
   readonly models: string[]
   readonly ollama: Ollama
@@ -61,14 +59,16 @@ export interface AppInterface {
   getShortcut(action_name: string): string | null
   indexFiles(): Promise<void>
   init: () => Promise<void>
+  isGeneratingMessage(id: number): boolean
+  isSummarizing(id: number): boolean
   saveSettings(): void
   saveSkills(): void
   sendNotification(id: string, notification: Gio.Notification): void
   setConversation(id: number): Promise<void>
   setConversationTitle(conv: Conversation, title: string): void
-  setGeneratingMessage(active: boolean): void
+  setGeneratingMessage(id: number, active: boolean): void
   setModel(model: string): void
-  setSummarizing(active: boolean): void
+  setSummarizing(id: number, active: boolean): void
   setTheme(theme: number): void
   setSyntax(theme: string): void
   showToast(message: string, error?: boolean): void
@@ -82,11 +82,11 @@ export class App extends Adw.Application implements AppInterface {
   private _settings: Settings
   private _isExiting: boolean = false
   private _filesIndexingCancellable: Gio.Cancellable | null = null
+  private _generatingConversations: Set<number> = new Set()
+  private _summarizingConversations: Set<number> = new Set()
 
   public conversation?: ChatConversation
   public conversations: Conversation[]
-  public isGeneratingMessage = false
-  public isSummarizing = false
   public model: string
   public models: string[]
   public ollama: Ollama
@@ -123,7 +123,18 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   public get isBusy(): boolean {
-    return this.isGeneratingMessage || this.isSummarizing
+    if (!this.conversation) {
+      return false
+    }
+    return this.isGeneratingMessage(this.conversation.id) || this.isSummarizing(this.conversation.id)
+  }
+
+  public isGeneratingMessage(id: number): boolean {
+    return this._generatingConversations.has(id)
+  }
+
+  public isSummarizing(id: number): boolean {
+    return this._summarizingConversations.has(id)
   }
 
   public vfunc_command_line(command_line: Gio.ApplicationCommandLine): number {
@@ -342,16 +353,26 @@ export class App extends Adw.Application implements AppInterface {
     }
   }
 
-  public setGeneratingMessage(active: boolean): void {
-    this.isGeneratingMessage = active
-    this.sidebar.setBusy(this.isBusy)
-    this.emit('busy-changed', this.isBusy)
+  public setGeneratingMessage(id: number, active: boolean): void {
+    if (active) {
+      this._generatingConversations.add(id)
+    } else {
+      this._generatingConversations.delete(id)
+    }
+    if (this.conversation?.id === id) {
+      this.emit('busy-changed', this.isBusy)
+    }
   }
 
-  public setSummarizing(active: boolean): void {
-    this.isSummarizing = active
-    this.sidebar.setBusy(this.isBusy)
-    this.emit('busy-changed', this.isBusy)
+  public setSummarizing(id: number, active: boolean): void {
+    if (active) {
+      this._summarizingConversations.add(id)
+    } else {
+      this._summarizingConversations.delete(id)
+    }
+    if (this.conversation?.id === id) {
+      this.emit('busy-changed', this.isBusy)
+    }
   }
 
   public async setConversation(id: number): Promise<void> {
@@ -494,6 +515,21 @@ export class App extends Adw.Application implements AppInterface {
     })
     this.add_action(newChatAction)
     this.set_accels_for_action('app.new-conversation', ['<Primary>n'])
+
+    const openConversationAction = createSimpleAction(
+      'open-conversation',
+      (_action, parameter) => {
+        if (!parameter) {
+          return
+        }
+        const idStr = parameter.get_string()[0]
+        const id = parseInt(idStr, 10)
+        void this.sidebar.selectConversationById(id)
+        this.window.present()
+      },
+      GLib.VariantType.new('s')
+    )
+    this.add_action(openConversationAction)
 
     const searchAction = createSimpleAction('search', () => {
       this.window.showSidebar()
