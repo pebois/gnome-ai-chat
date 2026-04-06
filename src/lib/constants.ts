@@ -1,5 +1,5 @@
+import type { PerformanceStats, Settings } from '@/lib/db/types.js'
 import { DEFAULT_SKILLS } from '@/lib/skills/index.js'
-import type { StoragePerformanceStats, StorageSettings } from '@/lib/storage.js'
 
 export { DEFAULT_SKILLS }
 
@@ -79,11 +79,11 @@ export const DEFAULT_SETTINGS = {
     terminal: 'ask',
     files: 'ask'
   }
-} as StorageSettings
+} as Settings
 
 export const DEFAULT_STATS = {
   wallTimeMs: 0,
   apiTimeMs: 0,
   toolTimeMs: 0,
   modelUsage: []
-} as StoragePerformanceStats
+} as PerformanceStats

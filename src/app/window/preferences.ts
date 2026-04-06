@@ -6,7 +6,8 @@ import GtkSource from 'gi://GtkSource?version=5'
 
 import type { AppInterface } from '@/app/index.js'
 import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_SKILLS, DEFAULT_STREAM, DEFAULT_SYNTAX_THEME, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
-import { permission_tiers, think_types } from '@/lib/storage.js'
+import { conversationsStore } from '@/lib/db/conversations.js'
+import { permission_tiers, think_types } from '@/lib/db/types.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
 
 export class Preferences {
@@ -573,7 +574,7 @@ export class Preferences {
     this._convIndexingCancellable = new Gio.Cancellable()
 
     try {
-      await this._app.storage.index(this._app.ollama, this._app.conversations, true, this._convIndexingCancellable, (fraction) => {
+      await conversationsStore.indexConversations(this._app.ollama, this._app.conversations, true, this._convIndexingCancellable, (fraction) => {
         progressBar.set_fraction(fraction)
       })
 

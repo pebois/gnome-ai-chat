@@ -1,6 +1,6 @@
-import type { StorageSkill } from '@/lib/storage.js'
+import type { Skill } from '@/lib/db/types.js'
 
-export const automation: StorageSkill = {
+export const automation: Skill = {
   id: 'automation',
   name: 'Automation',
   description: 'Wayland desktop automation expert using portals.',

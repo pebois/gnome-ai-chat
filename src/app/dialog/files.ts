@@ -6,6 +6,7 @@ import Pango from 'gi://Pango'
 
 import type { AppInterface } from '@/app/index.js'
 import { EmptyPage } from '@/app/page/empty.js'
+import { filesStore } from '@/lib/db/files.js'
 import { poll } from '@/lib/timeout.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
 
@@ -31,7 +32,7 @@ export function showFilesDialog(app: AppInterface): void {
       title: 'Select Folder to Index',
       accept_label: 'Select'
     })
-    fileDialog.select_multiple_folders(app.window, null, (_obj, res) => {
+    fileDialog.select_multiple_folders(app.window, null, async (_obj, res) => {
       try {
         const fileList = fileDialog.select_multiple_folders_finish(res)
         const nFiles = fileList.get_n_items()
@@ -39,8 +40,8 @@ export function showFilesDialog(app: AppInterface): void {
           const file = fileList.get_item(i) as Gio.File
           const path = file.get_path()
           if (path) {
-            app.vectorStore.addPath(path)
-            void app.vectorStore.indexPath(app.ollama, path)
+            await filesStore.addPath(path)
+            void filesStore.indexPath(app.ollama, path)
           }
         }
       } catch {
@@ -57,7 +58,7 @@ export function showFilesDialog(app: AppInterface): void {
     indexingActive = active
     indexingFraction = fraction
 
-    updateContent()
+    void updateContent()
   })
 
   const scrolled = new Gtk.ScrolledWindow({
@@ -124,8 +125,8 @@ export function showFilesDialog(app: AppInterface): void {
     }
   }
 
-  function updateContent(): void {
-    const paths = app.vectorStore.getPaths()
+  async function updateContent(): Promise<void> {
+    const paths = await filesStore.getPaths()
 
     if (paths.length === 0) {
       pathsGroup.visible = false
@@ -207,7 +208,7 @@ export function showFilesDialog(app: AppInterface): void {
         })
         indexBtn.add_css_class('flat')
         indexBtn.connect('clicked', () => {
-          void app.vectorStore.indexPath(app.ollama, p.path)
+          void filesStore.indexPath(app.ollama, p.path)
         })
         actionsBox.append(indexBtn)
         row.add_suffix(actionsBox)
@@ -226,8 +227,8 @@ export function showFilesDialog(app: AppInterface): void {
             app.window,
             'Remove Path',
             `Are you sure you want to stop indexing ${p.path}?`,
-            () => {
-              app.vectorStore.removePath(p.path)
+            async () => {
+              await filesStore.removePath(p.path)
             }
           )
         })
@@ -264,7 +265,7 @@ export function showFilesDialog(app: AppInterface): void {
   }
 
   const stopPolling = poll(() => {
-    updateContent()
+    void updateContent()
   }, 1000, true)
 
   dialog.connect('closed', () => {

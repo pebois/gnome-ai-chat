@@ -13,6 +13,7 @@ import { Input } from '@/app/ui/input.js'
 import { Message } from '@/app/ui/message.js'
 import { summarizeConversation } from '@/lib/agent/summarize.js'
 import { DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
+import { conversationsStore } from '@/lib/db/conversations.js'
 import type { OllamaMessage, OllamaToolCall } from '@/lib/ollama.js'
 import { debounce } from '@/lib/timeout.js'
 import { onToolCall, tools } from '@/lib/tools/index.js'
@@ -323,7 +324,7 @@ export class Chat {
 
     conversation.messages.push(userMessage)
 
-    this._app.storage.saveMessages(conversation.id, conversation.messages)
+    void conversationsStore.saveMessages(conversation.id, conversation.messages)
     conversation.updated_at = new Date().toISOString()
     const conv = this._app.conversations.find((c) => {
       return c.id === conversation.id
@@ -332,7 +333,7 @@ export class Chat {
       conv.updated_at = conversation.updated_at
       this._app.sidebar.updateConversation(conv)
     }
-    this._app.storage.saveConversations(this._app.conversations)
+    void conversationsStore.saveConversations(this._app.conversations)
 
     this._history.scrollToBottom()
 
@@ -405,7 +406,7 @@ export class Chat {
         })
       }
 
-      this._app.storage.saveMessages(conversation.id, conversation.messages)
+      void conversationsStore.saveMessages(conversation.id, conversation.messages)
       conversation.updated_at = new Date().toISOString()
       const conv = this._app.conversations.find((c) => {
         return c.id === conversation.id
@@ -414,7 +415,7 @@ export class Chat {
         conv.updated_at = conversation.updated_at
         this._app.sidebar.updateConversation(conv)
       }
-      this._app.storage.saveConversations(this._app.conversations)
+      void conversationsStore.saveConversations(this._app.conversations)
 
       if (!this._app.window.is_active) {
         const notification = new Gio.Notification()
@@ -425,12 +426,12 @@ export class Chat {
 
       if (isFirstMessage) {
         this._app.setSummarizing(true)
-        summarizeConversation({ ollama: this._app.ollama, messages: conversation.messages })
+        void summarizeConversation({ ollama: this._app.ollama, messages: conversation.messages })
           .then((summary) => {
             if (summary) {
               const title = convertSummaryToTitle(summary)
               this._app.setConversationTitle(conversation, title)
-              this._app.storage.saveConversations(this._app.conversations)
+              void conversationsStore.saveConversations(this._app.conversations)
             }
           })
           .catch((err) => {
@@ -457,7 +458,7 @@ export class Chat {
   public clearAllMessages(): void {
     if (this._app.conversation) {
       this._app.conversation.messages = []
-      void this._app.storage.saveMessages(this._app.conversation.id, [])
+      void conversationsStore.saveMessages(this._app.conversation.id, [])
       this.loadMessages(this._app.conversation)
     }
   }
@@ -473,7 +474,7 @@ export class Chat {
     }
     const text = message.content
     conversation.messages = conversation.messages.slice(0, index)
-    this._app.storage.saveMessages(conversation.id, conversation.messages)
+    void conversationsStore.saveMessages(conversation.id, conversation.messages)
     conversation.updated_at = new Date().toISOString()
     const conv = this._app.conversations.find((c) => {
       return c.id === conversation.id
@@ -482,7 +483,7 @@ export class Chat {
       conv.updated_at = conversation.updated_at
       this._app.sidebar.updateConversation(conv)
     }
-    this._app.storage.saveConversations(this._app.conversations)
+    void conversationsStore.saveConversations(this._app.conversations)
     this.loadMessages(conversation)
     this._input.getBuffer().set_text(text, -1)
   }

@@ -2,8 +2,8 @@ import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import Soup from 'gi://Soup?version=3.0'
 
+import type { Settings, Think } from '@/lib/db/types.js'
 import { debug } from '@/lib/debug.js'
-import type { StorageSettings, StorageThink } from '@/lib/storage.js'
 import type { Tracker } from '@/lib/tracker.js'
 
 Gio._promisify(Soup.Session.prototype, 'send_async', 'send_finish')
@@ -22,7 +22,7 @@ export interface OllamaChatRequest {
   model: string
   system?: string
   stream?: boolean
-  think?: StorageThink | true
+  think?: Think | true
   options?: Record<string, number>
   messages?: OllamaMessage[]
   tools?: OllamaTool[]
@@ -166,10 +166,10 @@ export interface OllamaModelDetails {
 export class Ollama {
   private _tracker: Tracker
   private _session: Soup.Session
-  private _settings: StorageSettings
+  private _settings: Settings
   public url: string
 
-  constructor(settings: StorageSettings, tracker: Tracker) {
+  constructor(settings: Settings, tracker: Tracker) {
     this.url = settings.url
     this._settings = settings
     this._tracker = tracker

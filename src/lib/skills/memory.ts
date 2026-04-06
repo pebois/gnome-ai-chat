@@ -1,6 +1,6 @@
-import type { StorageSkill } from '@/lib/storage.js'
+import type { Skill } from '@/lib/db/types.js'
 
-export const memory: StorageSkill = {
+export const memory: Skill = {
   id: 'memory',
   name: 'Memory',
   description: 'Knowledge Graph expert. Persists facts and relationships about the user.',

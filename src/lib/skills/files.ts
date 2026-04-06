@@ -1,6 +1,6 @@
-import type { StorageSkill } from '@/lib/storage.js'
+import type { Skill } from '@/lib/db/types.js'
 
-export const files: StorageSkill = {
+export const files: Skill = {
   id: 'files',
   name: 'Files',
   description: 'Local RAG expert. Grounded analysis using indexed project files.',
