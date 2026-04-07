@@ -2,53 +2,8 @@ import Gdk from 'gi://Gdk'
 import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import type { AppInterface } from '@/app/index.js'
-
-interface SubCommand {
-  name: string
-  description: string
-  icon?: string
-}
-
-interface Command {
-  name: string
-  description: string
-  icon: string
-  subCommands?: SubCommand[]
-}
-
-const commands: Command[] = [
-  { name: 'about', description: 'Show about dialog', icon: 'help-about-symbolic' },
-  { name: 'clear', description: 'Clear current conversation', icon: 'edit-clear-all-symbolic' },
-  { name: 'compress', description: 'Strip think and tools from conversation', icon: 'package-x-generic-symbolic' },
-  { name: 'debug', description: 'Toggle debug mode', icon: 'bug-symbolic' },
-  {
-    name: 'files',
-    description: 'Manage Local RAG files and folders',
-    icon: 'folder-symbolic',
-    subCommands: [
-      { name: 'manage', description: 'Open the indexed folders management window', icon: 'preferences-system-symbolic' }
-    ]
-  },
-  { name: 'hn', description: 'Get Hacker News headlines', icon: 'newspaper-symbolic' },
-  {
-    name: 'memory',
-    description: 'Manage knowledge graph memory',
-    icon: 'note-symbolic',
-    subCommands: [
-      { name: 'summarize', description: 'Summarize stored facts and user history', icon: 'format-justify-left-symbolic' },
-      { name: 'clean', description: 'Identify and suggest deletions for redundant data', icon: 'edit-clear-symbolic' },
-      { name: 'optimize', description: 'Restructure graph for better performance and clarity', icon: 'view-grid-symbolic' }
-    ]
-  },
-  { name: 'ps', description: 'Show running models', icon: 'processor-symbolic' },
-  { name: 'pull', description: 'Pull a new model', icon: 'folder-download-symbolic' },
-  { name: 'quit', description: 'Exit the application', icon: 'application-exit-symbolic' },
-  { name: 'settings', description: 'Open preferences', icon: 'preferences-system-symbolic' },
-  { name: 'skills', description: 'Open skills editor', icon: 'avatar-default-symbolic' },
-  { name: 'shortcuts', description: 'Open keyboard shortcuts', icon: 'preferences-desktop-keyboard-shortcuts-symbolic' },
-  { name: 'stats', description: 'Open performance statistics', icon: 'resources-symbolic' }
-]
+import type { AppInterface } from '@/lib/app.js'
+import { type Command, COMMANDS } from '@/lib/commands/index.js'
 
 export class Commands {
   private _app: AppInterface
@@ -153,7 +108,7 @@ export class Commands {
         })) {
           this.execute(`${this._currentCommand.name} ${selected.name}`)
         } else {
-          const cmd = commands.find((c) => {
+          const cmd = COMMANDS.find((c) => {
             return c.name === selected.name
           })
           if (cmd?.subCommands) {
@@ -176,7 +131,7 @@ export class Commands {
     const commandName = parts[0]
     const parameter = (parts.length > 1 || ['memory', 'files'].includes(commandName))
       ? GLib.Variant.new_string(commandPath)
-      : null
+      : undefined
     this._app.activateAction(commandName, parameter)
 
     const buffer = this._textView.get_buffer()
@@ -227,7 +182,7 @@ export class Commands {
             })) {
               this.execute(`${this._currentCommand.name} ${selected.name}`)
             } else {
-              const cmd = commands.find((c) => {
+              const cmd = COMMANDS.find((c) => {
                 return c.name === selected.name
               })
               if (cmd?.subCommands) {
@@ -279,8 +234,8 @@ export class Commands {
     if (parts.length > 1) {
       const baseCmdName = parts[0]
       const subFilter = parts.slice(1).join(' ')
-      const baseCmd = commands.find((c) => {
-        return c.name === baseCmdName
+      const baseCmd = COMMANDS.find((c) => {
+        return c.name === baseCmdName && c.visible !== false
       })
       if (baseCmd && baseCmd.subCommands) {
         this._currentCommand = baseCmd
@@ -292,14 +247,14 @@ export class Commands {
             return {
               name: sub.name,
               description: sub.description,
-              icon: sub.icon || baseCmd.icon
+              icon: sub.icon
             }
           })
         filterText = subFilter
       }
     } else {
-      matches = commands.filter((cmd) => {
-        return cmd.name.startsWith(filterText)
+      matches = COMMANDS.filter((cmd) => {
+        return cmd.visible !== false && cmd.name.startsWith(filterText)
       })
     }
 

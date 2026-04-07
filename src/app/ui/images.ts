@@ -5,7 +5,7 @@ import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import { showImageDialog } from '@/app/dialog/image.js'
-import type { AppInterface } from '@/app/index.js'
+import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_SPACING } from '@/lib/constants.js'
 
 export class Images {

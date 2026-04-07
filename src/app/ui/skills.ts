@@ -1,7 +1,7 @@
 import Gdk from 'gi://Gdk'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import type { AppInterface } from '@/app/index.js'
+import type { AppInterface } from '@/lib/app.js'
 import type { Skill } from '@/lib/db/types.js'
 
 export class Skills {

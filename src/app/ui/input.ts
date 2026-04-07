@@ -3,11 +3,11 @@ import Gdk from 'gi://Gdk'
 import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import type { AppInterface } from '@/app/index.js'
 import { Attachments } from '@/app/ui/attachments.js'
 import { Commands } from '@/app/ui/commands.js'
 import { Models } from '@/app/ui/models.js'
 import { Skills } from '@/app/ui/skills.js'
+import type { AppInterface } from '@/lib/app.js'
 
 export class Input {
   private _app: AppInterface

@@ -1,5 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function debug(tag: string, msg: string, ...args: any[]): void {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+export function debug(tag: string, msg: string, ...args: unknown[]): void {
   console.log(`[${tag}] ${msg}`, ...args)
 }

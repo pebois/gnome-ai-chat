@@ -5,7 +5,7 @@ import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import type { AppInterface } from '@/app/index.js'
+import type { AppInterface } from '@/lib/app.js'
 
 export function showImageDialog(app: AppInterface, images: string[], startIndex: number): void {
   const dialog = new Adw.Dialog({

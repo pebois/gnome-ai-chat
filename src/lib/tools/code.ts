@@ -1,7 +1,7 @@
 import Gio, { type File } from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
-import type { AppInterface } from '@/app/index.js'
+import type { AppInterface } from '@/lib/app.js'
 import type { OllamaTool } from '@/lib/ollama.js'
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish')

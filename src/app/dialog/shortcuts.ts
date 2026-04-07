@@ -1,6 +1,6 @@
 import Adw from 'gi://Adw?version=1'
 
-import type { AppInterface } from '@/app/index.js'
+import type { AppInterface } from '@/lib/app.js'
 
 export function showShortcutsDialog(app: AppInterface): void {
   const shortcutsWin = new Adw.ShortcutsDialog()
