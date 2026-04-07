@@ -94,9 +94,6 @@ export class Sidebar {
     })
     newChatButton.connect('clicked', () => {
       this.createNewConversation()
-        .then(() => {
-          this._app.showToast('Conversation added')
-        })
         .catch((err) => {
           console.error('Failed to create new conversation:', err)
         })
@@ -343,8 +340,6 @@ export class Sidebar {
       await conversationsStore.deleteMessages(conversation.id)
       await conversationsStore.deleteConversation(conversation.id)
     }
-
-    this._app.showToast('Conversation deleted')
 
     if (this._app.conversations.length === 0) {
       await this.createNewConversation()

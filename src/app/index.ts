@@ -289,7 +289,6 @@ export class App extends Adw.Application implements AppInterface {
       this.window.remove_css_class('devel')
     }
     void settingsStore.saveSettings(this.settings)
-    this.showToast(`Debug mode ${this.settings.debug ? 'enabled' : 'disabled'}`)
   }
 
   public setConversationTitle(conversation: Conversation, title: string): void {
@@ -368,12 +367,6 @@ export class App extends Adw.Application implements AppInterface {
       await filesStore.indexPaths(this.ollama, paths, this._filesIndexingCancellable, (fraction) => {
         this.emit('files-indexing-changed', true, fraction)
       })
-
-      if (this._filesIndexingCancellable.is_cancelled()) {
-        this.showToast('Files indexing cancelled')
-      } else {
-        this.showToast('Files indexing completed')
-      }
     } catch (err) {
       if (!(err instanceof GLib.Error && err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED))) {
         console.error('Failed to index files:', err)
