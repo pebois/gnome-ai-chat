@@ -234,7 +234,6 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
     }).then(() => {
       GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
         try {
-          app.showToast(`Successfully pulled ${modelName}`)
           void app.init()
           window.close()
         } catch (e) {

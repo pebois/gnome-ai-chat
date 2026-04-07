@@ -573,12 +573,6 @@ export class Preferences {
       await conversationsStore.indexConversations(this._app.ollama, this._app.conversations, true, this._convIndexingCancellable, (fraction) => {
         progressBar.set_fraction(fraction)
       })
-
-      if (this._convIndexingCancellable.is_cancelled()) {
-        this._app.showToast('Indexing cancelled')
-      } else {
-        this._app.showToast('Indexing completed')
-      }
     } catch (err) {
       if (!(err instanceof GLib.Error && err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED))) {
         console.error('Failed to index conversations:', err)
@@ -602,12 +596,6 @@ export class Preferences {
       await skillsStore.indexSkills(this._app.ollama, this._app.skills, true, this._skillsIndexingCancellable, (fraction) => {
         progressBar.set_fraction(fraction)
       })
-
-      if (this._skillsIndexingCancellable.is_cancelled()) {
-        this._app.showToast('Skills indexing cancelled')
-      } else {
-        this._app.showToast('Skills indexing completed')
-      }
     } catch (err) {
       if (!(err instanceof GLib.Error && err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED))) {
         console.error('Failed to index skills:', err)
