@@ -19,7 +19,6 @@ describe('RecursiveCharacterTextSplitter', () => {
     const chunk1 = chunks[0]
     const chunk2 = chunks[1]
 
-    // The overlap at the end of chunk1 should be at the start of chunk2
     const overlapText = chunk1.slice(chunk1.length - 100)
     expect(chunk2.startsWith(overlapText)).toBe(true)
   })
