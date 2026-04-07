@@ -37,6 +37,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Linting & Type Safety**: Resolved several `@typescript-eslint` warnings related to unsafe arguments and returns in `src/app/index.ts` and `src/lib/commands/system.ts`.
 - **Action Initialization**: Fixed a `Gjs-CRITICAL` error in `src/app/index.ts` by ensuring that `Gio.SimpleAction` properties are correctly initialized with `null` when `undefined`, satisfying the underlying GObject requirements.
 
+## [1.5.1] - 2026-04-07
+
+### Added
+- Updated all skill prompts with detailed tool usage instructions and strategies for maximum agent orientation.
+
+### Changed
+- The Writer skill prompt now explicitly states it should not use any tools to ensure focus on pure content creation.
+- The Reviewer skill prompt no longer includes `run_shell_command` to focus on code analysis rather than execution.
+- The Automation skill prompt no longer includes `get_system_info` or `launch_app`.
+- The Automation, Canvas, Coder, Files, Memory, and Reviewer skills have received more detailed and tool-integrated prompts.
+
 ## [1.5.0] - 2026-04-06
 
 ### Added
