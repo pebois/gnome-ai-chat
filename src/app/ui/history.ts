@@ -31,6 +31,7 @@ export class History {
   private _currentOffset = 0
   private _loading = false
   private _loaded = false
+  private _messages: Message[] = []
 
   public get stickToBottom(): boolean {
     return this._scrollManager.stickToBottom
@@ -203,8 +204,10 @@ export class History {
 
     if (atStart) {
       this._list.prepend(msgComponent.widget)
+      this._messages.unshift(msgComponent)
     } else {
       this._list.append(msgComponent.widget)
+      this._messages.push(msgComponent)
     }
 
     const row = msgComponent.widget.get_parent() as Gtk.ListBoxRow
@@ -231,6 +234,10 @@ export class History {
   }
 
   public clear(): void {
+    this._messages.forEach((m) => {
+      m.destroy()
+    })
+    this._messages = []
     this._list.remove_all()
     this._banner.revealed = false
     this._loaded = true

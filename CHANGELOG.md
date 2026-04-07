@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Disabled semantic search indexing on app close to significantly improve shutdown times.
 
 ### Fixed
+- **Memory Leaks**: Addressed critical memory leaks in chat messages, preferences, and skills dialogs by explicitly managing component lifecycles and utilizing `close-request` handlers instead of the deprecated GTK4 `destroy` signal.
 - **Test Configuration**: Resolved TypeScript errors (`TS5011`, `TS5101`) preventing tests from running by explicitly setting `rootDir` and silencing `baseUrl` deprecation warnings in `tsconfig.json`.
 
 ### Added
