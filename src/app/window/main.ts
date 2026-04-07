@@ -2,12 +2,12 @@ import Adw from 'gi://Adw?version=1'
 import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import type { AppInterface } from '@/app/index.js'
 import { EmptyPage } from '@/app/page/empty.js'
 import { ErrorPage } from '@/app/page/error.js'
 import { LoadingPage } from '@/app/page/loading.js'
 import { Chat } from '@/app/ui/chat.js'
 import { Sidebar } from '@/app/ui/sidebar.js'
+import type { AppInterface } from '@/lib/app.js'
 import { createStatusPageWrapper } from '@/lib/ui.js'
 
 export class AppWindow extends Adw.ApplicationWindow {

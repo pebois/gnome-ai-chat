@@ -4,7 +4,7 @@ import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 import GtkSource from 'gi://GtkSource?version=5'
 
-import type { AppInterface } from '@/app/index.js'
+import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_SKILLS, DEFAULT_STREAM, DEFAULT_SYNTAX_THEME, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
 import { skillsStore } from '@/lib/db/skills.js'

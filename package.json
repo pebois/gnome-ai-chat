@@ -34,7 +34,7 @@
     "@stylistic/eslint-plugin": "^5.10.0",
     "@types/jest": "^30.0.0",
     "eslint": "^10.2.0",
-    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-simple-import-sort": "^13.0.0",
     "eslint-plugin-sort-destructure-keys": "^3.0.0",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.9",

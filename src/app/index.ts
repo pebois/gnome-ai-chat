@@ -5,19 +5,13 @@ import GLib from 'gi://GLib?version=2.0'
 import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import { showFilesDialog } from '@/app/dialog/files.js'
-import { showRunningModelsDialog } from '@/app/dialog/ps.js'
-import { showPullDialog } from '@/app/dialog/pull.js'
-import { showShortcutsDialog } from '@/app/dialog/shortcuts.js'
-import { showStatsDialog } from '@/app/dialog/stats.js'
 import { css } from '@/app/global.css.js'
 import type { Chat } from '@/app/ui/chat.js'
 import type { ChatConversation } from '@/app/ui/history.js'
 import type { Sidebar } from '@/app/ui/sidebar.js'
-import { showAboutWindow } from '@/app/window/about.js'
 import { AppWindow } from '@/app/window/main.js'
-import { showPreferencesWindow } from '@/app/window/preferences.js'
-import { showSkillsWindow } from '@/app/window/skills.js'
+import type { AppInterface } from '@/lib/app.js'
+import { COMMANDS } from '@/lib/commands/index.js'
 import { APPLICATION_ID, DEFAULT_CHAT_MODEL, DEFAULT_SETTINGS } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
 import { filesStore } from '@/lib/db/files.js'
@@ -27,55 +21,7 @@ import { skillsStore } from '@/lib/db/skills.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
 import { Ollama } from '@/lib/ollama.js'
 import { Tracker } from '@/lib/tracker.js'
-import { createSimpleAction } from '@/lib/ui.js'
 import { convertMessageToTitle, pangoEscape } from '@/lib/utils.js'
-
-export interface AppInterface {
-  readonly chat: Chat
-  readonly conversation?: ChatConversation
-  readonly conversations: Conversation[]
-  readonly isBusy: boolean
-  readonly model: string
-  readonly models: string[]
-  readonly ollama: Ollama
-  readonly settings: Settings
-  readonly sidebar: Sidebar
-  readonly skills: Skill[]
-  readonly supportsVision: boolean
-  readonly toolModels: string[]
-  readonly tracker: Tracker
-  readonly window: AppWindow
-
-  activateAction(action_name: string, parameter: GLib.Variant | null): void
-  cancelFilesIndexing(): void
-  clearAllConversations(): Promise<void>
-  connect(sigName: 'busy-changed', callback: (_: number, isBusy: boolean) => void): number
-  connect(sigName: 'capabilities-changed', callback: (_: number) => void): number
-  connect(sigName: 'files-indexing-changed', callback: (_: number, active: boolean, fraction: number) => void): number
-  connect(sigName: 'syntax-changed', callback: (_: number, theme: string) => void): number
-  connect(sigName: string, callback: (...args: unknown[]) => void): number
-  disconnect(id: number): void
-  focusInput(): void
-  getShortcut(action_name: string): string | null
-  indexFiles(): Promise<void>
-  init: () => Promise<void>
-  isGeneratingMessage(id: number): boolean
-  isSummarizing(id: number): boolean
-  saveSettings(): void
-  saveSkills(): void
-  sendNotification(id: string, notification: Gio.Notification): void
-  setConversation(id: number): Promise<void>
-  setConversationTitle(conv: Conversation, title: string): void
-  setGeneratingMessage(id: number, active: boolean): void
-  setModel(model: string): void
-  setSummarizing(id: number, active: boolean): void
-  setTheme(theme: number): void
-  setSyntax(theme: string): void
-  showToast(message: string, error?: boolean): void
-  toggleDebug(): void
-  toggleSidebar(): void
-  requestToolPermission(heading: string, body: string): Promise<boolean>
-}
 
 export class App extends Adw.Application implements AppInterface {
   private _active: boolean
@@ -436,8 +382,8 @@ export class App extends Adw.Application implements AppInterface {
     this.send_notification(id, notification)
   }
 
-  public activateAction(action_name: string, parameter: GLib.Variant | null): void {
-    this.activate_action(action_name, parameter)
+  public activateAction(action_name: string, parameter?: GLib.Variant): void {
+    this.activate_action(action_name, parameter || null)
   }
 
   private _setupStyles(): void {
@@ -448,7 +394,7 @@ export class App extends Adw.Application implements AppInterface {
 
   private _setupIcon(): void {
     try {
-      const [filename] = GLib.filename_from_uri(import.meta.url)
+      const [filename] = GLib.filename_from_uri(import.meta.url as string)
       const distDir = GLib.path_get_dirname(filename)
       const rootDir = GLib.path_get_dirname(distDir)
 
@@ -499,219 +445,22 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   private _setupActions(): void {
-    const clearAction = createSimpleAction('clear', () => {
-      this.chat.clearAllMessages()
-    })
-    this.add_action(clearAction)
-
-    const toggleSidebarAction = createSimpleAction('toggle-sidebar', () => {
-      this.window.toggleSidebar()
-    })
-    this.add_action(toggleSidebarAction)
-    this.set_accels_for_action('app.toggle-sidebar', ['<Primary>b'])
-
-    const newChatAction = createSimpleAction('new-conversation', () => {
-      return this.sidebar.createNewConversation()
-    })
-    this.add_action(newChatAction)
-    this.set_accels_for_action('app.new-conversation', ['<Primary>n'])
-
-    const openConversationAction = createSimpleAction(
-      'open-conversation',
-      (_action, parameter) => {
-        if (!parameter) {
-          return
-        }
-        const idStr = parameter.get_string()[0]
-        const id = parseInt(idStr, 10)
-        void this.sidebar.selectConversationById(id)
-        this.window.present()
-      },
-      GLib.VariantType.new('s')
-    )
-    this.add_action(openConversationAction)
-
-    const searchAction = createSimpleAction('search', () => {
-      this.window.showSidebar()
-      this.sidebar.searchButton.active = true
-      this.sidebar.searchEntry.grab_focus()
-    })
-    this.add_action(searchAction)
-    this.set_accels_for_action('app.search', ['<Primary>f'])
-
-    const settingsAction = createSimpleAction('settings', () => {
-      return showPreferencesWindow(this)
-    })
-    this.add_action(settingsAction)
-    this.set_accels_for_action('app.settings', ['<Primary>comma'])
-
-    const shortcutsAction = createSimpleAction('shortcuts', () => {
-      return showShortcutsDialog(this)
-    })
-    this.add_action(shortcutsAction)
-    this.set_accels_for_action('app.shortcuts', ['<Primary>question'])
-
-    const debugAction = createSimpleAction('debug', () => {
-      return this.toggleDebug()
-    })
-    this.add_action(debugAction)
-
-    const psAction = createSimpleAction('ps', () => {
-      return showRunningModelsDialog(this)
-    })
-    this.add_action(psAction)
-    this.set_accels_for_action('app.ps', ['<Primary>p'])
-
-    const pullAction = createSimpleAction('pull', () => {
-      return showPullDialog(this)
-    })
-    this.add_action(pullAction)
-    this.set_accels_for_action('app.pull', ['<Primary>j'])
-
-    const statsAction = createSimpleAction('stats', () => {
-      return showStatsDialog(this)
-    })
-    this.add_action(statsAction)
-    this.set_accels_for_action('app.stats', ['<Primary>i'])
-
-    const skillsAction = createSimpleAction('skills', () => {
-      return showSkillsWindow(this)
-    })
-    this.add_action(skillsAction)
-    this.set_accels_for_action('app.skills', ['<Primary><Shift>s'])
-
-    const themeAction = new Gio.SimpleAction({
-      name: 'theme',
-      parameter_type: GLib.VariantType.new('i'),
-      state: GLib.Variant.new_int32(this._settings.theme)
-    })
-    themeAction.connect('activate', (_action, parameter) => {
-      if (parameter) {
-        const theme = parameter.get_int32()
-        this.setTheme(theme)
-        themeAction.set_state(parameter)
-      }
-    })
-    this.add_action(themeAction)
-
-    const aboutAction = createSimpleAction('about', () => {
-      return showAboutWindow(this)
-    })
-    this.add_action(aboutAction)
-
-    const quitAction = createSimpleAction('quit', () => {
-      return this.handleQuit()
-    })
-    this.add_action(quitAction)
-    this.set_accels_for_action('app.quit', ['<Primary>q'])
-
-    const focusInputAction = createSimpleAction('focus-input', () => {
-      return this.chat.input.grabFocus()
-    })
-    this.add_action(focusInputAction)
-    this.set_accels_for_action('app.focus-input', ['<Primary>l'])
-
-    const hnAction = createSimpleAction('hn', () => {
-      this.chat.input.getBuffer().set_text('http get https://hnrss.org/best list headlines', -1)
-      void this.chat.sendMessage()
-    })
-    this.add_action(hnAction)
-
-    const memoryAction = new Gio.SimpleAction({
-      name: 'memory',
-      parameter_type: GLib.VariantType.new('s')
-    })
-    memoryAction.connect('activate', (_action, parameter) => {
-      const variant = parameter as GLib.Variant
-      const text = variant.get_string()[0]
-      const parts = text.split(' ')
-
-      if (parts.length < 2) {
-        this.showToast('Usage: /memory [summarize|clean|optimize]')
-        return
-      }
-
-      const subCommand = parts[1].toLowerCase()
-      let prompt: string
-      switch (subCommand) {
-        case 'summarize':
-          prompt = '@Memory Use your memory tools to read the knowledge graph and provide a concise summary of what you know about me and our past interactions.'
-          break
-        case 'clean':
-          prompt = '@Memory Use your memory tools to review the knowledge graph and identify any duplicate, contradictory, or outdated information. Suggest what should be deleted or corrected.'
-          break
-        case 'optimize':
-          prompt = '@Memory Use your memory tools to optimize the knowledge graph. Look for opportunities to merge similar entities, refine relationship types to be more descriptive, and ensure observations are atomic and well-structured.'
-          break
-        default:
-          this.showToast(`Unknown memory command: ${subCommand}`)
-          return
-      }
-
-      const buffer = this.chat.input.getBuffer()
-      buffer.set_text(prompt, -1)
-      void this.chat.sendMessage()
-    })
-    this.add_action(memoryAction)
-
-    const filesAction = new Gio.SimpleAction({
-      name: 'files',
-      parameter_type: GLib.VariantType.new('s')
-    })
-    filesAction.connect('activate', (_action, parameter) => {
-      let subCommand = 'manage'
-      if (parameter) {
-        const variant = parameter
-        const text = variant.get_string()[0]
-        const parts = text.split(' ')
-        if (parts.length >= 2) {
-          subCommand = parts[1].toLowerCase()
-        } else if (parts.length === 1 && parts[0] && !parts[0].startsWith('/') && parts[0] !== 'files') {
-          subCommand = parts[0].toLowerCase()
-        }
-      }
-
-      if (subCommand === 'manage') {
-        showFilesDialog(this)
-      } else {
-        this.showToast(`Unknown files command: ${subCommand}`)
-      }
-    })
-    this.add_action(filesAction)
-    this.set_accels_for_action('app.files(\'manage\')', ['<Primary><Shift>f'])
-
-    const compressAction = createSimpleAction('compress', () => {
-      if (!this.conversation) {
-        return
-      }
-
-      const compressedMessages = this.conversation.messages
-        .filter((msg) => {
-          return msg.role !== 'tool'
-        })
-        .map((msg) => {
-          if (msg.role === 'assistant') {
-            const { thinking: _, tool_calls: __, ...rest } = msg
-            return rest
-          }
-          return msg
-        })
-
-      this.conversation.messages = compressedMessages
-      void conversationsStore.saveMessages(this.conversation.id, compressedMessages)
-      this.conversation.updated_at = new Date().toISOString()
-      const conv = this.conversations.find((c) => {
-        return c.id === this.conversation?.id
+    COMMANDS.forEach((cmd) => {
+      const state = cmd.getInitialState?.(this)
+      const action = new Gio.SimpleAction({
+        name: cmd.name,
+        ...(cmd.parameterType ? { parameter_type: cmd.parameterType } : {}),
+        ...(state ? { state } : {})
       })
-      if (conv) {
-        conv.updated_at = this.conversation.updated_at
-        this.sidebar.updateConversation(conv)
+      action.connect('activate', (_action, parameter) => {
+        void cmd.activate(this, parameter ?? undefined)
+      })
+      this.add_action(action)
+
+      if (cmd.accels) {
+        this.set_accels_for_action(`app.${cmd.name}`, cmd.accels)
       }
-      void conversationsStore.saveConversations(this.conversations)
-      this.chat.loadMessages(this.conversation)
-      this.showToast('Conversation compressed')
     })
-    this.add_action(compressAction)
   }
 
   private async _loadSettings(): Promise<void> {

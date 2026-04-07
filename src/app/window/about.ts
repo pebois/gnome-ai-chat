@@ -1,6 +1,6 @@
 import Adw from 'gi://Adw?version=1'
 
-import type { AppInterface } from '@/app/index.js'
+import type { AppInterface } from '@/lib/app.js'
 import { APPLICATION_ID, APPLICATION_NAME, VERSION } from '@/lib/constants.js'
 
 export function showAboutWindow(app: AppInterface): void {

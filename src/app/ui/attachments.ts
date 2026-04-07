@@ -4,7 +4,7 @@ import GLib from 'gi://GLib?version=2.0'
 import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import type { AppInterface } from '@/app/index.js'
+import type { AppInterface } from '@/lib/app.js'
 import { takeScreenshot } from '@/lib/screenshot.js'
 import { createMenuItem, createSimpleAction } from '@/lib/ui.js'
 

@@ -1,8 +1,8 @@
 import Adw from 'gi://Adw?version=1'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import type { AppInterface } from '@/app/index.js'
 import { EmptyPage } from '@/app/page/empty.js'
+import type { AppInterface } from '@/lib/app.js'
 import { poll } from '@/lib/timeout.js'
 import { formatSize } from '@/lib/utils.js'
 

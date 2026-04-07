@@ -109,6 +109,14 @@ src/
   lib/
     agent/
       summarize.ts      # AI agent for conversation titles
+    commands/           # slash command implementations
+      chat.ts           # chat-related commands (/clear, /compress, /hn)
+      dialogs.ts        # commands to open dialogs (/settings, /shortcuts, /ps, /pull, /stats, /skills, /about)
+      files.ts          # local RAG files management commands (/files)
+      index.ts          # command/subcommand definitions (required: name, description, icon)
+      memory.ts         # knowledge graph commands (/memory)
+      system.ts         # system and app state commands (/debug, /quit)
+      ui.ts             # navigation commands (internal, hidden from menu)
     db/
       conversations.ts  # conversation data store
       files.ts          # local file RAG vector store
@@ -139,9 +147,9 @@ src/
       time.ts           # time and timezone tools
       web.ts            # web page fetching tool
     ambient.d.ts        # type definitions for GJS and external libraries
+    app.ts              # AppInterface definition
     constants.ts        # application-wide constants
     debug.ts            # centralized debug logging utility
-    memory.ts           # semantic memory logic
     ollama.ts           # Ollama HTTP API client
     screenshot.ts       # screenshot capture logic
     timeout.ts          # async utilities (debounce, poll, sleep)
@@ -154,10 +162,17 @@ src/
 
 ## Development Conventions
 
+### AI Assistant Behaviors
+- **Post-Update Workflow**: After executing a plan or making source code updates, you MUST automatically run the following commands in order:
+  1. `npm run lint`
+  2. `npm run lint-fix`
+  3. `npm run build`
+- **Changelog**: After verifying that the build and linting commands pass, you MUST update `CHANGELOG.md` to document the changes made during the session.
+
 ### Architecture & State
-- **Orchestration**: `App` (implementing `AppInterface`) is the central source of truth and mediator. All persistent settings and global state transitions flow through it. Use `app.settings` for direct access and `app.saveSettings()` to persist changes. The `handleQuit` lifecycle ensures background indexing and data flushing.
+- **Orchestration**: `App` (implementing `AppInterface`) is the central source of truth and mediator. All persistent settings and global state transitions flow through it. Use `app.settings` for direct access and `app.saveSettings()` to persist changes. The `handleQuit` lifecycle ensures background indexing and data persistence.
 - **Component isolation**: UI components like `Chat`, `Sidebar`, `Input`, `History`, and `Images` should be passed the `AppInterface` to access shared state and actions, but should manage their own internal widget lifecycle.
-- **Data persistence**: Use the `Database` class and specialized stores in `src/lib/db/` for all data persistence. Data is stored in the user's data directory using SQLite. The `flush()` method ensures all pending database operations are completed before shutdown.
+- **Data persistence**: Use the `Database` class and specialized stores in `src/lib/db/` for all data persistence. Data is stored in the user's data directory using SQLite. The `_queue` in the `Database` class ensures that all SQL operations are executed sequentially to maintain integrity.
 
 ### GJS & GNOME Specifics
 - **GObject Lifecycle**: Always use `GObject.registerClass` for custom widgets or application classes that need to integrate with the GObject type system.

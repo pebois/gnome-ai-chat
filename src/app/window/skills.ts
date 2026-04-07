@@ -5,7 +5,7 @@ import Gtk from 'gi://Gtk?version=4.0'
 import GtkSource from 'gi://GtkSource?version=5'
 import Pango from 'gi://Pango'
 
-import type { AppInterface } from '@/app/index.js'
+import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_EMBEDDING_MODEL, DEFAULT_SKILLS, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
 import type { Skill } from '@/lib/db/types.js'
 import { debounce } from '@/lib/timeout.js'
