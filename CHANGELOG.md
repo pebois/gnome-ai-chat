@@ -10,8 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Index skills using vector embeddings on first application start.
 
 ### Changed
+- **DB Batch Transactions**: Improved database performance by wrapping bulk insert operations (conversations, messages, skills) in SQLite atomic transactions.
 - Automatic background indexing for conversations and skills when updated or modified.
 - Disabled semantic search indexing on app close to significantly improve shutdown times.
+
+### Fixed
+- **Test Configuration**: Resolved TypeScript errors (`TS5011`, `TS5101`) preventing tests from running by explicitly setting `rootDir` and silencing `baseUrl` deprecation warnings in `tsconfig.json`.
 
 ### Added
 - **Native Markdown Tables**: Implemented a robust markdown table parser that natively renders tables using `Gtk.ColumnView`. This provides a state-of-the-art GTK4 appearance with native column headers, row separators, and dynamic updates during text streaming. Refined header styling to look like plain muted labels and ensured height is based on content. The default AI system prompt has been updated to explicitly allow table generation.
@@ -188,5 +192,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed focus management in the pull dialog.
 
 ### Removed
-- **Remote Skill Sync**: Removed "Import from URL" and skill synchronization to focus on local management.
-- **Skill Custom Icons**: Removed per-skill icon configuration in favor of a unified style.

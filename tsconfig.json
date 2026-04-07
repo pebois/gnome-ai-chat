@@ -3,6 +3,8 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "baseUrl": ".",
+    "rootDir": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": [
         "./src/*"
