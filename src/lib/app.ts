@@ -43,6 +43,7 @@ export interface AppInterface {
   isSummarizing(id: number): boolean
   saveSettings(): void
   saveSkills(): void
+  saveConversations(): void
   sendNotification(id: string, notification: Gio.Notification): void
   setConversation(id: number): Promise<void>
   setConversationTitle(conv: Conversation, title: string): void

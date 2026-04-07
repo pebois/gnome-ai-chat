@@ -32,16 +32,17 @@ export class Database {
     }
   }
 
-  public execSql(sql: string, flags: string[] = []): Promise<string> {
+  public execSql(sql: string | string[], flags: string[] = []): Promise<string> {
     const task = async (): Promise<string> => {
-      this._debug(`SQL: ${sql.slice(0, 100)}${sql.length > 100 ? '...' : ''}`)
+      const sqlString = Array.isArray(sql) ? `BEGIN TRANSACTION;\n${sql.join('\n')}\nCOMMIT;` : sql
+      this._debug(`SQL: ${sqlString.slice(0, 100)}${sqlString.length > 100 ? '...' : ''}`)
       try {
         const proc = new Gio.Subprocess({
           argv: ['sqlite3', ...flags, this._dbPath],
           flags: Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
         })
         proc.init(null)
-        const [stdout, stderr] = await proc.communicate_utf8_async(sql, null)
+        const [stdout, stderr] = await proc.communicate_utf8_async(sqlString, null)
         if (!proc.get_successful()) {
           console.error('SQLite error:', stderr)
         }

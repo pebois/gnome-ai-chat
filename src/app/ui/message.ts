@@ -1,6 +1,7 @@
 import Adw from 'gi://Adw?version=1'
 import Gdk from 'gi://Gdk'
 import Gio from 'gi://Gio'
+import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 import GtkSource from 'gi://GtkSource?version=5'
 import Pango from 'gi://Pango'
@@ -14,6 +15,16 @@ import { handle_render_html } from '@/lib/tools/html.js'
 import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setupContextMenu } from '@/lib/ui.js'
 import { getLanguageId, markdownToPango } from '@/lib/utils.js'
 
+export class TableRowItem extends GObject.Object {
+  public cells: string[] = []
+
+  constructor(cells: string[] = []) {
+    super()
+    this.cells = cells
+  }
+}
+GObject.registerClass(TableRowItem)
+
 export interface MessageProps {
   message: OllamaMessage
   onReload: (message: OllamaMessage) => void
@@ -21,11 +32,13 @@ export interface MessageProps {
 }
 
 interface ContentPart {
-  type: 'text' | 'code'
+  type: 'text' | 'code' | 'table'
   widget: Gtk.Widget
   contentLabel?: Gtk.Label
   expanderRow?: Adw.ExpanderRow
   buffer?: GtkSource.Buffer
+  columnView?: Gtk.ColumnView
+  listStore?: Gio.ListStore
 }
 
 export class Message {
@@ -254,6 +267,44 @@ export class Message {
     return { language, code: lines.join('\n') }
   }
 
+  private _parseTable(tableContent: string): { headers: string[]; rows: string[][] } {
+    const lines = tableContent.split('\n').map((l) => {
+      return l.trim()
+    })
+    const parseRow = (line: string) => {
+      let l = line.trim()
+      if (l.startsWith('|')) {
+        l = l.substring(1)
+      }
+      if (l.endsWith('|')) {
+        l = l.substring(0, l.length - 1)
+      }
+      return l.split('|').map((cell) => {
+        return cell.trim()
+      })
+    }
+
+    const headers = parseRow(lines[0])
+    const rows: string[][] = []
+
+    for (let i = 2; i < lines.length; i++) {
+      if (lines[i].trim() === '') {
+        continue
+      }
+      rows.push(parseRow(lines[i]))
+    }
+
+    const normalizedRows = rows.map((row) => {
+      const newRow = [...row]
+      while (newRow.length < headers.length) {
+        newRow.push('')
+      }
+      return newRow.slice(0, headers.length)
+    })
+
+    return { headers, rows: normalizedRows }
+  }
+
   private _renderContent(message: OllamaMessage): void {
     if (!message.content) {
       this._contentParts.forEach((p) => {
@@ -263,7 +314,7 @@ export class Message {
       return
     }
 
-    const chunks: string[] = []
+    const rawChunks: { type: 'text' | 'code'; content: string }[] = []
     const rawLines = message.content.split('\n')
     let currentChunk: string[] = []
     let inCodeBlock = false
@@ -275,7 +326,7 @@ export class Message {
         const match = line.match(/^\s*(```+)(.*)/)
         if (match) {
           if (currentChunk.length > 0) {
-            chunks.push(currentChunk.join('\n'))
+            rawChunks.push({ type: 'text', content: currentChunk.join('\n') })
           }
           currentChunk = [line]
           inCodeBlock = true
@@ -294,7 +345,7 @@ export class Message {
           } else {
             nestingLevel--
             if (nestingLevel === 0) {
-              chunks.push(currentChunk.join('\n'))
+              rawChunks.push({ type: 'code', content: currentChunk.join('\n') })
               currentChunk = []
               inCodeBlock = false
               openingBackticks = ''
@@ -304,26 +355,76 @@ export class Message {
       }
     }
     if (currentChunk.length > 0) {
-      chunks.push(currentChunk.join('\n'))
+      rawChunks.push({ type: inCodeBlock ? 'code' : 'text', content: currentChunk.join('\n') })
     }
 
-    const processedChunks = chunks
-      .map((c) => {
-        return c.match(/^\s*```/) ? c : c.trim()
-      })
-      .filter((c) => {
-        return c.length > 0
-      })
+    const finalChunks: { type: 'text' | 'code' | 'table'; content: string }[] = []
 
-    for (let i = 0; i < processedChunks.length; i++) {
-      const chunk = processedChunks[i]
-      const isCode = !!chunk.match(/^\s*```/)
+    for (const chunk of rawChunks) {
+      if (chunk.type === 'code') {
+        finalChunks.push(chunk)
+        continue
+      }
+
+      const lines = chunk.content.split('\n')
+      let textBuffer: string[] = []
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
+
+        if (i < lines.length - 1) {
+          const nextLine = lines[i + 1]
+          const isTableSep = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)+\|?\s*$/.test(nextLine)
+          const hasPipes = line.includes('|')
+
+          if (isTableSep && hasPipes) {
+            if (textBuffer.length > 0) {
+              const textContent = textBuffer.join('\n').trim()
+              if (textContent) {
+                finalChunks.push({ type: 'text', content: textContent })
+              }
+              textBuffer = []
+            }
+
+            const tableBuffer = [line, nextLine]
+            i += 2
+
+            while (i < lines.length) {
+              const rowLine = lines[i]
+              if (!rowLine.includes('|') && rowLine.trim() !== '') {
+                break
+              }
+              if (rowLine.trim() === '') {
+                break
+              }
+              tableBuffer.push(rowLine)
+              i++
+            }
+            i--
+
+            finalChunks.push({ type: 'table', content: tableBuffer.join('\n') })
+            continue
+          }
+        }
+        textBuffer.push(line)
+      }
+
+      if (textBuffer.length > 0) {
+        const textContent = textBuffer.join('\n').trim()
+        if (textContent) {
+          finalChunks.push({ type: 'text', content: textContent })
+        }
+      }
+    }
+
+    for (let i = 0; i < finalChunks.length; i++) {
+      const chunk = finalChunks[i]
 
       if (i < this._contentParts.length) {
         const part = this._contentParts[i]
-        if (part.type === (isCode ? 'code' : 'text')) {
-          if (isCode) {
-            const { code, language } = this._parseCodeBlock(chunk)
+        if (part.type === chunk.type) {
+          if (chunk.type === 'code') {
+            const { code, language } = this._parseCodeBlock(chunk.content)
             part.expanderRow!.set_title(language || 'text')
             part.buffer!.set_text(code, -1)
 
@@ -333,20 +434,47 @@ export class Message {
             if (part.buffer!.get_language() !== lang) {
               part.buffer!.set_language(lang)
             }
+            continue
+          } else if (chunk.type === 'table') {
+            const { headers, rows } = this._parseTable(chunk.content)
+            if (part.columnView!.get_columns().get_n_items() === headers.length) {
+              const currentCount = part.listStore!.get_n_items()
+              for (let r = 0; r < rows.length; r++) {
+                if (r < currentCount) {
+                  const item = part.listStore!.get_item(r) as TableRowItem
+                  let changed = false
+                  for (let c = 0; c < headers.length; c++) {
+                    if (item.cells[c] !== rows[r][c]) {
+                      changed = true
+                      break
+                    }
+                  }
+                  if (changed) {
+                    part.listStore!.splice(r, 1, [new TableRowItem(rows[r])])
+                  }
+                } else {
+                  part.listStore!.append(new TableRowItem(rows[r]))
+                }
+              }
+              if (rows.length < currentCount) {
+                part.listStore!.splice(rows.length, currentCount - rows.length, [])
+              }
+              continue
+            }
           } else {
-            part.contentLabel!.set_markup(markdownToPango(chunk))
+            part.contentLabel!.set_markup(markdownToPango(chunk.content))
+            continue
           }
-          continue
-        } else {
-          for (let j = i; j < this._contentParts.length; j++) {
-            this._contentBox.remove(this._contentParts[j].widget)
-          }
-          this._contentParts.splice(i)
         }
+
+        for (let j = i; j < this._contentParts.length; j++) {
+          this._contentBox.remove(this._contentParts[j].widget)
+        }
+        this._contentParts.splice(i)
       }
 
-      if (isCode) {
-        const { code, language } = this._parseCodeBlock(chunk)
+      if (chunk.type === 'code') {
+        const { code, language } = this._parseCodeBlock(chunk.content)
         const [listBox, expander] = createBoxedExpanderRow(language || 'text', 'text-x-generic-symbolic')
         expander.set_expanded(true)
 
@@ -403,6 +531,70 @@ export class Message {
           expanderRow: expander,
           buffer: buffer
         })
+      } else if (chunk.type === 'table') {
+        const { headers, rows } = this._parseTable(chunk.content)
+
+        const listStore = new Gio.ListStore({ item_type: TableRowItem.$gtype })
+        for (const row of rows) {
+          listStore.append(new TableRowItem(row))
+        }
+
+        const selection = new Gtk.NoSelection({ model: listStore })
+        const columnView = new Gtk.ColumnView({ model: selection })
+        columnView.set_can_focus(false)
+        columnView.add_css_class('markdown-table')
+        columnView.set_show_row_separators(true)
+        columnView.set_show_column_separators(true)
+
+        for (let c = 0; c < headers.length; c++) {
+          const factory = new Gtk.SignalListItemFactory()
+          factory.connect('setup', (_, listItem: Gtk.ListItem) => {
+            const label = new Gtk.Label({
+              use_markup: true,
+              wrap: false,
+              xalign: 0,
+              selectable: true,
+              margin_top: 8,
+              margin_bottom: 8,
+              margin_start: 8,
+              margin_end: 8
+            })
+            listItem.set_child(label)
+          })
+          factory.connect('bind', (_, listItem: Gtk.ListItem) => {
+            const label = listItem.get_child() as Gtk.Label
+            const item = listItem.get_item()
+            if (item instanceof TableRowItem) {
+              const cellContent = item.cells[c] || ''
+              label.set_markup(markdownToPango(cellContent))
+            }
+          })
+
+          const titleText = headers[c]
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/\*(.*?)\*/g, '$1')
+            .replace(/`(.*?)`/g, '$1')
+
+          const column = new Gtk.ColumnViewColumn({
+            title: titleText,
+            factory: factory,
+            expand: true
+          })
+          columnView.append_column(column)
+        }
+
+        const scrolled = new Gtk.ScrolledWindow({
+          child: columnView,
+          propagate_natural_height: true,
+          propagate_natural_width: false,
+          hexpand: true,
+          vscrollbar_policy: Gtk.PolicyType.NEVER,
+          hscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
+          has_frame: true
+        })
+
+        this._contentBox.append(scrolled)
+        this._contentParts.push({ type: 'table', widget: scrolled, columnView, listStore })
       } else {
         const label = new Gtk.Label({
           use_markup: true,
@@ -411,7 +603,8 @@ export class Message {
           xalign: 0,
           selectable: true
         })
-        label.set_markup(markdownToPango(chunk))
+        label.add_css_class('message-text')
+        label.set_markup(markdownToPango(chunk.content))
         this._contentBox.append(label)
         this._contentParts.push({
           type: 'text',
@@ -421,7 +614,7 @@ export class Message {
       }
     }
 
-    while (this._contentParts.length > chunks.length) {
+    while (this._contentParts.length > finalChunks.length) {
       const part = this._contentParts.pop()!
       this._contentBox.remove(part.widget)
     }

@@ -92,9 +92,14 @@ export class Sidebar {
       icon_name: 'list-add-symbolic',
       tooltip_text: 'New Chat (ctrl+n)'
     })
-    newChatButton.connect('clicked', async () => {
-      await this.createNewConversation()
-      this._app.showToast('Conversation added')
+    newChatButton.connect('clicked', () => {
+      this.createNewConversation()
+        .then(() => {
+          this._app.showToast('Conversation added')
+        })
+        .catch((err) => {
+          console.error('Failed to create new conversation:', err)
+        })
     })
     navigationHeader.pack_start(newChatButton)
 
@@ -182,9 +187,11 @@ export class Sidebar {
       return 0
     })
 
-    this._conversationList.connect('row-selected', async (_list: Gtk.ListBox, row?: ConversationRow) => {
+    this._conversationList.connect('row-selected', (_list: Gtk.ListBox, row?: ConversationRow) => {
       if (row && row.conversation) {
-        await this._selectConversation(row.conversation)
+        this._selectConversation(row.conversation).catch((err) => {
+          console.error('Failed to select conversation:', err)
+        })
       }
     })
 
@@ -286,7 +293,7 @@ export class Sidebar {
       updated_at: now
     }
     this._app.conversations.unshift(conversation)
-    void conversationsStore.saveConversations(this._app.conversations)
+    this._app.saveConversations()
     this.populateList()
     await this._selectConversation(conversation)
     const row = this._getRow(conversation)
@@ -360,7 +367,7 @@ export class Sidebar {
       }
     }
 
-    void conversationsStore.saveConversations(this._app.conversations)
+    this._app.saveConversations()
   }
 
   private _createHeaderRow(label: string): ConversationRow {
@@ -404,7 +411,7 @@ export class Sidebar {
           if (summary) {
             const title = convertSummaryToTitle(summary)
             this._app.setConversationTitle(conversation, title)
-            void conversationsStore.saveConversations(this._app.conversations)
+            this._app.saveConversations()
           }
         }
       } catch (err) {
@@ -460,5 +467,6 @@ export class Sidebar {
         return row
       }
     }
+    return undefined
   }
 }

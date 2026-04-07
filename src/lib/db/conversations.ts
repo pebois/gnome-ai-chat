@@ -38,7 +38,8 @@ export class ConversationsStore {
       return c.id
     }).join(',')
 
-    await db.execSql(`DELETE FROM conversations WHERE id NOT IN (${ids});`)
+    const sqls: string[] = []
+    sqls.push(`DELETE FROM conversations WHERE id NOT IN (${ids});`)
 
     const values = conversations.map((c) => {
       const title = db.escape(c.title)
@@ -49,8 +50,12 @@ export class ConversationsStore {
       return `(${c.id}, '${title}', '${model}', '${createdAt}', ${updatedAt}, ${embeddings})`
     })
 
-    const sql = `INSERT OR REPLACE INTO conversations (id, title, model, created_at, updated_at, embeddings) VALUES ${values.join(',')};`
-    await db.execSql(sql)
+    for (let i = 0; i < values.length; i += 500) {
+      const chunk = values.slice(i, i + 500)
+      sqls.push(`INSERT OR REPLACE INTO conversations (id, title, model, created_at, updated_at, embeddings) VALUES ${chunk.join(',')};`)
+    }
+
+    await db.execSql(sqls)
   }
 
   public async deleteConversation(id: number): Promise<void> {
@@ -82,8 +87,11 @@ export class ConversationsStore {
   }
 
   public async saveMessages(conversation_id: number, messages: OllamaMessage[]): Promise<void> {
-    await db.execSql(`DELETE FROM messages WHERE conversation_id = ${conversation_id};`)
+    const sqls: string[] = []
+    sqls.push(`DELETE FROM messages WHERE conversation_id = ${conversation_id};`)
+
     if (messages.length === 0) {
+      await db.execSql(sqls)
       return
     }
 
@@ -98,8 +106,12 @@ export class ConversationsStore {
       return `(${conversation_id}, '${role}', '${content}', ${images}, ${files}, ${thinking}, ${tool_calls}, ${tool_name})`
     })
 
-    const sql = `INSERT INTO messages (conversation_id, role, content, images, files, thinking, tool_calls, tool_name) VALUES ${values.join(',')};`
-    await db.execSql(sql)
+    for (let i = 0; i < values.length; i += 500) {
+      const chunk = values.slice(i, i + 500)
+      sqls.push(`INSERT INTO messages (conversation_id, role, content, images, files, thinking, tool_calls, tool_name) VALUES ${chunk.join(',')};`)
+    }
+
+    await db.execSql(sqls)
   }
 
   public async deleteMessages(conversation_id: number): Promise<void> {

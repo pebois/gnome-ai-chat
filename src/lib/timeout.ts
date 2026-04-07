@@ -14,7 +14,12 @@ export function debounce<T extends (...args: unknown[]) => void>(fn: T, delayMs 
     }
 
     timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delayMs, () => {
-      fn(...args)
+      const result = fn(...args)
+      if (result instanceof Promise) {
+        result.catch((err) => {
+          console.error('Debounced function failed:', err)
+        })
+      }
       timeoutId = null
       return GLib.SOURCE_REMOVE
     })
@@ -32,11 +37,21 @@ export function debounce<T extends (...args: unknown[]) => void>(fn: T, delayMs 
 
 export function poll(fn: () => void | Promise<void>, intervalMs: number, immediate = false): () => void {
   if (immediate) {
-    void fn()
+    const result = fn()
+    if (result instanceof Promise) {
+      result.catch((err) => {
+        console.error('Initial poll call failed:', err)
+      })
+    }
   }
 
   const timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, intervalMs, () => {
-    void fn()
+    const result = fn()
+    if (result instanceof Promise) {
+      result.catch((err) => {
+        console.error('Polled function failed:', err)
+      })
+    }
     return GLib.SOURCE_CONTINUE
   })
 
