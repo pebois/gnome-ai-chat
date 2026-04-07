@@ -12,7 +12,7 @@ import { showDestructiveConfirmation } from '@/lib/ui.js'
 
 export function showFilesDialog(app: AppInterface): void {
   const dialog = new Adw.Dialog({
-    title: 'Indexed Paths',
+    title: 'Indexed Folders',
     content_width: 500,
     content_height: 500
   })
@@ -79,15 +79,12 @@ export function showFilesDialog(app: AppInterface): void {
     spacing: 24
   })
 
-  const pathsGroup = new Adw.PreferencesGroup({
-    title: 'Indexed Folders',
-    description: 'Folders indexed for local vector search using Ollama.'
-  })
+  const pathsGroup = new Adw.PreferencesGroup({})
   box.append(pathsGroup)
 
   const emptyPage = new EmptyPage(app, {
     icon_name: 'edit-find-symbolic',
-    title: 'No Paths Indexed',
+    title: 'No Folders Indexed',
     description: 'Add folders to enable Local RAG',
     visible: false,
     vexpand: true
@@ -203,7 +200,7 @@ export function showFilesDialog(app: AppInterface): void {
 
         const indexBtn = new Gtk.Button({
           icon_name: 'view-refresh-symbolic',
-          tooltip_text: 'Re-index path',
+          tooltip_text: 'Re-index folder',
           valign: Gtk.Align.CENTER
         })
         indexBtn.add_css_class('flat')
@@ -214,7 +211,7 @@ export function showFilesDialog(app: AppInterface): void {
         row.add_suffix(actionsBox)
 
         const removeBtn = new Gtk.Button({
-          label: 'Remove Path',
+          label: 'Remove Folder',
           css_classes: ['pill', 'destructive-action'],
           margin_top: 12,
           margin_bottom: 12,
@@ -225,7 +222,7 @@ export function showFilesDialog(app: AppInterface): void {
         removeBtn.connect('clicked', () => {
           showDestructiveConfirmation(
             app.window,
-            'Remove Path',
+            'Remove Folder',
             `Are you sure you want to stop indexing ${p.path}?`,
             async () => {
               await filesStore.removePath(p.path)

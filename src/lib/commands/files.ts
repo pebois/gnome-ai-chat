@@ -16,11 +16,13 @@ export const files: Command = {
     let subCommand = 'manage'
     if (parameter) {
       const text = parameter.get_string()[0]
-      const parts = text.split(' ')
-      if (parts.length >= 2) {
-        subCommand = parts[1].toLowerCase()
-      } else if (parts.length === 1 && parts[0] && !parts[0].startsWith('/') && parts[0] !== 'files') {
-        subCommand = parts[0].toLowerCase()
+      if (text) {
+        const parts = text.split(' ')
+        if (parts.length >= 2) {
+          subCommand = parts[1].toLowerCase()
+        } else if (parts.length === 1 && parts[0] && !parts[0].startsWith('/') && parts[0] !== 'files') {
+          subCommand = parts[0].toLowerCase()
+        }
       }
     }
 
