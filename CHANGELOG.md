@@ -6,8 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Index skills using vector embeddings on first application start.
+
+### Changed
+- Automatic background indexing for conversations and skills when updated or modified.
+- Disabled semantic search indexing on app close to significantly improve shutdown times.
+
+
 
 ### Added
+- **Native Markdown Tables**: Implemented a robust markdown table parser that natively renders tables using `Gtk.ColumnView`. This provides a state-of-the-art GTK4 appearance with native column headers, row separators, and dynamic updates during text streaming. Refined header styling to look like plain muted labels and ensured height is based on content. The default AI system prompt has been updated to explicitly allow table generation.
 - **Command Visibility Control**: Introduced a `visible` property to the `Command` interface, allowing specific commands to be registered for keyboard shortcuts and actions while remaining hidden from the slash command autocomplete menu.
 - **Strict Command Metadata**: The `Command` and `SubCommand` interfaces now require `description` and `icon` properties, ensuring a consistent and documented user experience across the entire command suite.
 

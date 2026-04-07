@@ -526,6 +526,7 @@ export function showSkillsWindow(app: AppInterface): void {
           return
         }
         app.skills[i] = { ...defaultSkill }
+        app.skills[i].embeddings = undefined
         app.saveSkills()
         refreshList()
       }

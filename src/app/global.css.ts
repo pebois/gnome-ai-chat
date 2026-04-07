@@ -116,4 +116,25 @@ export const css = /* css */`
   border-bottom-left-radius: 8px;
   border-bottom-right-radius: 8px;
 }
+
+.markdown-table row:hover {
+  background-color: @shade_color;
+}
+
+.markdown-table header {
+  background: none;
+}
+.markdown-table header button {
+  background: none;
+  box-shadow: none;
+  font-weight: normal;
+  color: @secondary_fg_color;
+  padding: 8px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.message-text {
+  line-height: 1.4;
+}
 `

@@ -333,16 +333,18 @@ export class Chat {
 
     conversation.messages.push(userMessage)
 
-    void conversationsStore.saveMessages(conversation.id, conversation.messages)
+    await conversationsStore.saveMessages(conversation.id, conversation.messages)
     conversation.updated_at = new Date().toISOString()
+    conversation.embeddings = undefined
     const conv = this._app.conversations.find((c) => {
       return c.id === conversation.id
     })
     if (conv) {
       conv.updated_at = conversation.updated_at
+      conv.embeddings = undefined
       this._app.sidebar.updateConversation(conv)
     }
-    void conversationsStore.saveConversations(this._app.conversations)
+    this._app.saveConversations()
 
     this._history.scrollToBottom()
 
@@ -416,16 +418,18 @@ export class Chat {
         })
       }
 
-      void conversationsStore.saveMessages(conversation.id, conversation.messages)
+      await conversationsStore.saveMessages(conversation.id, conversation.messages)
       conversation.updated_at = new Date().toISOString()
+      conversation.embeddings = undefined
       const conv = this._app.conversations.find((c) => {
         return c.id === conversation.id
       })
       if (conv) {
         conv.updated_at = conversation.updated_at
+        conv.embeddings = undefined
         this._app.sidebar.updateConversation(conv)
       }
-      void conversationsStore.saveConversations(this._app.conversations)
+      this._app.saveConversations()
 
       if (!this._app.window.is_active || this._app.conversation?.id !== conversation.id) {
         const notification = new Gio.Notification()
@@ -442,7 +446,7 @@ export class Chat {
             if (summary) {
               const title = convertSummaryToTitle(summary)
               this._app.setConversationTitle(conversation, title)
-              void conversationsStore.saveConversations(this._app.conversations)
+              this._app.saveConversations()
             }
           })
           .catch((err) => {
@@ -471,12 +475,14 @@ export class Chat {
   public clearAllMessages(): void {
     if (this._app.conversation) {
       this._app.conversation.messages = []
-      void conversationsStore.saveMessages(this._app.conversation.id, [])
+      void conversationsStore.saveMessages(this._app.conversation.id, []).catch((err) => {
+        console.error('Failed to clear messages:', err)
+      })
       this.loadMessages(this._app.conversation)
     }
   }
 
-  public startFromMessage(message: OllamaMessage): void {
+  public async startFromMessage(message: OllamaMessage): Promise<void> {
     const conversation = this._app.conversation
     if (!conversation || this._app.isGeneratingMessage(conversation.id)) {
       return
@@ -487,16 +493,18 @@ export class Chat {
     }
     const text = message.content
     conversation.messages = conversation.messages.slice(0, index)
-    void conversationsStore.saveMessages(conversation.id, conversation.messages)
+    await conversationsStore.saveMessages(conversation.id, conversation.messages)
     conversation.updated_at = new Date().toISOString()
+    conversation.embeddings = undefined
     const conv = this._app.conversations.find((c) => {
       return c.id === conversation.id
     })
     if (conv) {
       conv.updated_at = conversation.updated_at
+      conv.embeddings = undefined
       this._app.sidebar.updateConversation(conv)
     }
-    void conversationsStore.saveConversations(this._app.conversations)
+    this._app.saveConversations()
     this.loadMessages(conversation)
     this._input.getBuffer().set_text(text, -1)
   }

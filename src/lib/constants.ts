@@ -40,11 +40,11 @@ ONLY use these specific features:
 * ~~Strikethrough~~
 * [Link text](https://example.com) (only when genuinely useful)
 * - Bullet lists and 1. Numbered lists (only when structure genuinely helps)
+* | Markdown | Tables | (only for structured data)
 
 ## Strictly Forbidden
 * No Headings (#, ##, ###, etc.)
 * No Images
-* No Tables. If you need to present structured data, use a list instead.
 * No Underscores (_), HTML, or Latex.
 * No Tiles or Boxes.
 `.trim()

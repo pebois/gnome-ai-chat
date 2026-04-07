@@ -35,8 +35,8 @@ export const openConversation: Command = {
     }
     const idStr = parameter.get_string()[0]
     const id = parseInt(idStr, 10)
-    void app.sidebar.selectConversationById(id)
     app.window.present()
+    return app.sidebar.selectConversationById(id)
   }
 }
 
@@ -71,7 +71,7 @@ export const compress: Command = {
       conv.updated_at = app.conversation.updated_at
       app.sidebar.updateConversation(conv)
     }
-    await conversationsStore.saveConversations(app.conversations)
+    app.saveConversations()
     app.chat.loadMessages(app.conversation)
     app.showToast('Conversation compressed')
   }
@@ -83,6 +83,6 @@ export const hn: Command = {
   icon: 'newspaper-symbolic',
   activate: (app) => {
     app.chat.input.getBuffer().set_text('http get https://hnrss.org/best list headlines', -1)
-    void app.chat.sendMessage()
+    return app.chat.sendMessage()
   }
 }

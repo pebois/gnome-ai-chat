@@ -21,6 +21,7 @@ import { skillsStore } from '@/lib/db/skills.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
 import { Ollama } from '@/lib/ollama.js'
 import { Tracker } from '@/lib/tracker.js'
+import { createSimpleAction } from '@/lib/ui.js'
 import { convertMessageToTitle, pangoEscape } from '@/lib/utils.js'
 
 export class App extends Adw.Application implements AppInterface {
@@ -196,12 +197,6 @@ export class App extends Adw.Application implements AppInterface {
     this.window.hide()
     this.hold()
 
-    try {
-      await conversationsStore.indexConversations(this.ollama, this.conversations, false)
-    } catch (err) {
-      console.error('Failed to index on quit:', err)
-    }
-
     await conversationsStore.saveConversations(this.conversations)
     await settingsStore.saveSettings(this._settings)
 
@@ -239,7 +234,19 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   public saveSkills(): void {
-    void skillsStore.saveSkills(this.skills)
+    void skillsStore.saveSkills(this.skills).then(() => {
+      return skillsStore.indexSkills(this.ollama, this.skills, false)
+    }).catch((err) => {
+      console.error('Failed to save/index skills:', err)
+    })
+  }
+
+  public saveConversations(): void {
+    void conversationsStore.saveConversations(this.conversations).then(() => {
+      return conversationsStore.indexConversations(this.ollama, this.conversations, false)
+    }).catch((err) => {
+      console.error('Failed to save/index conversations:', err)
+    })
   }
 
   public setModel(model: string): void {
@@ -290,11 +297,13 @@ export class App extends Adw.Application implements AppInterface {
   public setConversationTitle(conversation: Conversation, title: string): void {
     const converted = convertMessageToTitle(title)
     conversation.title = converted
+    conversation.embeddings = undefined
     const conv = this.conversations.find((c) => {
       return c.id === conversation.id
     })
     if (conv) {
       conv.title = converted
+      conv.embeddings = undefined
       this.sidebar.setConversationTitle(conv, converted)
     }
   }
@@ -447,14 +456,14 @@ export class App extends Adw.Application implements AppInterface {
   private _setupActions(): void {
     COMMANDS.forEach((cmd) => {
       const state = cmd.getInitialState?.(this)
-      const action = new Gio.SimpleAction({
-        name: cmd.name,
-        ...(cmd.parameterType ? { parameter_type: cmd.parameterType } : {}),
-        ...(state ? { state } : {})
-      })
-      action.connect('activate', (_action, parameter) => {
-        void cmd.activate(this, parameter ?? undefined)
-      })
+      const action = createSimpleAction(
+        cmd.name,
+        (_action, parameter) => {
+          return cmd.activate(this, parameter ?? undefined)
+        },
+        cmd.parameterType,
+        state
+      )
       this.add_action(action)
 
       if (cmd.accels) {

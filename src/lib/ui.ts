@@ -74,14 +74,25 @@ export function createMenuItem(label: string, action: string, iconName: string, 
   return item
 }
 
-export function createSimpleAction(name: string, callback: (action: Gio.SimpleAction, parameter: GLib.Variant | null) => void, parameterType?: GLib.VariantType): Gio.SimpleAction {
+export function createSimpleAction(
+  name: string,
+  callback: (action: Gio.SimpleAction, parameter: GLib.Variant | null) => void | Promise<void>,
+  parameterType?: GLib.VariantType,
+  state?: GLib.Variant
+): Gio.SimpleAction {
   const action = new Gio.SimpleAction({
     name,
-    ...(parameterType ? { parameter_type: parameterType } : {})
+    ...(parameterType ? { parameter_type: parameterType } : {}),
+    ...(state ? { state } : {})
   })
 
   action.connect('activate', (act, param) => {
-    return callback(act, param)
+    const result = callback(act, param)
+    if (result instanceof Promise) {
+      result.catch((err) => {
+        console.error(`Action ${name} failed:`, err)
+      })
+    }
   })
 
   return action
@@ -117,9 +128,14 @@ export function showDestructiveConfirmation(
   alertDialog.add_response('confirm', 'Confirm')
   alertDialog.set_response_appearance('confirm', Adw.ResponseAppearance.DESTRUCTIVE)
 
-  alertDialog.connect('response', async (_, response) => {
+  alertDialog.connect('response', (_: Adw.AlertDialog, response: string) => {
     if (response === 'confirm') {
-      await onConfirm()
+      const result = onConfirm()
+      if (result instanceof Promise) {
+        result.catch((err) => {
+          console.error('Destructive confirmation action failed:', err)
+        })
+      }
     }
   })
 

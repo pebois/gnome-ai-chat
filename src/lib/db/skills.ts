@@ -32,8 +32,11 @@ export class SkillsStore {
   }
 
   public async saveSkills(skills: Skill[]): Promise<void> {
-    await db.execSql(`DELETE FROM skills;`)
+    const sqls: string[] = []
+    sqls.push(`DELETE FROM skills;`)
+
     if (skills.length === 0) {
+      await db.execSql(sqls)
       return
     }
 
@@ -46,8 +49,12 @@ export class SkillsStore {
       return `('${id}', '${name}', ${desc}, '${prompt}', ${embeddings})`
     })
 
-    const sql = `INSERT INTO skills (id, name, description, prompt, embeddings) VALUES ${values.join(',')};`
-    await db.execSql(sql)
+    for (let i = 0; i < values.length; i += 500) {
+      const chunk = values.slice(i, i + 500)
+      sqls.push(`INSERT INTO skills (id, name, description, prompt, embeddings) VALUES ${chunk.join(',')};`)
+    }
+
+    await db.execSql(sqls)
   }
 
   public async indexSkills(ollama: Ollama, skills: Skill[], force: boolean = false, cancellable?: Gio.Cancellable, onProgress?: (fraction: number) => void): Promise<void> {
