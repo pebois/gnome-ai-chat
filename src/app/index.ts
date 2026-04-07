@@ -12,7 +12,7 @@ import type { Sidebar } from '@/app/ui/sidebar.js'
 import { AppWindow } from '@/app/window/main.js'
 import type { AppInterface } from '@/lib/app.js'
 import { COMMANDS } from '@/lib/commands/index.js'
-import { APPLICATION_ID, DEFAULT_CHAT_MODEL, DEFAULT_SETTINGS } from '@/lib/constants.js'
+import { APPLICATION_ID, DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
 import { filesStore } from '@/lib/db/files.js'
 import { db } from '@/lib/db/index.js'
@@ -26,7 +26,6 @@ import { convertMessageToTitle, pangoEscape } from '@/lib/utils.js'
 
 export class App extends Adw.Application implements AppInterface {
   private _active: boolean
-  private _settings: Settings
   private _isExiting: boolean = false
   private _filesIndexingCancellable: Gio.Cancellable | null = null
   private _generatingConversations: Set<number> = new Set()
@@ -49,12 +48,11 @@ export class App extends Adw.Application implements AppInterface {
       flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE
     })
     this._active = false
-    this._settings = DEFAULT_SETTINGS
     this.models = []
     this.model = DEFAULT_CHAT_MODEL
     this.conversations = []
     this.tracker = new Tracker()
-    this.ollama = new Ollama(this._settings, this.tracker)
+    this.ollama = new Ollama(this.settings, this.tracker)
   }
 
   public get chat(): Chat {
@@ -159,7 +157,7 @@ export class App extends Adw.Application implements AppInterface {
       await db.initDb()
       await this._loadSettings()
 
-      Adw.StyleManager.get_default().set_color_scheme(this._settings.theme)
+      Adw.StyleManager.get_default().set_color_scheme(this.settings.theme)
 
       if (this.settings.debug) {
         this.window.add_css_class('devel')
@@ -198,7 +196,7 @@ export class App extends Adw.Application implements AppInterface {
     this.hold()
 
     await conversationsStore.saveConversations(this.conversations)
-    await settingsStore.saveSettings(this._settings)
+    await settingsStore.saveSettings(this.settings)
 
     this.sidebar.clearList()
 
@@ -228,9 +226,9 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   public saveSettings(): void {
-    this.ollama.url = this._settings.url
+    this.ollama.url = this.settings.url
     this.window.updateCssClass()
-    void settingsStore.saveSettings(this._settings)
+    void settingsStore.saveSettings(this.settings)
   }
 
   public saveSkills(): void {
@@ -268,9 +266,9 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   public setTheme(theme: number): void {
-    this._settings.theme = theme
+    this.settings.theme = theme
     Adw.StyleManager.get_default().set_color_scheme(theme)
-    void settingsStore.saveSettings(this._settings)
+    void settingsStore.saveSettings(this.settings)
     const action = this.lookup_action('theme') as Gio.SimpleAction | null
     if (action) {
       action.set_state(GLib.Variant.new_int32(theme))
@@ -278,20 +276,20 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   public setSyntax(theme: string): void {
-    this._settings.syntax = theme
-    void settingsStore.saveSettings(this._settings)
+    this.settings.syntax = theme
+    void settingsStore.saveSettings(this.settings)
     this.emit('syntax-changed', theme)
   }
 
   public toggleDebug(): void {
-    this._settings.debug = !this._settings.debug
-    if (this._settings.debug) {
+    this.settings.debug = !this.settings.debug
+    if (this.settings.debug) {
       this.window.add_css_class('devel')
     } else {
       this.window.remove_css_class('devel')
     }
-    void settingsStore.saveSettings(this._settings)
-    this.showToast(`Debug mode ${this._settings.debug ? 'enabled' : 'disabled'}`)
+    void settingsStore.saveSettings(this.settings)
+    this.showToast(`Debug mode ${this.settings.debug ? 'enabled' : 'disabled'}`)
   }
 
   public setConversationTitle(conversation: Conversation, title: string): void {
@@ -475,7 +473,7 @@ export class App extends Adw.Application implements AppInterface {
   private async _loadSettings(): Promise<void> {
     await settingsStore.loadSettings()
     this.skills = await skillsStore.getSkills()
-    this.ollama.url = this._settings.url
+    this.ollama.url = this.settings.url
   }
 
   private async _loadModels(): Promise<void> {

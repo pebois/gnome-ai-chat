@@ -1,5 +1,6 @@
 import Gio from 'gi://Gio'
 
+import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import { db } from '@/lib/db/index.js'
 import type { Conversation } from '@/lib/db/types.js'
 import type { Ollama, OllamaMessage, OllamaToolCall } from '@/lib/ollama.js'
@@ -145,7 +146,7 @@ export class ConversationsStore {
         }).join('\n')
         try {
           const response = await ollama.embed({
-            model: 'nomic-embed-text',
+            model: DEFAULT_EMBEDDING_MODEL,
             input: textContent.slice(0, 8000)
           })
           if (response && response.embeddings && response.embeddings.length > 0) {
