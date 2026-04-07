@@ -6,6 +6,7 @@ import { db } from '@/lib/db/index.js'
 import type { FileChunk, IndexedPath, SearchResult } from '@/lib/db/types.js'
 import type { Ollama } from '@/lib/ollama.js'
 import { RecursiveCharacterTextSplitter } from '@/lib/splitter.js'
+import { cosineSimilarity } from '@/lib/utils.js'
 
 Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish')
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish')
@@ -17,13 +18,13 @@ export class FilesStore {
 
   public async getPaths(): Promise<IndexedPath[]> {
     const sql = `
-      SELECT 
-        p.path, 
-        p.status, 
+      SELECT
+        p.path,
+        p.status,
         COUNT(c.file_path) as chunkCount,
         COUNT(DISTINCT c.file_path) as fileCount
-      FROM vector_paths p 
-      LEFT JOIN vector_chunks c ON c.file_path = p.path OR c.file_path LIKE p.path || '/%' 
+      FROM vector_paths p
+      LEFT JOIN vector_chunks c ON c.file_path = p.path OR c.file_path LIKE p.path || '/%'
       GROUP BY p.path;
     `
     const stdout = await db.execSql(sql, ['-json'])
@@ -95,17 +96,8 @@ export class FilesStore {
   public async search(queryEmbedding: number[], limit: number = 3): Promise<SearchResult[]> {
     const chunks = await this.getAllChunks()
 
-    // JS Cosine Similarity calculation
     const results: SearchResult[] = chunks.map((chunk) => {
-      let dotProduct = 0
-      let normA = 0
-      let normB = 0
-      for (let i = 0; i < queryEmbedding.length; i++) {
-        dotProduct += queryEmbedding[i] * chunk.embedding[i]
-        normA += queryEmbedding[i] * queryEmbedding[i]
-        normB += chunk.embedding[i] * chunk.embedding[i]
-      }
-      const score = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB))
+      const score = cosineSimilarity(queryEmbedding, chunk.embedding)
       return { file_path: chunk.file_path, content: chunk.content, score }
     })
 
