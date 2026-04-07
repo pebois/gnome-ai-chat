@@ -5,7 +5,7 @@ import Gtk from 'gi://Gtk?version=4.0'
 import GtkSource from 'gi://GtkSource?version=5'
 
 import type { AppInterface } from '@/lib/app.js'
-import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_SKILLS, DEFAULT_STREAM, DEFAULT_SYNTAX_THEME, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
+import { DEFAULT_OLLAMA_URL, DEFAULT_OPTIONS, DEFAULT_STREAM, DEFAULT_SYNTAX_THEME, DEFAULT_SYSTEM_PROMPT, DEFAULT_THEME, DEFAULT_THINK } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
 import { skillsStore } from '@/lib/db/skills.js'
 import { permission_tiers, think_types } from '@/lib/db/types.js'
@@ -406,45 +406,6 @@ export class Preferences {
     filesIndexBox.append(filesIndexBtn)
     filesIndexRow.add_suffix(filesIndexBox)
     searchGroup.add(filesIndexRow)
-
-    const skillsGroup = new Adw.PreferencesGroup({
-      title: 'Skills'
-    })
-    page.add(skillsGroup)
-
-    const restoreSkillsRow = new Adw.ActionRow({
-      title: 'Restore Default Skills'
-    })
-    const restoreSkillsBtn = new Gtk.Button({
-      label: 'Restore defaults',
-      valign: Gtk.Align.CENTER
-    })
-    restoreSkillsBtn.add_css_class('row-button')
-    restoreSkillsBtn.connect('clicked', () => {
-      showDestructiveConfirmation(
-        this._window,
-        'Restore Default Skills',
-        'Are you sure you want to reset all builtin skills to their defaults? This cannot be undone.',
-        () => {
-          for (const def of DEFAULT_SKILLS) {
-            const idx = this._app.skills.findIndex((s) => {
-              return s.id === def.id
-            })
-            if (idx !== -1) {
-              this._app.skills[idx] = { ...def }
-            } else {
-              this._app.skills.push({ ...def })
-            }
-          }
-          this._app.skills.sort((a, b) => {
-            return a.name.localeCompare(b.name)
-          })
-          this._app.saveSkills()
-        }
-      )
-    })
-    restoreSkillsRow.add_suffix(restoreSkillsBtn)
-    skillsGroup.add(restoreSkillsRow)
 
     const group = new Adw.PreferencesGroup({
       title: 'Chat History'

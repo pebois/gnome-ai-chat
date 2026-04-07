@@ -129,9 +129,15 @@ export class Commands {
     this._popover.popdown()
     const parts = commandPath.split(' ')
     const commandName = parts[0]
-    const parameter = (parts.length > 1 || ['memory', 'files'].includes(commandName))
-      ? GLib.Variant.new_string(commandPath)
-      : undefined
+    const cmd = COMMANDS.find((c) => {
+      return c.name === commandName
+    })
+
+    let parameter: GLib.Variant | undefined
+    if (cmd?.parameterType) {
+      parameter = GLib.Variant.new_string(commandPath)
+    }
+
     this._app.activateAction(commandName, parameter)
 
     const buffer = this._textView.get_buffer()

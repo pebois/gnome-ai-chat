@@ -465,7 +465,12 @@ export class App extends Adw.Application implements AppInterface {
       this.add_action(action)
 
       if (cmd.accels) {
-        this.set_accels_for_action(`app.${cmd.name}`, cmd.accels)
+        let actionName = `app.${cmd.name}`
+        if (cmd.parameterType) {
+          const target = cmd.name === 'files' ? 'manage' : ''
+          actionName += `('${target}')`
+        }
+        this.set_accels_for_action(actionName, cmd.accels)
       }
     })
   }
