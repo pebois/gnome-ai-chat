@@ -99,6 +99,8 @@ export class FilesStore {
     const results: SearchResult[] = chunks.map((chunk) => {
       const score = cosineSimilarity(queryEmbedding, chunk.embedding)
       return { file_path: chunk.file_path, content: chunk.content, score }
+    }).filter((r) => {
+      return r.score >= 0.5
     })
 
     results.sort((a, b) => {
