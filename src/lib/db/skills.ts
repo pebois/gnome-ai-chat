@@ -1,6 +1,6 @@
 import type Gio from 'gi://Gio'
 
-import { DEFAULT_SKILLS } from '@/lib/constants.js'
+import { DEFAULT_EMBEDDING_MODEL, DEFAULT_SKILLS } from '@/lib/constants.js'
 import { db } from '@/lib/db/index.js'
 import type { Skill } from '@/lib/db/types.js'
 import type { Ollama } from '@/lib/ollama.js'
@@ -80,7 +80,7 @@ export class SkillsStore {
       const textContent = `${skill.name}\n${skill.description || ''}\n${skill.prompt}`
       try {
         const response = await ollama.embed({
-          model: 'nomic-embed-text',
+          model: DEFAULT_EMBEDDING_MODEL,
           input: textContent.slice(0, 8000)
         })
         if (response && response.embeddings && response.embeddings.length > 0) {
