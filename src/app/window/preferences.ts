@@ -277,8 +277,9 @@ export class Preferences {
       }
     })
 
-    this._window.connect('destroy', () => {
+    this._window.connect('close-request', () => {
       this._app.disconnect(syntaxSignalId)
+      return false
     })
 
     const resetBtn = this._createResetButton(() => {
@@ -389,8 +390,9 @@ export class Preferences {
       filesProgressBar.set_fraction(fraction)
     })
 
-    this._window.connect('destroy', () => {
+    this._window.connect('close-request', () => {
       this._app.disconnect(indexingId)
+      return false
     })
 
     filesIndexBtn.connect('clicked', () => {

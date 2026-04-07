@@ -103,12 +103,12 @@ export class Message {
       this._updateSyntax(theme)
     })
 
-    this._widget.connect('destroy', () => {
-      this._app.disconnect(this._busySignalId)
-      this._app.disconnect(this._syntaxSignalId)
-    })
-
     this._updateSensitivity(this._app.isBusy)
+  }
+
+  public destroy(): void {
+    this._app.disconnect(this._busySignalId)
+    this._app.disconnect(this._syntaxSignalId)
   }
 
   private _updateSyntax(theme: string): void {

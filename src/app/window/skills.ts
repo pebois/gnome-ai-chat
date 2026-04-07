@@ -539,8 +539,9 @@ export function showSkillsWindow(app: AppInterface): void {
       buffer.set_style_scheme(newScheme)
     }
   })
-  win.connect('destroy', () => {
-    return app.disconnect(syntaxSignalId)
+  win.connect('close-request', () => {
+    app.disconnect(syntaxSignalId)
+    return false
   })
 
   if ((app.skills ?? []).length > 0) {

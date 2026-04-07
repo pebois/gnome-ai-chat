@@ -7,13 +7,23 @@ import type { AppInterface } from '@/lib/app.js'
 import { formatRemainingTime, formatSize } from '@/lib/utils.js'
 
 export function showPullDialog(app: AppInterface, defaultModel?: string): void {
+  let isPulling = false
+  let cancellable: Gio.Cancellable | null = null
+  let startTime = 0
+
   const window = new Adw.Window({
     title: 'Pull Model',
     modal: true,
     transient_for: app.window,
     width_request: 400,
-    resizable: false,
-    hide_on_close: true
+    resizable: false
+  })
+
+  window.connect('close-request', () => {
+    if (isPulling && cancellable) {
+      cancellable.cancel()
+    }
+    return false
   })
 
   const toolbarView = new Adw.ToolbarView()
@@ -149,10 +159,6 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
 
   box.append(progressBox)
 
-  let isPulling = false
-  let cancellable: Gio.Cancellable | null = null
-  let startTime = 0
-
   const resetState = () => {
     isPulling = false
     cancellable = null
@@ -229,8 +235,8 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
       GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
         try {
           app.showToast(`Successfully pulled ${modelName}`)
-          window.close()
           void app.init()
+          window.close()
         } catch (e) {
           console.error('Error on pull success UI update:', e)
         }
