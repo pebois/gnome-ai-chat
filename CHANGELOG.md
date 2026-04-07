@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Disabled semantic search indexing on app close to significantly improve shutdown times.
 
 ### Fixed
+- **Auto-Summarization**: Fixed a bug where cancelling the generation of the first message would still trigger the automatic conversation summarization process.
 - **Keyboard Shortcuts**: Fixed "Indexed Folders" shortcut (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>) failing to trigger due to missing action parameters.
 - Improved parameterized action handling to allow accelerators to trigger commands that normally require string arguments.
 - **Memory Leaks**: Addresssed critical memory leaks in chat messages, preferences, and skills dialogs by explicitly managing component lifecycles and utilizing `close-request` handlers instead of the deprecated GTK4 `destroy` signal.

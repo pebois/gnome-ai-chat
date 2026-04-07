@@ -439,7 +439,7 @@ export class Chat {
         this._app.sendNotification(`message-completed-${conversation.id}`, notification)
       }
 
-      if (isFirstMessage) {
+      if (isFirstMessage && !cancellable.is_cancelled()) {
         this._app.setSummarizing(conversation.id, true)
         void summarizeConversation({ ollama: this._app.ollama, messages: conversation.messages })
           .then((summary) => {
