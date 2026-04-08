@@ -13,7 +13,7 @@ import { DEFAULT_SPACING, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
 import type { OllamaMessage, OllamaToolCall } from '@/lib/ollama.js'
 import { handle_render_html } from '@/lib/tools/html.js'
 import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setupContextMenu } from '@/lib/ui.js'
-import { getLanguageId, markdownToPango } from '@/lib/utils.js'
+import { getLanguageMetadata, markdownToPango } from '@/lib/utils.js'
 
 export class TableRowItem extends GObject.Object {
   public cells: string[] = []
@@ -190,8 +190,8 @@ export class Message {
       const buffer = new GtkSource.Buffer()
       const lm = GtkSource.LanguageManager.get_default()
       const ext = file.name.split('.').pop() || ''
-      const langId = getLanguageId(ext)
-      const lang = lm.get_language(langId) || lm.get_language('text')
+      const metadata = getLanguageMetadata(ext)
+      const lang = lm.get_language(metadata.id) || lm.get_language('text')
       if (lang) {
         buffer.set_language(lang)
       }
@@ -425,12 +425,12 @@ export class Message {
         if (part.type === chunk.type) {
           if (chunk.type === 'code') {
             const { code, language } = this._parseCodeBlock(chunk.content)
-            part.expanderRow!.set_title(language || 'text')
+            const lm = GtkSource.LanguageManager.get_default()
+            const metadata = getLanguageMetadata(language)
+            part.expanderRow!.set_title(metadata.title)
             part.buffer!.set_text(code, -1)
 
-            const lm = GtkSource.LanguageManager.get_default()
-            const langId = getLanguageId(language)
-            const lang = lm.get_language(langId) || lm.get_language('text')
+            const lang = lm.get_language(metadata.id) || lm.get_language('text')
             if (part.buffer!.get_language() !== lang) {
               part.buffer!.set_language(lang)
             }
@@ -475,7 +475,10 @@ export class Message {
 
       if (chunk.type === 'code') {
         const { code, language } = this._parseCodeBlock(chunk.content)
-        const [listBox, expander] = createBoxedExpanderRow(language || 'text', 'text-x-generic-symbolic')
+        const lm = GtkSource.LanguageManager.get_default()
+        const metadata = getLanguageMetadata(language)
+
+        const [listBox, expander] = createBoxedExpanderRow(metadata.title, 'text-x-generic-symbolic')
         expander.set_expanded(true)
 
         const copyBtn = new Gtk.Button({
@@ -492,9 +495,7 @@ export class Message {
         expander.add_suffix(copyBtn)
 
         const buffer = new GtkSource.Buffer()
-        const lm = GtkSource.LanguageManager.get_default()
-        const langId = getLanguageId(language)
-        const lang = lm.get_language(langId) || lm.get_language('text')
+        const lang = lm.get_language(metadata.id) || lm.get_language('text')
         if (lang) {
           buffer.set_language(lang)
         }

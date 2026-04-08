@@ -1,6 +1,28 @@
-import { convertMessageToTitle, convertSummaryToTitle, cosineSimilarity, formatDuration, formatModelName, formatRemainingTime, formatSize, markdownToPango, selectDefaultModel } from '@/lib/utils.js'
+import { convertMessageToTitle, convertSummaryToTitle, cosineSimilarity, formatDuration, formatModelName, formatRemainingTime, formatSize, getLanguageMetadata, markdownToPango, selectDefaultModel } from '@/lib/utils.js'
 
 describe('utils', () => {
+  describe('getLanguageMetadata', () => {
+    it('maps common extensions correctly', () => {
+      expect(getLanguageMetadata('ts')).toEqual({ id: 'typescript', title: 'TypeScript' })
+      expect(getLanguageMetadata('py')).toEqual({ id: 'python', title: 'Python' })
+      expect(getLanguageMetadata('rs')).toEqual({ id: 'rust', title: 'Rust' })
+    })
+
+    it('handles special titles', () => {
+      expect(getLanguageMetadata('c++')).toEqual({ id: 'cpp', title: 'C++' })
+      expect(getLanguageMetadata('c#')).toEqual({ id: 'csharp', title: 'C#' })
+    })
+
+    it('handles fallbacks by capitalizing', () => {
+      expect(getLanguageMetadata('customlang')).toEqual({ id: 'customlang', title: 'Customlang' })
+    })
+
+    it('handles empty or null input', () => {
+      expect(getLanguageMetadata('')).toEqual({ id: 'text', title: 'Text' })
+      expect(getLanguageMetadata(null as unknown as string)).toEqual({ id: 'text', title: 'Text' })
+    })
+  })
+
   describe('formatDuration', () => {
     it('formats milliseconds', () => {
       expect(formatDuration(500.5)).toBe('500.5ms')
