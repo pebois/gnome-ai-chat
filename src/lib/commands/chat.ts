@@ -87,8 +87,39 @@ export const hn: Command = {
   name: 'hn',
   description: 'Get Hacker News headlines',
   icon: 'newspaper-symbolic',
-  activate: (app) => {
-    app.chat.input.getBuffer().set_text('http get https://hnrss.org/best list headlines', -1)
+  subCommands: [
+    { name: 'best', description: 'Get the best stories from Hacker News', icon: 'view-paged-symbolic' },
+    { name: 'newest', description: 'Get the newest stories from Hacker News', icon: 'view-list-bullet-symbolic' },
+    { name: 'custom', description: 'Search Hacker News by custom query', icon: 'system-search-symbolic', requiresArgument: true }
+  ],
+  parameterType: GLib.VariantType.new('s'),
+  activate: (app, parameter) => {
+    let url = 'https://hnrss.org/best'
+    let subCommand = 'best'
+    let argument = ''
+
+    if (parameter) {
+      const text = parameter.get_string()[0]
+      if (text) {
+        const parts = text.split(' ')
+        if (parts.length >= 2) {
+          subCommand = parts[1].toLowerCase()
+          argument = parts.slice(2).join(' ').trim()
+        }
+      }
+    }
+
+    if (subCommand === 'newest') {
+      url = 'https://hnrss.org/newest'
+    } else if (subCommand === 'custom') {
+      if (!argument) {
+        app.chat.input.getBuffer().set_text('', -1)
+        return
+      }
+      url = `https://hnrss.org/newest?q=${encodeURIComponent(argument)}`
+    }
+
+    app.chat.input.getBuffer().set_text(`Use fetch_rss_feed on ${url} to get the latest Hacker News headlines. Please summarize all of the headlines and present them with an informative tone.`, -1)
     return app.chat.sendMessage()
   }
 }
