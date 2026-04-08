@@ -119,7 +119,7 @@ export class Commands {
           const subCmd = this._currentCommand.subCommands.find((s) => {
             return s.name === selected.name
           })
-          if (subCmd?.getDynamicMatches) {
+          if (subCmd?.getDynamicMatches || subCmd?.requiresArgument) {
             this._complete(selected.name)
             this._updateList(`/${this._currentCommand.name} ${selected.name} `)
           } else {
@@ -229,7 +229,7 @@ export class Commands {
                 const subCmd = this._currentCommand.subCommands.find((s) => {
                   return s.name === selected.name
                 })
-                if (subCmd?.getDynamicMatches) {
+                if (subCmd?.getDynamicMatches || subCmd?.requiresArgument) {
                   this._complete(selected.name)
                   this._updateList(`/${this._currentCommand.name} ${selected.name} `)
                 } else {

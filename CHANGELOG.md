@@ -6,9 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
-## [1.7.0] - 2026-04-08
 ### Added
+- **Slash Command Argument Parsing**: Fixed a bug where executing a slash command manually with arguments (e.g., `/hn custom typescript`) would ignore the arguments and execute the base command instead.
+- **Command Argument Safety**: Introduced a `requiresArgument` property to the `SubCommand` interface. Subcommands with this flag (like `/hn custom`) will now smoothly autocomplete and wait for user input instead of executing prematurely.
+- **RSS Feed Tool**: Introduced a new `fetch_rss_feed` tool that natively parses RSS and Atom feeds into structured JSON for efficient model processing.
+- **Hacker News Subcommands**: Updated the `/hn` command with specialized subcommands and enhanced the AI prompt to explicitly summarize all headlines with an informative tone:
+  - `/hn best`: Fetches the top-rated stories.
+  - `/hn newest`: Fetches the most recent stories.
+  - `/hn custom [QUERY]`: Performs a keyword search across Hacker News stories using a custom query.
 - **Enhanced File Attachment**: Added `/files attach [QUERY]` and `/files search [QUERY]` subcommands with real-time autocompletion.
   - `/files attach` uses advanced fuzzy matching (e.g., "diapu" matches "dialog/pull.ts") to find files by path.
   - `/files search` performs local semantic vector search to find files based on their content.

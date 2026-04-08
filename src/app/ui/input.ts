@@ -116,8 +116,8 @@ export class Input {
         const text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false).trim()
 
         if (text.startsWith('/')) {
-          const cmdName = text.slice(1).split(' ')[0].toLowerCase()
-          this._commands.execute(cmdName)
+          const fullCmd = text.slice(1).trim()
+          this._commands.execute(fullCmd)
           return true
         }
 

@@ -8,7 +8,7 @@ import { calculate, handle_calculate, handle_roll_die, roll_die } from '@/lib/to
 import { add_observations, create_entities, create_relations, delete_entities, delete_observations, delete_relations, handle_add_observations, handle_create_entities, handle_create_relations, handle_delete_entities, handle_delete_observations, handle_delete_relations, handle_open_nodes, handle_read_graph, handle_search_nodes, open_nodes, read_graph, search_nodes } from '@/lib/tools/memory.js'
 import { get_system_info, handle_get_system_info, handle_take_screenshot, take_screenshot } from '@/lib/tools/system.js'
 import { get_current_datetime, get_user_timezone, handle_get_current_datetime, handle_get_user_timezone } from '@/lib/tools/time.js'
-import { fetch_web_page, handle_fetch_web_page } from '@/lib/tools/web.js'
+import { fetch_rss_feed, fetch_web_page, handle_fetch_rss_feed, handle_fetch_web_page } from '@/lib/tools/web.js'
 
 export const tools = [
   add_observations,
@@ -18,6 +18,7 @@ export const tools = [
   delete_entities,
   delete_observations,
   delete_relations,
+  fetch_rss_feed,
   fetch_web_page,
   get_app_details,
   get_current_datetime,
@@ -65,6 +66,8 @@ export async function onToolCall(app: AppInterface, name: string, args: Record<s
       return handle_search_vector_index(app, args)
     case 'run_automation_command':
       return handle_run_automation_command(args)
+    case 'fetch_rss_feed':
+      return handle_fetch_rss_feed(args)
     case 'fetch_web_page':
       return handle_fetch_web_page(args)
     case 'calculate':
