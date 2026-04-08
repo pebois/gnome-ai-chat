@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.7.0] - 2026-04-08
 ### Added
 - **Enhanced File Attachment**: Added `/files attach [QUERY]` and `/files search [QUERY]` subcommands with real-time autocompletion.
   - `/files attach` uses advanced fuzzy matching (e.g., "diapu" matches "dialog/pull.ts") to find files by path.
