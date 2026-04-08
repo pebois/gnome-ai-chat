@@ -9,13 +9,13 @@ This is a GNOME desktop application built with TypeScript, GJS, GTK4, and Libadw
 - **Real-Time Streaming & Reasoning**: Experience immediate feedback with text streaming and adjustable reasoning depth (None, Low, Medium, High) for complex queries.
 - **Multimodal Capabilities**: Effortlessly include images in prompts using drag-and-drop or the native file picker for vision-enabled models.
 - **Smart Chat Organization**: Automatically categorizes conversations with concise AI-generated titles and relevant emojis for effortless navigation.
-- **Rich Text Rendering**: Full Markdown support including code blocks, headers, and text formatting, cleanly rendered natively using Pango markup.
+- **Rich Text Rendering**: Full Markdown support including code blocks, tables, headers, and text formatting, cleanly rendered natively using Pango markup and GTK widgets.
 - **Integrated System Tools**: Expand model capabilities with built-in function calling for time, math calculations, web fetching, HTML parsing, system info, file searching, app launching, desktop automation, code execution, persistent memory, and screenshots.
 - **Comprehensive Analytics**: Monitor performance with detailed statistics on API latency, tool execution times, and per-model token consumption.
 - **Advanced Chat Controls**: Full-featured chat management including search, message copying, session restarting, keyboard shortcuts, and smart bottom-scrolling.
 - **Quick Slash Commands**: Execute powerful inline actions (e.g., `/hn` for Hacker News, `/compress` to optimize context) with a dynamic, filterable autocomplete interface.
 - **Local RAG (Chat with your Files)**: Index local folders into a private SQLite vector store to ground model answers in actual code and documentation without cloud uploads.
-- **Skills Editor**: Dedicated, full-size window with markdown syntax highlighting for creating and managing custom persona instructions and system prompts.
+- **Skills Editor**: Dedicated, full-size window with markdown syntax highlighting for creating and managing custom persona instructions and system prompts. Quickly apply them with @-mentions in the chat input.
 - **Auto-Attach Screenshots**: Effortlessly capture and include screen contents directly in the chat input for visual analysis.
 - **Semantic History Search**: Locate past conversations conceptually using local vector embeddings, grouped chronologically, with seamless background indexing.
 - **Resource Monitoring**: Track active models and their hardware footprint (VRAM, CPU, Total Memory, and TTL) through the 'Running Models' view.
@@ -23,7 +23,7 @@ This is a GNOME desktop application built with TypeScript, GJS, GTK4, and Libadw
 
 ## Technologies
 - **Language**: TypeScript (compiled to JavaScript for GJS)
-- **UI Framework**: GTK4 & Libadwaita (`Adw`)
+- **UI Framework**: GTK4, Libadwaita (`Adw`), GtkSourceView 5 (`GtkSource`), and WebKitGTK 6.0 (`WebKit`)
 - **HTTP Client**: Libsoup 3.0 (`Soup`) with persistent RFC-compliant caching for web tools.
 - **Backend API**: Ollama (Local HTTP API at `localhost:11434`)
 - **Testing**: Jest & `ts-jest`
@@ -100,7 +100,7 @@ src/
       models.ts         # Models dropdown component
       scroll.ts         # ScrollManager for "stick to bottom" logic
       sidebar.ts        # Sidebar class — left-pane and conversation lifecycle
-      skills.ts         # Skills Editor UI components
+      skills.ts         # Skill mentions handler and popover (e.g. @coder)
     window/
       about.ts          # about dialog
       main.ts           # AppWindow class — main window orchestrator
@@ -152,10 +152,11 @@ src/
     debug.ts            # centralized debug logging utility
     ollama.ts           # Ollama HTTP API client
     screenshot.ts       # screenshot capture logic
+    splitter.ts         # text chunking for vector embeddings
     timeout.ts          # async utilities (debounce, poll, sleep)
     tracker.ts          # performance and usage tracking logic
-    ui.ts               # UI utility helpers (actions, confirmation dialogs)
-    utils.ts            # markdown→Pango, model selection helpers
+    ui.ts               # UI utility helpers (actions, widgets, confirmation dialogs)
+    utils.ts            # markdown→Pango, formatting, and general helpers
   test/
     *.test.ts           # Jest test suites
 ```
