@@ -434,7 +434,20 @@ export class Sidebar {
     popover.set_has_arrow(false)
     popover.set_position(Gtk.PositionType.BOTTOM)
 
-    setupContextMenu(row, popover)
+    setupContextMenu(row, popover, async () => {
+      if (this._app.conversation?.id === conversation.id) {
+        const count = this._app.conversation.messages.filter((m) => {
+          return ['user', 'assistant'].includes(m.role)
+        }).length
+        summarizeAction.set_enabled(count > 0)
+      } else {
+        const messages = await conversationsStore.getMessages(conversation.id)
+        const count = messages.filter((m) => {
+          return ['user', 'assistant'].includes(m.role)
+        }).length
+        summarizeAction.set_enabled(count > 0)
+      }
+    })
 
     row.conversation = conversation
     row.group = getDateGroup(conversation.updated_at || conversation.created_at)

@@ -5,11 +5,12 @@ import GLib from 'gi://GLib?version=2.0'
 import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 
-export function setupContextMenu(widget: Gtk.Widget, popover: Gtk.PopoverMenu): void {
+export function setupContextMenu(widget: Gtk.Widget, popover: Gtk.PopoverMenu, onBeforeShow?: () => void): void {
   const gesture = new Gtk.GestureClick({
     button: 3
   })
   gesture.connect('pressed', (_gesture: Gtk.GestureClick, _n_press: number, x: number, y: number) => {
+    onBeforeShow?.()
     const rect = new Gdk.Rectangle({ x: Math.round(x), y: Math.round(y), width: 1, height: 1 })
     popover.set_pointing_to(rect)
     popover.popup()
@@ -19,6 +20,7 @@ export function setupContextMenu(widget: Gtk.Widget, popover: Gtk.PopoverMenu): 
   const keyCtrl = new Gtk.EventControllerKey()
   keyCtrl.connect('key-pressed', (_ctrl, keyval, _keycode) => {
     if (keyval === Gdk.keyval_from_name('Menu')) {
+      onBeforeShow?.()
       const width = widget.get_allocated_width()
       const height = widget.get_allocated_height()
       const rect = new Gdk.Rectangle({ x: Math.round(width / 2), y: Math.round(height / 2), width: 1, height: 1 })
