@@ -207,47 +207,60 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB))
 }
 
-export function getLanguageId(lang: string): string {
+export interface LanguageMetadata {
+  id: string
+  title: string
+}
+
+export function getLanguageMetadata(lang: string): LanguageMetadata {
   if (!lang) {
-    return 'text'
+    return { id: 'text', title: 'Text' }
   }
 
-  const map: Record<string, string> = {
-    'ts': 'typescript',
-    'tsx': 'typescript',
-    'js': 'javascript',
-    'jsx': 'javascript',
-    'mjs': 'javascript',
-    'cjs': 'javascript',
-    'vue': 'javascript',
-    'md': 'markdown',
-    'mdx': 'markdown',
-    'py': 'python',
-    'rs': 'rust',
-    'sh': 'sh',
-    'bash': 'sh',
-    'zsh': 'sh',
-    'yml': 'yaml',
-    'yaml': 'yaml',
-    'cxx': 'cpp',
-    'c++': 'cpp',
-    'rb': 'ruby',
-    'cs': 'csharp',
-    'c#': 'csharp',
-    'fs': 'fsharp',
-    'f#': 'fsharp',
-    'kt': 'kotlin',
-    'html': 'html',
-    'xml': 'xml',
-    'json': 'json',
-    'jsonl': 'json',
-    'css': 'css',
-    'java': 'java',
-    'swift': 'swift',
-    'php': 'php',
-    'sql': 'sql'
+  const map: Record<string, LanguageMetadata> = {
+    'ts': { id: 'typescript', title: 'TypeScript' },
+    'tsx': { id: 'typescript', title: 'TypeScript (TSX)' },
+    'js': { id: 'javascript', title: 'JavaScript' },
+    'jsx': { id: 'javascript', title: 'JavaScript (JSX)' },
+    'mjs': { id: 'javascript', title: 'JavaScript (ESM)' },
+    'cjs': { id: 'javascript', title: 'JavaScript (CJS)' },
+    'vue': { id: 'javascript', title: 'Vue' },
+    'md': { id: 'markdown', title: 'Markdown' },
+    'mdx': { id: 'markdown', title: 'MDX' },
+    'py': { id: 'python', title: 'Python' },
+    'rs': { id: 'rust', title: 'Rust' },
+    'sh': { id: 'sh', title: 'Shell' },
+    'bash': { id: 'sh', title: 'Bash' },
+    'zsh': { id: 'sh', title: 'Zsh' },
+    'yml': { id: 'yaml', title: 'YAML' },
+    'yaml': { id: 'yaml', title: 'YAML' },
+    'cxx': { id: 'cpp', title: 'C++' },
+    'c++': { id: 'cpp', title: 'C++' },
+    'cpp': { id: 'cpp', title: 'C++' },
+    'rb': { id: 'ruby', title: 'Ruby' },
+    'cs': { id: 'csharp', title: 'C#' },
+    'c#': { id: 'csharp', title: 'C#' },
+    'fs': { id: 'fsharp', title: 'F#' },
+    'f#': { id: 'fsharp', title: 'F#' },
+    'kt': { id: 'kotlin', title: 'Kotlin' },
+    'html': { id: 'html', title: 'HTML' },
+    'xml': { id: 'xml', title: 'XML' },
+    'json': { id: 'json', title: 'JSON' },
+    'jsonl': { id: 'json', title: 'JSONL' },
+    'css': { id: 'css', title: 'CSS' },
+    'java': { id: 'java', title: 'Java' },
+    'swift': { id: 'swift', title: 'Swift' },
+    'php': { id: 'php', title: 'PHP' },
+    'sql': { id: 'sql', title: 'SQL' }
   }
 
   const l = lang.toLowerCase()
-  return map[l] || l
+  if (map[l]) {
+    return map[l]
+  }
+
+  return {
+    id: l,
+    title: l.charAt(0).toUpperCase() + l.slice(1)
+  }
 }

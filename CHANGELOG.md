@@ -199,7 +199,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Refined Tool Metadata**: Updated all tool descriptions with clearer usage constraints, warnings about side effects (e.g., file overwrites, non-interactive shell commands), and discovery prerequisites.
 - **Sub-command Autocompletion**: Enhanced slash commands to support nested sub-commands with unique icons and descriptions (e.g., `/memory summarize`).
 - **Cumulative System Prompts**: `@` skills now append their specialized instructions to the default system prompt rather than replacing it, maintaining core interaction rules.
-- **Robust Syntax Highlighting**: Improved language detection for code blocks and file attachments using a comprehensive extension-to-language mapping (e.g., `ts` -> `typescript`).
+- **Robust Syntax Highlighting**: Improved language detection for code blocks and file attachments using a comprehensive mapping that resolves raw identifiers (e.g., `ts`) to standardized highlight IDs (`typescript`) and human-friendly UI titles (`TypeScript`).
 - **Intelligent Auto-scroll**: Streaming responses now respect manual scrolling; auto-scroll is temporarily disabled if you scroll up to read previous messages and re-engages once you return to the bottom.
 - **Refined Memory Architecture**: Extracted knowledge graph logic into a standalone `MemoryManager` library.
 - **Message Layout**: Content and role label are grouped in a shared box with consistent 4px spacing; group is hidden when content is empty.

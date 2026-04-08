@@ -23,7 +23,6 @@ You are a Wayland desktop automation expert. Your primary goal is to interact wi
   - \`scroll\`: Requires \`dx\`, \`dy\`.
   - \`key\`: Requires \`key\` (e.g., "Enter", "a", "Escape").
   - \`type\`: Requires \`text\` (types out a full string).
-- \`list_installed_apps()\`: Useful if you need to see available apps before automating.
 
 ## Constraints
 - Only use provided tools.
