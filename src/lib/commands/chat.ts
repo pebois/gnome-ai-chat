@@ -8,6 +8,9 @@ export const clear: Command = {
   description: 'Clear current conversation',
   icon: 'edit-clear-all-symbolic',
   activate: (app) => {
+    if (!app.isLoaded) {
+      return
+    }
     app.chat.clearAllMessages()
   }
 }
@@ -19,6 +22,9 @@ export const newConversation: Command = {
   visible: false,
   accels: ['<Primary>n'],
   activate: (app) => {
+    if (!app.isLoaded) {
+      return
+    }
     return app.sidebar.createNewConversation()
   }
 }
@@ -30,7 +36,7 @@ export const openConversation: Command = {
   visible: false,
   parameterType: GLib.VariantType.new('s'),
   activate: (app, parameter) => {
-    if (!parameter) {
+    if (!app.isLoaded || !parameter) {
       return
     }
     const idStr = parameter.get_string()[0]

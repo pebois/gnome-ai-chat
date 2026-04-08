@@ -27,6 +27,8 @@ import { convertMessageToTitle, pangoEscape } from '@/lib/utils.js'
 export class App extends Adw.Application implements AppInterface {
   private _active: boolean
   private _isExiting: boolean = false
+  public isLoaded: boolean = false
+  private _pendingNewConversation: boolean = false
   private _filesIndexingCancellable: Gio.Cancellable | null = null
   private _generatingConversations: Set<number> = new Set()
   private _summarizingConversations: Set<number> = new Set()
@@ -87,8 +89,12 @@ export class App extends Adw.Application implements AppInterface {
 
     this.activate()
 
-    if (args.includes('--new-conversation') && this.sidebar) {
-      void this.sidebar.createNewConversation()
+    if (args.includes('--new-conversation')) {
+      if (this.isLoaded && this.sidebar) {
+        void this.sidebar.createNewConversation()
+      } else {
+        this._pendingNewConversation = true
+      }
     }
 
     return 0
@@ -195,7 +201,9 @@ export class App extends Adw.Application implements AppInterface {
     this.window.hide()
     this.hold()
 
-    await conversationsStore.saveConversations(this.conversations)
+    if (this.isLoaded) {
+      await conversationsStore.saveConversations(this.conversations)
+    }
     await settingsStore.saveSettings(this.settings)
 
     this.sidebar.clearList()
@@ -240,6 +248,9 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   public saveConversations(): void {
+    if (!this.isLoaded) {
+      return
+    }
     void conversationsStore.saveConversations(this.conversations).then(() => {
       return conversationsStore.indexConversations(this.ollama, this.conversations, false)
     }).catch((err) => {
@@ -491,11 +502,13 @@ export class App extends Adw.Application implements AppInterface {
 
   private async _loadConversations(): Promise<void> {
     this.conversations = await conversationsStore.getConversations()
+    this.isLoaded = true
     this.sidebar.populateList()
-    if (this.conversations.length > 0) {
-      await this.sidebar.selectFirst()
-    } else {
+    if (this._pendingNewConversation || this.conversations.length === 0) {
+      this._pendingNewConversation = false
       await this.sidebar.createNewConversation()
+    } else {
+      await this.sidebar.selectFirst()
     }
   }
 }

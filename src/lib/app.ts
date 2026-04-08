@@ -13,6 +13,7 @@ export interface AppInterface {
   readonly chat: Chat
   readonly conversation?: ChatConversation
   readonly conversations: Conversation[]
+  readonly isLoaded: boolean
   readonly isBusy: boolean
   readonly model: string
   readonly models: string[]

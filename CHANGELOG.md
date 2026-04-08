@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Popover Race Condition**: Resolved an issue where the command popover would briefly re-appear after a file was successfully attached.
 - **Command State Management**: Ensured the command list and matches are properly cleared after execution or when searches are invalidated.
+- **Startup Race Conditions**: Fixed critical data loss bugs where triggering actions (`Ctrl+N`, `Ctrl+Q`, or the `--new-conversation` CLI flag) during the initial database load would inadvertently overwrite the conversation store with an empty list. All state-mutating commands now await a full application load.
 
 ### Changed
 - **Optimized File Search**: Increased search result limit to 50 and improved SQL performance by restricting fuzzy matching to relative file paths.
