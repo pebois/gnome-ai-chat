@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- **Enhanced File Attachment**: Added `/files attach [QUERY]` and `/files search [QUERY]` subcommands with real-time autocompletion.
+  - `/files attach` uses advanced fuzzy matching (e.g., "diapu" matches "dialog/pull.ts") to find files by path.
+  - `/files search` performs local semantic vector search to find files based on their content.
+- **Dynamic Command Feedback**: The slash command popover now displays a clear "No matches found" message for dynamic searches that yield no results.
+- **Improved Search UI**: Optimized search results display to show the filename as the primary title and the relative directory path as the description.
+
+### Fixed
+- **Popover Race Condition**: Resolved an issue where the command popover would briefly re-appear after a file was successfully attached.
+- **Command State Management**: Ensured the command list and matches are properly cleared after execution or when searches are invalidated.
+
+### Changed
+- **Optimized File Search**: Increased search result limit to 50 and improved SQL performance by restricting fuzzy matching to relative file paths.
+- **Strict Command Metadata**: Enhanced the `SubCommand` interface with mandatory `title` and asynchronous `getDynamicMatches` support for better extensibility.
 
 ## [1.6.0] - 2026-04-07
 ### Added

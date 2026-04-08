@@ -3,7 +3,7 @@ import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/lib/app.js'
-import { type Command, COMMANDS } from '@/lib/commands/index.js'
+import { type Command, COMMANDS, type SubCommand } from '@/lib/commands/index.js'
 
 export class Commands {
   private _app: AppInterface
@@ -11,8 +11,11 @@ export class Commands {
   private _parent: Gtk.Widget
   private _popover!: Gtk.Popover
   private _listBox!: Gtk.ListBox
-  private _matches: { name: string; description: string; icon: string }[] = []
+  private _matches: { name: string; title: string; description: string; icon: string }[] = []
   private _currentCommand: Command | null = null
+  private _currentSubCommand: SubCommand | null = null
+  private _updateId = 0
+  private _isExecuting = false
 
   constructor(app: AppInterface, textView: Gtk.TextView, parent: Gtk.Widget) {
     this._app = app
@@ -86,6 +89,10 @@ export class Commands {
 
     const buffer = this._textView.get_buffer()
     buffer.connect('changed', () => {
+      if (this._isExecuting) {
+        return
+      }
+
       const cursor = buffer.get_iter_at_mark(buffer.get_insert())
       const start = cursor.copy()
       start.set_line_offset(0)
@@ -102,18 +109,34 @@ export class Commands {
       const index = row.get_index()
       const selected = this._matches[index]
       if (selected) {
-        this._complete(selected.name)
-        if (this._currentCommand && this._currentCommand.subCommands?.some((s) => {
+        if (this._currentSubCommand) {
+          this._isExecuting = true
+          this._complete(selected.name)
+          this.execute(`${this._currentCommand!.name} ${this._currentSubCommand.name} ${selected.name}`)
+        } else if (this._currentCommand && this._currentCommand.subCommands?.some((s) => {
           return s.name === selected.name
         })) {
-          this.execute(`${this._currentCommand.name} ${selected.name}`)
+          const subCmd = this._currentCommand.subCommands.find((s) => {
+            return s.name === selected.name
+          })
+          if (subCmd?.getDynamicMatches) {
+            this._complete(selected.name)
+            this._updateList(`/${this._currentCommand.name} ${selected.name} `)
+          } else {
+            this._isExecuting = true
+            this._complete(selected.name)
+            this.execute(`${this._currentCommand.name} ${selected.name}`)
+          }
         } else {
           const cmd = COMMANDS.find((c) => {
             return c.name === selected.name
           })
           if (cmd?.subCommands) {
+            this._complete(selected.name)
             this._updateList(`/${cmd.name} `)
           } else {
+            this._isExecuting = true
+            this._complete(selected.name)
             this.execute(selected.name)
           }
         }
@@ -126,7 +149,15 @@ export class Commands {
   }
 
   public execute(commandPath: string): void {
+    this._isExecuting = true
+    this._updateId++
     this._popover.popdown()
+    this._matches = []
+    let child
+    while ((child = this._listBox.get_first_child())) {
+      this._listBox.remove(child)
+    }
+
     const parts = commandPath.split(' ')
     const commandName = parts[0]
     const cmd = COMMANDS.find((c) => {
@@ -145,6 +176,7 @@ export class Commands {
     const end = buffer.get_end_iter()
     buffer.delete(start, end)
     this._textView.grab_focus()
+    this._isExecuting = false
   }
 
   public handleKeyPress(keyval: number): boolean {
@@ -181,21 +213,45 @@ export class Commands {
       if (selectedRow) {
         const selected = this._matches[index]
         if (selected) {
-          this._complete(selected.name)
-          if (isReturn) {
-            if (this._currentCommand && this._currentCommand.subCommands?.some((s) => {
-              return s.name === selected.name
-            })) {
-              this.execute(`${this._currentCommand.name} ${selected.name}`)
+          if (this._currentSubCommand) {
+            if (isReturn) {
+              this._isExecuting = true
+              this._complete(selected.name)
+              this.execute(`${this._currentCommand!.name} ${this._currentSubCommand.name} ${selected.name}`)
             } else {
-              const cmd = COMMANDS.find((c) => {
-                return c.name === selected.name
-              })
-              if (cmd?.subCommands) {
-                this._updateList(`/${cmd.name} `)
+              this._complete(selected.name)
+            }
+          } else {
+            if (isReturn) {
+              if (this._currentCommand && this._currentCommand.subCommands?.some((s) => {
+                return s.name === selected.name
+              })) {
+                const subCmd = this._currentCommand.subCommands.find((s) => {
+                  return s.name === selected.name
+                })
+                if (subCmd?.getDynamicMatches) {
+                  this._complete(selected.name)
+                  this._updateList(`/${this._currentCommand.name} ${selected.name} `)
+                } else {
+                  this._isExecuting = true
+                  this._complete(selected.name)
+                  this.execute(`${this._currentCommand.name} ${selected.name}`)
+                }
               } else {
-                this.execute(selected.name)
+                const cmd = COMMANDS.find((c) => {
+                  return c.name === selected.name
+                })
+                if (cmd?.subCommands) {
+                  this._complete(selected.name)
+                  this._updateList(`/${cmd.name} `)
+                } else {
+                  this._isExecuting = true
+                  this._complete(selected.name)
+                  this.execute(selected.name)
+                }
               }
+            } else {
+              this._complete(selected.name)
             }
           }
           return true
@@ -224,7 +280,9 @@ export class Commands {
     start.set_line_offset(0)
 
     buffer.delete(start, cursor)
-    if (this._currentCommand) {
+    if (this._currentSubCommand) {
+      buffer.insert(start, `/${this._currentCommand!.name} ${this._currentSubCommand.name} ${name} `, -1)
+    } else if (this._currentCommand) {
       buffer.insert(start, `/${this._currentCommand.name} ${name} `, -1)
     } else {
       buffer.insert(start, `/${name} `, -1)
@@ -233,8 +291,9 @@ export class Commands {
 
   private _updateList(lineText: string): void {
     let filterText = lineText.startsWith('/') ? lineText.slice(1).toLowerCase() : lineText.toLowerCase()
-    let matches: { name: string; description: string; icon: string }[] = []
+    let matches: { name: string; title: string; description: string; icon: string }[] = []
     this._currentCommand = null
+    this._currentSubCommand = null
 
     const parts = filterText.split(' ')
     if (parts.length > 1) {
@@ -245,6 +304,18 @@ export class Commands {
       })
       if (baseCmd && baseCmd.subCommands) {
         this._currentCommand = baseCmd
+
+        const activeSubCmd = baseCmd.subCommands.find((sub) => {
+          return subFilter.startsWith(`${sub.name} `)
+        })
+
+        if (activeSubCmd && activeSubCmd.getDynamicMatches) {
+          this._currentSubCommand = activeSubCmd
+          const query = subFilter.slice(activeSubCmd.name.length + 1).trim()
+          this._loadDynamicMatches(activeSubCmd, query, filterText)
+          return
+        }
+
         matches = baseCmd.subCommands
           .filter((sub) => {
             return sub.name.startsWith(subFilter)
@@ -252,6 +323,7 @@ export class Commands {
           .map((sub) => {
             return {
               name: sub.name,
+              title: sub.name,
               description: sub.description,
               icon: sub.icon
             }
@@ -261,11 +333,85 @@ export class Commands {
     } else {
       matches = COMMANDS.filter((cmd) => {
         return cmd.visible !== false && cmd.name.startsWith(filterText)
+      }).map((cmd) => {
+        return {
+          name: cmd.name,
+          title: cmd.name,
+          description: cmd.description,
+          icon: cmd.icon
+        }
       })
     }
 
+    this._renderMatches(matches, filterText)
+  }
+
+  private _loadDynamicMatches(subCmd: SubCommand, query: string, filterText: string): void {
+    const updateId = ++this._updateId
+    if (!subCmd.getDynamicMatches) {
+      return
+    }
+
+    void subCmd.getDynamicMatches(this._app, query).then((matches) => {
+      if (this._updateId !== updateId) {
+        return
+      }
+      this._renderMatches(matches, filterText)
+    }).catch((err) => {
+      console.error(err)
+    })
+  }
+
+  private _renderMatches(matches: { name: string; title: string; description: string; icon: string }[], filterText: string): void {
     if (matches.length === 0) {
-      this._popover.popdown()
+      this._matches = []
+      let child
+      while ((child = this._listBox.get_first_child())) {
+        this._listBox.remove(child)
+      }
+
+      if (this._currentSubCommand) {
+        const box = new Gtk.Box({
+          orientation: Gtk.Orientation.HORIZONTAL,
+          spacing: 6,
+          margin_top: 6,
+          margin_bottom: 6,
+          margin_start: 6,
+          margin_end: 6
+        })
+
+        const icon = new Gtk.Image({
+          icon_name: 'edit-find-symbolic',
+          pixel_size: 16
+        })
+        icon.add_css_class('dim-label')
+
+        const label = new Gtk.Label({
+          label: 'No matches found',
+          halign: Gtk.Align.START
+        })
+        label.add_css_class('dim-label')
+
+        box.append(icon)
+        box.append(label)
+
+        const row = new Gtk.ListBoxRow({
+          child: box,
+          activatable: false,
+          selectable: false
+        })
+        this._listBox.append(row)
+
+        const width = Math.max(this._parent.get_allocated_width(), 200)
+        const rect = new Gdk.Rectangle({ x: 0, y: 0, width, height: 0 })
+        this._popover.set_pointing_to(rect)
+
+        if (!this._popover.get_visible()) {
+          this._popover.popup()
+        }
+      } else {
+        this._popover.popdown()
+      }
       return
     }
 
@@ -344,10 +490,21 @@ export class Commands {
         const box = row.get_child() as Gtk.Box
         const titleLabel = box.get_first_child()?.get_next_sibling() as Gtk.Label
         if (titleLabel) {
-          const highlighted = filterText.length > 0
-            ? `<b>${cmd.name.slice(0, filterText.length)}</b>${cmd.name.slice(filterText.length)}`
-            : cmd.name
-          titleLabel.set_markup(this._currentCommand ? highlighted : `/${highlighted}`)
+          const displayStr = cmd.title
+          let highlighted = displayStr
+          if (filterText.length > 0 && !this._currentSubCommand) {
+            if (displayStr.toLowerCase().startsWith(filterText.toLowerCase())) {
+              highlighted = `<b>${displayStr.slice(0, filterText.length)}</b>${displayStr.slice(filterText.length)}`
+            }
+          }
+
+          if (this._currentSubCommand) {
+            titleLabel.set_markup(highlighted)
+          } else if (this._currentCommand) {
+            titleLabel.set_markup(highlighted)
+          } else {
+            titleLabel.set_markup(`/${highlighted}`)
+          }
         }
       }
     })

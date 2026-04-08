@@ -75,12 +75,14 @@ export interface IndexedPath {
 
 export interface FileChunk {
   file_path: string
+  root_path?: string
   content: string
   embedding: number[]
 }
 
 export interface SearchResult {
   file_path: string
+  root_path: string
   content: string
   score: number
 }

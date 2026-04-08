@@ -73,16 +73,21 @@ export class FilesStore {
   }
 
   public async getAllChunks(): Promise<FileChunk[]> {
-    const sql = `SELECT file_path, content, embedding FROM vector_chunks;`
+    const sql = `
+      SELECT c.file_path, c.content, c.embedding, p.path as root_path
+      FROM vector_chunks c
+      JOIN vector_paths p ON c.file_path LIKE p.path || '/%' OR c.file_path = p.path;
+    `
     const stdout = await db.execSql(sql, ['-json'])
     if (!stdout) {
       return []
     }
     try {
-      const rows = JSON.parse(stdout) as { file_path: string; content: string; embedding: string }[]
+      const rows = JSON.parse(stdout) as { file_path: string; root_path: string; content: string; embedding: string }[]
       return rows.map((r) => {
         return {
           file_path: r.file_path,
+          root_path: r.root_path,
           content: r.content,
           embedding: JSON.parse(r.embedding) as number[]
         }
@@ -98,7 +103,7 @@ export class FilesStore {
 
     const results: SearchResult[] = chunks.map((chunk) => {
       const score = cosineSimilarity(queryEmbedding, chunk.embedding)
-      return { file_path: chunk.file_path, content: chunk.content, score }
+      return { file_path: chunk.file_path, root_path: chunk.root_path || '', content: chunk.content, score }
     }).filter((r) => {
       return r.score >= 0.5
     })
@@ -107,6 +112,30 @@ export class FilesStore {
       return b.score - a.score
     })
     return results.slice(0, limit)
+  }
+
+  public async searchPaths(query: string): Promise<{ file_path: string; root_path: string }[]> {
+    const fuzzyPattern = query.split('').map((c) => {
+      return c.replace(/[%_]/g, '')
+    }).join('%')
+    const escapedQuery = db.escape(`%${fuzzyPattern}%`)
+    const sql = `
+      SELECT DISTINCT c.file_path, p.path as root_path
+      FROM vector_chunks c
+      JOIN vector_paths p ON c.file_path LIKE p.path || '/%' OR c.file_path = p.path
+      WHERE SUBSTR(c.file_path, LENGTH(p.path) + 1) LIKE '${escapedQuery}'
+      LIMIT 50;
+    `
+    const stdout = await db.execSql(sql, ['-json'])
+    if (!stdout) {
+      return []
+    }
+    try {
+      return JSON.parse(stdout) as { file_path: string; root_path: string }[]
+    } catch (e) {
+      console.error('Failed to parse searchPaths JSON:', e)
+      return []
+    }
   }
 
   public async indexPath(ollama: Ollama, targetPath: string): Promise<void> {

@@ -12,6 +12,7 @@ export interface SubCommand {
   name: string
   description: string
   icon: string
+  getDynamicMatches?: (app: AppInterface, query: string) => Promise<{ name: string; title: string; description: string; icon: string }[]>
 }
 
 export interface Command {
