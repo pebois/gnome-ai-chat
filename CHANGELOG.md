@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.8.0] - 2026-04-09
 ### Added
 - **Regenerate Response Action**: Added a new "Regenerate response" button and menu action next to the edit action on user messages, allowing users to easily re-submit their prompt and generate a new response.
 - **Slash Command Argument Parsing**: Fixed a bug where executing a slash command manually with arguments (e.g., `/hn custom typescript`) would ignore the arguments and execute the base command instead.
