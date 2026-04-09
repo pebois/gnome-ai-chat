@@ -312,6 +312,21 @@ export class Chat {
     await this._generateResponse(conversation, conversation.messages.length === 1)
   }
 
+  public stopGeneration(id: number): void {
+    const cancellable = this._cancellables.get(id)
+    if (cancellable) {
+      cancellable.cancel()
+      this._cancellables.delete(id)
+    }
+  }
+
+  public stopAllGenerations(): void {
+    for (const cancellable of this._cancellables.values()) {
+      cancellable.cancel()
+    }
+    this._cancellables.clear()
+  }
+
   public async sendMessage(): Promise<void> {
     const buffer = this._input.getBuffer()
     const text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false).trim()
@@ -322,11 +337,7 @@ export class Chat {
     }
 
     if (this._app.isGeneratingMessage(conversation.id)) {
-      const cancellable = this._cancellables.get(conversation.id)
-      if (cancellable) {
-        cancellable.cancel()
-        this._cancellables.delete(conversation.id)
-      }
+      this.stopGeneration(conversation.id)
       return
     }
 
@@ -509,6 +520,7 @@ export class Chat {
 
   public clearAllMessages(): void {
     if (this._app.conversation) {
+      this.stopGeneration(this._app.conversation.id)
       this._app.conversation.messages = []
       void conversationsStore.saveMessages(this._app.conversation.id, []).catch((err) => {
         console.error('Failed to clear messages:', err)

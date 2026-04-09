@@ -334,6 +334,8 @@ export class Sidebar {
   }
 
   private async _deleteConversation(conversation: Conversation): Promise<void> {
+    this._app.chat.stopGeneration(conversation.id)
+
     const index = this._app.conversations.indexOf(conversation)
     if (index > -1) {
       this._app.conversations.splice(index, 1)
