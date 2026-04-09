@@ -29,6 +29,7 @@ export interface MessageProps {
   message: OllamaMessage
   onReload: (message: OllamaMessage) => void
   onCopy: () => void
+  onRegenerate: (message: OllamaMessage) => void
 }
 
 interface ContentPart {
@@ -60,6 +61,8 @@ export class Message {
   private _copyAction?: Gio.SimpleAction
   private _reloadButton?: Gtk.Button
   private _reloadAction?: Gio.SimpleAction
+  private _regenerateButton?: Gtk.Button
+  private _regenerateAction?: Gio.SimpleAction
   private _busySignalId: number
   private _syntaxSignalId: number
 
@@ -133,8 +136,10 @@ export class Message {
     const sensitive = !isBusy
     this._copyButton?.set_sensitive(sensitive)
     this._reloadButton?.set_sensitive(sensitive)
+    this._regenerateButton?.set_sensitive(sensitive)
     this._copyAction?.set_enabled(sensitive)
     this._reloadAction?.set_enabled(sensitive)
+    this._regenerateAction?.set_enabled(sensitive)
   }
 
   private _setupThinking(message: OllamaMessage): void {
@@ -671,6 +676,19 @@ export class Message {
         return onReload(message)
       })
       buttonsBox.append(this._reloadButton)
+
+      this._regenerateButton = new Gtk.Button({
+        icon_name: 'view-refresh-symbolic',
+        tooltip_text: 'Regenerate response',
+        has_frame: false,
+        valign: Gtk.Align.CENTER
+      })
+      this._regenerateButton.add_css_class('flat')
+      this._regenerateButton.add_css_class('dim-label')
+      this._regenerateButton.connect('clicked', () => {
+        return props.onRegenerate(message)
+      })
+      buttonsBox.append(this._regenerateButton)
     }
 
     if (message.role === 'user') {
@@ -706,8 +724,11 @@ export class Message {
     menu.append_item(copyMenuItem)
 
     if (message.role === 'user') {
-      const reloadMenuItem = createMenuItem('Restart from here', 'chat.reload_message', 'view-refresh-symbolic')
+      const reloadMenuItem = createMenuItem('Restart from here', 'chat.reload_message', 'document-edit-symbolic')
       menu.append_item(reloadMenuItem)
+
+      const regenerateMenuItem = createMenuItem('Regenerate response', 'chat.regenerate_message', 'view-refresh-symbolic')
+      menu.append_item(regenerateMenuItem)
     }
 
     const actionGroup = new Gio.SimpleActionGroup()
@@ -723,6 +744,11 @@ export class Message {
         return onReload(message)
       })
       actionGroup.add_action(this._reloadAction)
+
+      this._regenerateAction = createSimpleAction('regenerate_message', () => {
+        return props.onRegenerate(message)
+      })
+      actionGroup.add_action(this._regenerateAction)
     }
 
     const popover = Gtk.PopoverMenu.new_from_model(menu)

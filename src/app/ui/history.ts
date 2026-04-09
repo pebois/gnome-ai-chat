@@ -197,6 +197,9 @@ export class History {
       onReload: (m) => {
         return this._app.chat.startFromMessage(m)
       },
+      onRegenerate: (m) => {
+        return this._app.chat.regenerateFromMessage(m)
+      },
       onCopy: () => {
         this._app.showToast('Message copied')
       }
