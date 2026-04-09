@@ -173,8 +173,9 @@ src/
   1. Use `npm version <type> --no-git-tag-version` to seamlessly update `package.json` and `package-lock.json`.
   2. Update the `Version` field in `io.github.pebois.gnome-ai-chat.desktop`.
   3. Update `export const VERSION` in `src/lib/constants.ts`.
-  4. Finalize `CHANGELOG.md` by replacing the `[Unreleased]` header with the new version and today's date (e.g., `## [1.7.0] - YYYY-MM-DD`), and insert a new empty `## [Unreleased]` block above it.
-  5. After verifying the build, commit the changes using `git commit -a -m "Release version X.Y.Z"` along with an extended description summarizing the `CHANGELOG.md` additions.
+  4. Update `io.github.pebois.gnome-ai-chat.metainfo.xml` by adding a new `<release>` block with the new version, today's date, and a summary of the most significant changes.
+  5. Finalize `CHANGELOG.md` by replacing the `[Unreleased]` header with the new version and today's date (e.g., `## [1.7.0] - YYYY-MM-DD`), and insert a new empty `## [Unreleased]` block above it.
+  6. After verifying the build, commit the changes using `git commit -a -m "Release version X.Y.Z"` along with an extended description summarizing the `CHANGELOG.md` additions.
 
 ### Architecture & State
 - **Orchestration**: `App` (implementing `AppInterface`) is the central source of truth and mediator. All persistent settings and global state transitions flow through it. Use `app.settings` for direct access and `app.saveSettings()` to persist changes. The `handleQuit` lifecycle ensures background indexing and data persistence.

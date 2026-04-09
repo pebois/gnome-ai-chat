@@ -280,6 +280,38 @@ export class Chat {
     this._input.grabFocus()
   }
 
+  public async regenerateFromMessage(message: OllamaMessage): Promise<void> {
+    const conversation = this._app.conversation
+    if (!conversation || this._app.isGeneratingMessage(conversation.id)) {
+      return
+    }
+
+    const index = conversation.messages.indexOf(message)
+    if (index === -1) {
+      return
+    }
+
+    conversation.messages = conversation.messages.slice(0, index + 1)
+    await conversationsStore.saveMessages(conversation.id, conversation.messages)
+    conversation.updated_at = new Date().toISOString()
+    conversation.embeddings = undefined
+    const conv = this._app.conversations.find((c) => {
+      return c.id === conversation.id
+    })
+    if (conv) {
+      conv.updated_at = conversation.updated_at
+      conv.embeddings = undefined
+      this._app.sidebar.updateConversation(conv)
+    }
+    this._app.saveConversations()
+    this.loadMessages(conversation)
+
+    this._app.setGeneratingMessage(conversation.id, true)
+    this._input.setSensitive(false)
+    this._input.setSendMode('stop')
+    await this._generateResponse(conversation, conversation.messages.length === 1)
+  }
+
   public async sendMessage(): Promise<void> {
     const buffer = this._input.getBuffer()
     const text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false).trim()
@@ -347,7 +379,10 @@ export class Chat {
     this._app.saveConversations()
 
     this._history.scrollToBottom()
+    await this._generateResponse(conversation, isFirstMessage)
+  }
 
+  private async _generateResponse(conversation: ChatConversation, isFirstMessage: boolean): Promise<void> {
     const cancellable = new Gio.Cancellable()
     this._cancellables.set(conversation.id, cancellable)
 

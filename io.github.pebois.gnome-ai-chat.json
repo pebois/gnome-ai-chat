@@ -39,6 +39,7 @@
         "install -d ${FLATPAK_DEST}/share/io.github.pebois.gnome-ai-chat",
         "cp -r dist ${FLATPAK_DEST}/share/io.github.pebois.gnome-ai-chat/",
         "install -Dm644 io.github.pebois.gnome-ai-chat.desktop ${FLATPAK_DEST}/share/applications/io.github.pebois.gnome-ai-chat.desktop",
+        "install -Dm644 io.github.pebois.gnome-ai-chat.metainfo.xml ${FLATPAK_DEST}/share/metainfo/io.github.pebois.gnome-ai-chat.metainfo.xml",
         "install -Dm644 icons/scalable/apps/io.github.pebois.gnome-ai-chat.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/io.github.pebois.gnome-ai-chat.svg",
         "install -Dm644 icons/hicolor/256x256/apps/io.github.pebois.gnome-ai-chat.png ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/io.github.pebois.gnome-ai-chat.png",
         "install -Dm644 icons/hicolor/128x128/apps/io.github.pebois.gnome-ai-chat.png ${FLATPAK_DEST}/share/icons/hicolor/128x128/apps/io.github.pebois.gnome-ai-chat.png",

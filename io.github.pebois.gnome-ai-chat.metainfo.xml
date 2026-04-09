@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.pebois.gnome-ai-chat</id>
+  <name>Gnome AI Chat</name>
+  <summary>Chat with local AI models via Ollama</summary>
+  <developer_name>Pierre-Emmanuel Bois</developer_name>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>
+      Gnome AI Chat is a simple, modern chat interface built specifically for the GNOME desktop. It communicates with your local Ollama HTTP API to interact with large language models completely offline and privately.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Native GNOME experience with GTK4 and Libadwaita.</li>
+      <li>Automatic detection of local models and in-app model pulling.</li>
+      <li>Real-time streaming and deep reasoning capabilities.</li>
+      <li>Custom @ personas/skills for specific tasks with a dedicated markdown editor.</li>
+      <li>Agentic capabilities via system tools for web fetching, file searching, code execution, and desktop automation.</li>
+      <li>Semantic vector search across past conversations.</li>
+      <li>Multimodal capabilities with image and text file attachments.</li>
+      <li>Interactive HTML Canvas for rendering UIs natively.</li>
+      <li>Smart chat organization with AI-generated titles and emojis.</li>
+      <li>Local RAG to chat with your local files and documentation via a private vector store.</li>
+      <li>Rich text rendering with native Markdown tables and code blocks.</li>
+      <li>Slash commands for powerful inline actions.</li>
+      <li>Detailed resource monitoring and performance analytics.</li>
+      <li>Privacy-first 100% local SQLite database.</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.pebois.gnome-ai-chat.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/pebois/gnome-ai-chat/main/screenshots/main.png</image>
+      <caption>Gnome AI Chat main interface</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/pebois/gnome-ai-chat/main/screenshots/skills.png</image>
+      <caption>Skills Editor</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/pebois/gnome-ai-chat</url>
+  <url type="bugtracker">https://github.com/pebois/gnome-ai-chat/issues</url>
+  <url type="vcs-browser">https://github.com/pebois/gnome-ai-chat</url>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="1.6.0" date="2026-04-07">
+      <description>
+        <p>This release brings native Markdown tables, command visibility controls, unit tests, and significant performance optimizations.</p>
+        <ul>
+          <li>Implemented a robust markdown table parser that natively renders tables using Gtk.ColumnView.</li>
+          <li>Added visibility controls for slash commands to hide internal actions.</li>
+          <li>Improved database performance by wrapping bulk insert operations in SQLite atomic transactions.</li>
+          <li>Implemented automatic background vector indexing for conversations and skills.</li>
+          <li>Added robust, mock-free unit tests for pure logic modules.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.5.1" date="2026-04-07">
+      <description>
+        <ul>
+          <li>Updated all skill prompts with detailed tool usage instructions and strategies for maximum agent orientation.</li>
+          <li>Refined Writer, Reviewer, and Automation skills to ensure proper tool usage and focus.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.5.0" date="2026-04-06">
+      <description>
+        <p>This release introduces a robust SQLite database migration and semantic skill discovery.</p>
+        <ul>
+          <li>Migrated data storage from legacy JSON files to a robust SQLite database with fully asynchronous operations.</li>
+          <li>Implemented semantic matching for skills using local text embeddings.</li>
+          <li>Enhanced screenshot tool to automatically attach captured images to the chat input.</li>
+          <li>Optimized Ollama client for consistent persona application during complex tool-call sequences.</li>
+          <li>Improved code block parsing strategy with support for nested blocks.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.4.0" date="2026-04-03">
+      <description>
+        <p>This release brings Local RAG capabilities and Tool Execution Permissions.</p>
+        <ul>
+          <li>Added Local RAG to chat with local folders via a private SQLite vector store using the @files skill.</li>
+          <li>Added Tool Execution Permissions security layer for shell commands and file writes.</li>
+          <li>New UI to manage, remove, and re-index local project paths for the vector store.</li>
+          <li>Moved desktop automation to native Wayland portals.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.3.1" date="2026-03-31">
+      <description>
+        <p>This release focuses on syntax highlighting fixes.</p>
+        <ul>
+          <li>Fixed code block syntax highlighting when reusing widgets during content streaming.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.3.0" date="2026-03-31">
+      <description>
+        <p>This release brings a dedicated Skills Editor window and skill management enhancements.</p>
+        <ul>
+          <li>Added dedicated Skills Editor window with GtkSource markdown editor.</li>
+          <li>Skills are grouped into Builtins and Custom sections with sidebar search.</li>
+          <li>Added /skills slash command and Keyboard Shortcut (Ctrl+E).</li>
+          <li>Auto-trigger Memory skill for /memory sub-commands.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.1" date="2026-03-30">
+      <description>
+        <ul>
+          <li>Fixed out-of-bounds array access in image previewer.</li>
+          <li>Wrapped skill dialog system prompt for consistent styling.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.0" date="2026-03-30">
+      <description>
+        <p>This release brings image preview functionality, UI enhancements, and model capability awareness.</p>
+        <ul>
+          <li>Added full-size Image Preview and Slideshow.</li>
+          <li>Added Skill Prompt Syntax Highlighting.</li>
+          <li>Added Model Update Notifications and Dynamic Model Capabilities tracking.</li>
+          <li>Vision-aware attachments and tool-required model selection to prevent invalid actions.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.1.0" date="2026-03-30">
+      <description>
+        <p>Major feature release bringing numerous enhancements to chat, attachments, and application functionality.</p>
+        <ul>
+          <li>Added Auto-Summarize conversation titles in the background.</li>
+          <li>Added text file attachments and interactive HTML Canvas rendering.</li>
+          <li>Added Model Pull Dialog with real-time progress.</li>
+          <li>Added robust slash commands including /hn, /memory, /compress, and /debug.</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

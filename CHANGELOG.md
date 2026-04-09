@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Regenerate Response Action**: Added a new "Regenerate response" button and menu action next to the edit action on user messages, allowing users to easily re-submit their prompt and generate a new response.
 - **Slash Command Argument Parsing**: Fixed a bug where executing a slash command manually with arguments (e.g., `/hn custom typescript`) would ignore the arguments and execute the base command instead.
 - **Command Argument Safety**: Introduced a `requiresArgument` property to the `SubCommand` interface. Subcommands with this flag (like `/hn custom`) will now smoothly autocomplete and wait for user input instead of executing prematurely.
 - **RSS Feed Tool**: Introduced a new `fetch_rss_feed` tool that natively parses RSS and Atom feeds into structured JSON for efficient model processing.
