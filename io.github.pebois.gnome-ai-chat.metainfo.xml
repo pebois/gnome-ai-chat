@@ -50,6 +50,28 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.8.0" date="2026-04-09">
+      <description>
+        <p>This release introduces a new Regenerate Response action, RSS feed tools, and major enhancements to slash commands and file attachments.</p>
+        <ul>
+          <li>Added "Regenerate response" action on user messages to easily re-submit prompts.</li>
+          <li>Added RSS Feed Tool to natively parse RSS/Atom feeds for AI processing.</li>
+          <li>Enhanced Slash Commands with better argument parsing safety and dynamic feedback.</li>
+          <li>Upgraded Hacker News command (/hn) with specialized best, newest, and custom search subcommands.</li>
+          <li>Enhanced File Attachments with /files attach (fuzzy search) and /files search (semantic vector search).</li>
+          <li>Disabled smart summarization for empty conversations to prevent unnecessary API calls.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.7.0" date="2026-04-08">
+      <description>
+        <p>This release fixes critical bugs and includes stability improvements.</p>
+        <ul>
+           <li>Fixed critical race conditions on startup preventing data loss on rapid actions.</li>
+           <li>Optimized semantic file search performance and increased result limits.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.6.0" date="2026-04-07">
       <description>
         <p>This release brings native Markdown tables, command visibility controls, unit tests, and significant performance optimizations.</p>
