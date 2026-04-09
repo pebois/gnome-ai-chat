@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- **App Orchestration Bugs**: Fixed background indexing loss on application quit, default settings overwrite on early exit, and corrected UI icon fallback paths.
+- **Generation Cancellation**: Ensured that deleting a conversation or clearing messages now correctly stops any active message generation for that conversation.
 
 ## [1.8.0] - 2026-04-09
 ### Added

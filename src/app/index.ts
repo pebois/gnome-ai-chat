@@ -27,6 +27,7 @@ import { convertMessageToTitle, pangoEscape } from '@/lib/utils.js'
 export class App extends Adw.Application implements AppInterface {
   private _active: boolean
   private _isExiting: boolean = false
+  private _settingsLoaded: boolean = false
   public isLoaded: boolean = false
   private _pendingNewConversation: boolean = false
   private _filesIndexingCancellable: Gio.Cancellable | null = null
@@ -203,8 +204,14 @@ export class App extends Adw.Application implements AppInterface {
 
     if (this.isLoaded) {
       await conversationsStore.saveConversations(this.conversations)
+      await conversationsStore.indexConversations(this.ollama, this.conversations, false)
     }
-    await settingsStore.saveSettings(this.settings)
+
+    if (this._settingsLoaded) {
+      await settingsStore.saveSettings(this.settings)
+      await skillsStore.saveSkills(this.skills)
+      await skillsStore.indexSkills(this.ollama, this.skills, false)
+    }
 
     this.sidebar.clearList()
 
@@ -353,6 +360,7 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   public async clearAllConversations(): Promise<void> {
+    this.chat.stopAllGenerations()
     await conversationsStore.saveConversations([])
     this.conversations = []
     this.sidebar.clearList()
@@ -418,9 +426,9 @@ export class App extends Adw.Application implements AppInterface {
       const display = Gdk.Display.get_default()
       if (display) {
         const iconTheme = Gtk.IconTheme.get_for_display(display)
-        iconTheme.add_resource_path('resource:///io/github/pebois/gnome-ai-chat/icons')
+        iconTheme.add_resource_path('/io/github/pebois/gnome-ai-chat/icons')
 
-        const iconsDir = GLib.build_filenamev([rootDir, 'icons'])
+        const iconsDir = GLib.build_filenamev([GLib.path_get_dirname(rootDir), 'icons'])
         if (GLib.file_test(iconsDir, GLib.FileTest.IS_DIR)) {
           iconTheme.add_search_path(iconsDir)
         }
@@ -483,6 +491,7 @@ export class App extends Adw.Application implements AppInterface {
     await settingsStore.loadSettings()
     this.skills = await skillsStore.getSkills()
     this.ollama.url = this.settings.url
+    this._settingsLoaded = true
   }
 
   private async _loadModels(): Promise<void> {
