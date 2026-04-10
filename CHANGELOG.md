@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - **Download Image**: Added a download button to the image preview dialog, allowing users to save images directly to their local filesystem.
+- **Photo Component**: Extracted core image rendering and scaling logic into a reusable `Photo` component for consistent visual handling across the application.
+
+### Changed
+- **Modernized Image Preview**: Redesigned the image preview dialog with a solid black background, centered photo layout, and integrated navigation indicators within the header bar. The header now features a persistent bottom border for better visual definition against the dark background.
+- **Adaptive Sidebar Headers**: Updated the main chat history and skills editor sidebars to use adaptive headers that automatically show a bottom border when scrolled, enhancing the depth and clarity of the navigation interface.
 
 ### Fixed
 - **App Orchestration Bugs**: Fixed background indexing loss on application quit, default settings overwrite on early exit, and corrected UI icon fallback paths.
