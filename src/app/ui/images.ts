@@ -1,10 +1,8 @@
 import Gdk from 'gi://Gdk'
-import GdkPixbuf from 'gi://GdkPixbuf'
-import Gio from 'gi://Gio'
-import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import { showImageDialog } from '@/app/dialog/image.js'
+import { Photo } from '@/app/ui/photo.js'
 import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_SPACING } from '@/lib/constants.js'
 
@@ -23,47 +21,31 @@ export class Images {
     })
 
     images.forEach((base64, index) => {
-      try {
-        const bytes = GLib.base64_decode(base64)
-        const inputStream = Gio.MemoryInputStream.new_from_bytes(new GLib.Bytes(bytes))
-        const pixbuf = GdkPixbuf.Pixbuf.new_from_stream(inputStream, null)
-        if (pixbuf) {
-          const width = pixbuf.get_width()
-          const height = pixbuf.get_height()
-          const aspectRatio = width / height
-          const reqWidth = 250
-          const reqHeight = Math.round(reqWidth / aspectRatio)
+      const photo = new Photo({
+        base64,
+        scaled: true,
+        canShrink: false
+      })
 
-          const scaledPixbuf = pixbuf.scale_simple(reqWidth, reqHeight, GdkPixbuf.InterpType.BILINEAR)
-          if (!scaledPixbuf) {
-            throw new Error('Failed to scale image')
-          }
+      if (photo.widget) {
+        const picture = photo.widget
+        picture.add_css_class('message-image')
+        picture.set_overflow(Gtk.Overflow.HIDDEN)
 
-          const paintable = Gdk.Texture.new_for_pixbuf(scaledPixbuf)
-          const picture = new Gtk.Picture({
-            paintable,
-            can_shrink: false
-          })
-          picture.add_css_class('message-image')
-          picture.set_overflow(Gtk.Overflow.HIDDEN)
+        const canvas = new Gtk.Box({
+          halign: role === 'user' ? Gtk.Align.END : Gtk.Align.START
+        })
+        canvas.add_css_class('message-canvas')
+        canvas.append(picture)
+        canvas.set_cursor(Gdk.Cursor.new_from_name('pointer', null))
 
-          const canvas = new Gtk.Box({
-            halign: role === 'user' ? Gtk.Align.END : Gtk.Align.START
-          })
-          canvas.add_css_class('message-canvas')
-          canvas.append(picture)
-          canvas.set_cursor(Gdk.Cursor.new_from_name('pointer', null))
+        const gesture = new Gtk.GestureClick()
+        gesture.connect('pressed', () => {
+          showImageDialog(app, images, index)
+        })
+        canvas.add_controller(gesture)
 
-          const gesture = new Gtk.GestureClick()
-          gesture.connect('pressed', () => {
-            showImageDialog(app, images, index)
-          })
-          canvas.add_controller(gesture)
-
-          this._widget.append(canvas)
-        }
-      } catch (e) {
-        console.error('Failed to render image:', e)
+        this._widget.append(canvas)
       }
     })
   }

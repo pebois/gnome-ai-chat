@@ -1,10 +1,10 @@
 import Adw from 'gi://Adw?version=1'
 import Gdk from 'gi://Gdk'
-import GdkPixbuf from 'gi://GdkPixbuf'
 import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
+import { Photo } from '@/app/ui/photo.js'
 import type { AppInterface } from '@/lib/app.js'
 
 export function showImageDialog(app: AppInterface, images: string[], startIndex: number): void {
@@ -14,63 +14,97 @@ export function showImageDialog(app: AppInterface, images: string[], startIndex:
     content_height: 800
   })
 
-  const toolbarView = new Adw.ToolbarView()
+  const toolbarView = new Adw.ToolbarView({
+    top_bar_style: Adw.ToolbarStyle.RAISED
+  })
   const headerBar = new Adw.HeaderBar()
-  headerBar.add_css_class('flat')
-  toolbarView.add_top_bar(headerBar)
+
+  const downloadBtn = new Gtk.Button({
+    icon_name: 'document-save-symbolic',
+    tooltip_text: 'Download Image'
+  })
+
+  downloadBtn.connect('clicked', () => {
+    const index = Math.round(carousel.get_position())
+    const base64 = images[index]
+    if (!base64) {
+      return
+    }
+
+    const fileDialog = new Gtk.FileDialog({
+      title: 'Save Image',
+      initial_name: `image-${Date.now()}.png`
+    })
+
+    void fileDialog.save(app.window, null, (source, result) => {
+      try {
+        const file = fileDialog.save_finish(result)
+        if (file) {
+          const bytes = GLib.base64_decode(base64)
+          void file.replace_contents_async(
+            new GLib.Bytes(bytes),
+            null,
+            false,
+            Gio.FileCreateFlags.NONE,
+            null,
+            null
+          )
+        }
+      } catch (e) {
+        console.error('Failed to save image:', e)
+      }
+    })
+  })
+
+  headerBar.pack_start(downloadBtn)
 
   const carousel = new Adw.Carousel({
     interactive: true,
-    spacing: 0
+    spacing: 0,
+    vexpand: true,
+    hexpand: true
   })
 
   const children: Gtk.Widget[] = []
 
   images.forEach((base64) => {
-    try {
-      const bytes = GLib.base64_decode(base64)
-      const inputStream = Gio.MemoryInputStream.new_from_bytes(new GLib.Bytes(bytes))
-      const pixbuf = GdkPixbuf.Pixbuf.new_from_stream(inputStream, null)
+    const photo = new Photo({
+      base64,
+      canShrink: true,
+      halign: Gtk.Align.CENTER,
+      valign: Gtk.Align.CENTER
+    })
 
-      if (pixbuf) {
-        const paintable = Gdk.Texture.new_for_pixbuf(pixbuf)
-        const picture = new Gtk.Picture({
-          paintable,
-          can_shrink: true
-        })
+    if (photo.widget) {
+      const scrolled = new Gtk.ScrolledWindow({
+        vexpand: true,
+        hexpand: true,
+        hscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
+        vscrollbar_policy: Gtk.PolicyType.AUTOMATIC
+      })
+      scrolled.set_child(photo.widget)
 
-        const scrolled = new Gtk.ScrolledWindow({
-          vexpand: true,
-          hexpand: true,
-          hscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
-          vscrollbar_policy: Gtk.PolicyType.AUTOMATIC
-        })
-        scrolled.set_child(picture)
-
-        carousel.append(scrolled)
-        children.push(scrolled)
-      }
-    } catch (e) {
-      console.error('Failed to render preview image:', e)
+      carousel.append(scrolled)
+      children.push(scrolled)
     }
   })
 
-  const indicators = new Adw.CarouselIndicatorDots({
-    carousel: carousel,
-    margin_top: 12,
-    margin_bottom: 12,
-    halign: Gtk.Align.CENTER
-  })
+  if (images.length > 1) {
+    const indicators = new Adw.CarouselIndicatorDots({
+      carousel
+    })
+    headerBar.set_title_widget(indicators)
+  }
 
-  const box = new Gtk.Box({
-    orientation: Gtk.Orientation.VERTICAL,
+  toolbarView.add_top_bar(headerBar)
+
+  const overlay = new Gtk.Overlay({
     vexpand: true,
     hexpand: true
   })
-  box.append(carousel)
-  box.append(indicators)
+  overlay.set_child(carousel)
 
-  toolbarView.set_content(box)
+  toolbarView.set_content(overlay)
   dialog.set_child(toolbarView)
 
   const keyCtrl = new Gtk.EventControllerKey()
