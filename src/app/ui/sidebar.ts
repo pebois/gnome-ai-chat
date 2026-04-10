@@ -84,9 +84,10 @@ export class Sidebar {
 
   public setup(box: Gtk.Box, window: Gtk.Window): void {
     this._box = box
+
+    const toolbarView = new Adw.ToolbarView()
     const navigationHeader = new Adw.HeaderBar()
-    navigationHeader.add_css_class('flat')
-    box.append(navigationHeader)
+    toolbarView.add_top_bar(navigationHeader)
 
     const newChatButton = new Gtk.Button({
       icon_name: 'list-add-symbolic',
@@ -131,7 +132,6 @@ export class Sidebar {
         this._searchEntry.set_text('')
       }
     })
-    box.append(searchBar)
 
     this._conversationList = new Gtk.ListBox({
       selection_mode: Gtk.SelectionMode.SINGLE,
@@ -195,7 +195,15 @@ export class Sidebar {
     const scrolledSidebar = new Gtk.ScrolledWindow({
       child: this._conversationList
     })
-    box.append(scrolledSidebar)
+
+    const contentBox = new Gtk.Box({
+      orientation: Gtk.Orientation.VERTICAL
+    })
+    contentBox.append(searchBar)
+    contentBox.append(scrolledSidebar)
+
+    toolbarView.set_content(contentBox)
+    box.append(toolbarView)
   }
 
   private _updateVisibleGroups(): void {

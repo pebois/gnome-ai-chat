@@ -89,7 +89,6 @@ export function showSkillsWindow(app: AppInterface): void {
   const searchEntry = new Gtk.SearchEntry({ hexpand: true })
   const searchBar = new Gtk.SearchBar({ child: searchEntry })
   searchBar.connect_entry(searchEntry)
-  sidebarToolbar.add_top_bar(searchBar)
 
   const listBox = new Gtk.ListBox({ selection_mode: Gtk.SelectionMode.SINGLE })
   listBox.add_css_class('navigation-sidebar')
@@ -99,7 +98,14 @@ export function showSkillsWindow(app: AppInterface): void {
     hscrollbar_policy: Gtk.PolicyType.NEVER
   })
   listScrolled.set_child(listBox)
-  sidebarToolbar.set_content(listScrolled)
+
+  const sidebarBox = new Gtk.Box({
+    orientation: Gtk.Orientation.VERTICAL
+  })
+  sidebarBox.append(searchBar)
+  sidebarBox.append(listScrolled)
+
+  sidebarToolbar.set_content(sidebarBox)
 
   const contentToolbar = new Adw.ToolbarView()
 
