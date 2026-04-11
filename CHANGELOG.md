@@ -10,11 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Download Image**: Added a download button to the image preview dialog, allowing users to save images directly to their local filesystem.
 - **Photo Component**: Extracted core image rendering and scaling logic into a reusable `Photo` component for consistent visual handling across the application.
 
+### Fixed
+- **Tool Call Wrapping**: Improved text wrapping for arguments and responses in the tool call dialog by using `Pango.WrapMode.WORD_CHAR`, ensuring that long strings or JSON data don't overflow the dialog.
+
 ### Changed
+- **HTML Content Safety**: The `render_html` tool now automatically truncates its output after the closing `</html>` tag, preventing the rendering of accidental trailing text or hallucinations from the model.
+- **Tool Parameter Refactoring**: Renamed the `title` parameter to `window_title` in the `render_html` tool and moved it to the first position in the argument list for better clarity. The parameter is now optional and defaults to "Preview" if not provided. Updated the `@canvas` skill prompt to reflect these changes, removed the restriction on using external CDNs, and added a mandate for well-formed HTML with properly closed `<html>` and `</html>` tags.
 - **Modernized Image Preview**: Redesigned the image preview dialog with a solid black background, centered photo layout, and integrated navigation indicators within the header bar. The header now features a persistent bottom border for better visual definition against the dark background.
 - **Adaptive Sidebar Headers**: Updated the main chat history and skills editor sidebars to use adaptive headers that automatically show a bottom border when scrolled, enhancing the depth and clarity of the navigation interface.
 
 ### Fixed
+- **Missing Tool Call Response**: Fixed an issue where calling a tool not present in the tool list would return an empty response instead of a descriptive error message.
 - **App Orchestration Bugs**: Fixed background indexing loss on application quit, default settings overwrite on early exit, and corrected UI icon fallback paths.
 - **Generation Cancellation**: Ensured that deleting a conversation or clearing messages now correctly stops any active message generation for that conversation.
 

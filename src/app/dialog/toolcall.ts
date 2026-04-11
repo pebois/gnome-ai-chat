@@ -1,5 +1,6 @@
 import Adw from 'gi://Adw?version=1'
 import Gtk from 'gi://Gtk?version=4.0'
+import Pango from 'gi://Pango'
 
 import type { AppInterface } from '@/lib/app.js'
 import type { OllamaToolCall } from '@/lib/ollama.js'
@@ -72,6 +73,7 @@ export function showToolCallDialog(app: AppInterface, tool_call: OllamaToolCall)
     xalign: 0,
     selectable: true,
     wrap: true,
+    wrap_mode: Pango.WrapMode.WORD_CHAR,
     css_classes: ['dim-label', 'monospace'],
     margin_top: 12,
     margin_bottom: 12,
@@ -98,6 +100,7 @@ export function showToolCallDialog(app: AppInterface, tool_call: OllamaToolCall)
       xalign: 0,
       selectable: true,
       wrap: true,
+      wrap_mode: Pango.WrapMode.WORD_CHAR,
       css_classes: [cssClass, 'monospace'],
       margin_top: 12,
       margin_bottom: 12,
