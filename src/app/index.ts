@@ -21,9 +21,10 @@ import { settingsStore } from '@/lib/db/settings.js'
 import { skillsStore } from '@/lib/db/skills.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
 import { Ollama } from '@/lib/ollama.js'
+import { pangoEscape } from '@/lib/parser.js'
 import { Tracker } from '@/lib/tracker.js'
 import { createSimpleAction } from '@/lib/ui.js'
-import { convertMessageToTitle, pangoEscape } from '@/lib/utils.js'
+import { convertMessageToTitle } from '@/lib/utils.js'
 
 export class App extends Adw.Application implements AppInterface {
   private _active: boolean
