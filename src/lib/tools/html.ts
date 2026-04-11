@@ -1,6 +1,5 @@
-import Adw from 'gi://Adw?version=1'
-import WebKit from 'gi://WebKit?version=6.0'
-
+import { ArtifactWindow } from '@/app/window/artifact.js'
+import type { AppInterface } from '@/lib/app.js'
 import type { OllamaTool } from '@/lib/ollama.js'
 
 export const render_html: OllamaTool = {
@@ -10,44 +9,47 @@ export const render_html: OllamaTool = {
     parameters: {
       type: 'object',
       properties: {
-        html_content: {
+        window_title: {
           type: 'string',
-          description: 'The raw HTML string to be rendered.'
+          description: 'An optional descriptive title for the window. Defaults to "Preview". Use a consistent title to update an existing window.'
+        },
+        html: {
+          type: 'string',
+          description: 'The raw HTML string to be rendered. Must include CSS and JS inline.'
         }
       },
-      required: ['html_content']
+      required: ['html']
     },
-    description: 'Renders HTML content inside a new internal application window. Use this tool as an interactive canvas to generate and display complex UIs, games, data visualizations (e.g., charts, graphs), or any dynamic web content. The HTML string should be fully self-contained, responsive, use shadcn style, and the zinc theme. Note that external resources may be blocked; embed CSS and JS directly.'
+    description: 'Renders HTML content inside a standalone artifact window. Use this for complex UIs, games, or data visualizations. If a window with the same title already exists, it will be updated with the new content. Returns the HTML content on success.'
   }
 }
 
-export function handle_render_html(args: Record<string, unknown>): string {
-  const htmlContent = typeof args.html_content === 'string' ? args.html_content : ''
+export function handle_render_html(app: AppInterface, args: Record<string, unknown>): string {
+  const window_title = typeof args.window_title === 'string' && args.window_title ? args.window_title : 'Preview'
+  let html = typeof args.html === 'string' ? args.html : ''
 
-  if (!htmlContent) {
-    return 'Error: html_content is required.'
+  if (!html) {
+    return 'Error: html is required.'
+  }
+
+  const closingTag = '</html>'
+  const closingIndex = html.toLowerCase().lastIndexOf(closingTag)
+  if (closingIndex !== -1) {
+    html = html.substring(0, closingIndex + closingTag.length)
   }
 
   try {
-    const webView = new WebKit.WebView()
-    webView.load_html(htmlContent, null)
+    const existingWindow = app.activeArtifacts.get(window_title)
+    if (existingWindow) {
+      existingWindow.update(window_title, html)
+    } else {
+      const window = new ArtifactWindow(app, window_title, html)
+      app.activeArtifacts.set(window_title, window)
+      window.present()
+    }
 
-    const toolbarView = new Adw.ToolbarView()
-    const headerBar = new Adw.HeaderBar()
-    toolbarView.add_top_bar(headerBar)
-    toolbarView.set_content(webView)
-
-    const window = new Adw.Window({
-      title: 'HTML Preview',
-      default_width: 800,
-      default_height: 600
-    })
-
-    window.set_content(toolbarView)
-    window.present()
-
-    return 'Successfully rendered HTML in an internal preview window.'
+    return html
   } catch (e) {
-    return `Error rendering HTML internally: ${e instanceof Error ? e.message : String(e)}`
+    return `Error rendering artifact: ${e instanceof Error ? e.message : String(e)}`
   }
 }

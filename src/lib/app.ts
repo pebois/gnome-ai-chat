@@ -4,6 +4,7 @@ import type GLib from 'gi://GLib?version=2.0'
 import type { Chat } from '@/app/ui/chat.js'
 import type { ChatConversation } from '@/app/ui/history.js'
 import type { Sidebar } from '@/app/ui/sidebar.js'
+import type { ArtifactWindow } from '@/app/window/artifact.js'
 import type { AppWindow } from '@/app/window/main.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
 import type { Ollama } from '@/lib/ollama.js'
@@ -25,6 +26,7 @@ export interface AppInterface {
   readonly toolModels: string[]
   readonly tracker: Tracker
   readonly window: AppWindow
+  readonly activeArtifacts: Map<string, ArtifactWindow>
 
   activateAction(action_name: string, parameter?: GLib.Variant): void
   cancelFilesIndexing(): void

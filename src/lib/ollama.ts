@@ -2,6 +2,7 @@ import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import Soup from 'gi://Soup?version=3.0'
 
+import { DEFAULT_TIMEOUT } from '@/lib/constants.js'
 import type { Settings, Think } from '@/lib/db/types.js'
 import { debug } from '@/lib/debug.js'
 import { buildSkillPrompt } from '@/lib/skills/index.js'
@@ -174,7 +175,9 @@ export class Ollama {
     this.url = settings.url
     this._settings = settings
     this._tracker = tracker
-    this._session = new Soup.Session()
+    this._session = new Soup.Session({
+      timeout: DEFAULT_TIMEOUT
+    })
   }
 
   private _debug(msg: string, ...args: unknown[]): void {
@@ -438,6 +441,7 @@ export class Ollama {
           return textLower.startsWith(`@${s.name.toLowerCase()}`)
         })
         if (skill) {
+          this._debug(`Using skill: ${skill.name}`)
           skillPrompt = buildSkillPrompt(skill)
         }
       }
