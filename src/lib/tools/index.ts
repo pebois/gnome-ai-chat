@@ -75,7 +75,7 @@ export async function onToolCall(app: AppInterface, name: string, args: Record<s
     case 'take_screenshot':
       return handle_take_screenshot(app)
     case 'render_html':
-      return handle_render_html(args)
+      return handle_render_html(app, args)
     case 'read_file':
       return handle_read_file(args)
     case 'write_file':
@@ -103,6 +103,6 @@ export async function onToolCall(app: AppInterface, name: string, args: Record<s
     case 'open_nodes':
       return handle_open_nodes(args)
     default:
-      return ''
+      return `Error: Tool "${name}" not found.`
   }
 }

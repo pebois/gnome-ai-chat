@@ -9,6 +9,7 @@ import { css } from '@/app/global.css.js'
 import type { Chat } from '@/app/ui/chat.js'
 import type { ChatConversation } from '@/app/ui/history.js'
 import type { Sidebar } from '@/app/ui/sidebar.js'
+import { ArtifactWindow } from '@/app/window/artifact.js'
 import { AppWindow } from '@/app/window/main.js'
 import type { AppInterface } from '@/lib/app.js'
 import { COMMANDS } from '@/lib/commands/index.js'
@@ -44,6 +45,7 @@ export class App extends Adw.Application implements AppInterface {
   public toolModels: string[] = []
   public tracker: Tracker
   public window!: AppWindow
+  public activeArtifacts: Map<string, ArtifactWindow> = new Map()
 
   constructor(application_id: string) {
     super({

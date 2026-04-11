@@ -19,6 +19,8 @@ export const DEFAULT_EMBEDDING_MODEL = 'nomic-embed-text:latest'
 
 export const DEFAULT_LIMIT = 50
 
+export const DEFAULT_TIMEOUT = 300
+
 export const DEFAULT_SPACING = 12
 
 export const DEFAULT_SYSTEM_PROMPT = /* md */`
