@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Markdown Parser**: Decoupled Markdown parsing logic from UI components into a dedicated `src/lib/parser.ts` module, supporting text, code block, and table chunking.
+- **Message Components**: Introduced specialized `CodeWidget` and `TableWidget` components in `src/app/ui/message/` to modularize message rendering.
 - **Download Image**: Added a download button to the image preview dialog, allowing users to save images directly to their local filesystem.
 - **Photo Component**: Extracted core image rendering and scaling logic into a reusable `Photo` component for consistent visual handling across the application.
 
@@ -14,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tool Call Wrapping**: Improved text wrapping for arguments and responses in the tool call dialog by using `Pango.WrapMode.WORD_CHAR`, ensuring that long strings or JSON data don't overflow the dialog.
 
 ### Changed
+- **Message UI Refactoring**: Significantly reduced the complexity of `src/app/ui/message.ts` by leveraging the new parser and specialized components, improving maintainability and code readability.
 - **HTML Content Safety**: The `render_html` tool now automatically truncates its output after the closing `</html>` tag, preventing the rendering of accidental trailing text or hallucinations from the model.
 - **Tool Parameter Refactoring**: Renamed the `title` parameter to `window_title` in the `render_html` tool and moved it to the first position in the argument list for better clarity. The parameter is now optional and defaults to "Preview" if not provided. Updated the `@canvas` skill prompt to reflect these changes, removed the restriction on using external CDNs, and added a mandate for well-formed HTML with properly closed `<html>` and `</html>` tags.
 - **Modernized Image Preview**: Redesigned the image preview dialog with a solid black background, centered photo layout, and integrated navigation indicators within the header bar. The header now features a persistent bottom border for better visual definition against the dark background.
