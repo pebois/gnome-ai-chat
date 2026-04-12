@@ -42,7 +42,7 @@ export class Sidebar {
       return
     }
     try {
-      const response = await this._app.ollama.embed({
+      const response = await this._app.provider.embed({
         model: DEFAULT_EMBEDDING_MODEL,
         input: searchTerm
       })
@@ -412,7 +412,7 @@ export class Sidebar {
         this._app.setSummarizing(conversation.id, true)
         const messages = await conversationsStore.getMessages(conversation.id)
         if (messages.length > 0) {
-          const summary = await summarizeConversation({ ollama: this._app.ollama, messages })
+          const summary = await summarizeConversation({ provider: this._app.provider, messages })
           if (summary) {
             const title = convertSummaryToTitle(summary)
             this._app.setConversationTitle(conversation, title)

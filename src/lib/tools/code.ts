@@ -2,7 +2,7 @@ import Gio, { type File } from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
 import type { AppInterface } from '@/lib/app.js'
-import type { OllamaTool } from '@/lib/ollama.js'
+import type { Tool } from '@/lib/providers/index.js'
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish')
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish')
@@ -10,7 +10,7 @@ Gio._promisify(Gio.FileEnumerator.prototype, 'close_async', 'close_finish')
 Gio._promisify(Gio.File.prototype, 'replace_contents_bytes_async', 'replace_contents_finish')
 Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish')
 
-export const read_file: OllamaTool = {
+export const read_file: Tool = {
   type: 'function',
   function: {
     name: 'read_file',
@@ -28,7 +28,7 @@ export const read_file: OllamaTool = {
   }
 }
 
-export const write_file: OllamaTool = {
+export const write_file: Tool = {
   type: 'function',
   function: {
     name: 'write_file',
@@ -50,7 +50,7 @@ export const write_file: OllamaTool = {
   }
 }
 
-export const list_directory: OllamaTool = {
+export const list_directory: Tool = {
   type: 'function',
   function: {
     name: 'list_directory',
@@ -68,7 +68,7 @@ export const list_directory: OllamaTool = {
   }
 }
 
-export const run_shell_command: OllamaTool = {
+export const run_shell_command: Tool = {
   type: 'function',
   function: {
     name: 'run_shell_command',

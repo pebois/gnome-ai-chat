@@ -3,9 +3,9 @@ import Gtk from 'gi://Gtk?version=4.0'
 import Pango from 'gi://Pango'
 
 import type { AppInterface } from '@/lib/app.js'
-import type { OllamaToolCall } from '@/lib/ollama.js'
+import type { ToolCall } from '@/lib/providers/index.js'
 
-export function showToolCallDialog(app: AppInterface, tool_call: OllamaToolCall): void {
+export function showToolCallDialog(app: AppInterface, tool_call: ToolCall): void {
   const conversation = app.conversation
   if (!conversation) {
     return

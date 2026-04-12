@@ -54,7 +54,7 @@ export const files: Command = {
           return []
         }
         try {
-          const resp = await app.ollama.embed({
+          const resp = await app.provider.embed({
             model: DEFAULT_EMBEDDING_MODEL,
             input: query
           })

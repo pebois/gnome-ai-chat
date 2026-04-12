@@ -9,16 +9,13 @@ import { EmptyPage } from '@/app/page/empty.js'
 import type { ChatConversation } from '@/app/ui/history.js'
 import { History } from '@/app/ui/history.js'
 import { Input } from '@/app/ui/input.js'
-import { Message } from '@/app/ui/message.js'
-import { summarizeConversation } from '@/lib/agent/summarize.js'
+import { Message } from '@/app/ui/message/index.js'
+import { ChatService } from '@/lib/agent/chat.js'
 import type { AppInterface } from '@/lib/app.js'
-import { DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
-import type { OllamaMessage, OllamaToolCall } from '@/lib/ollama.js'
+import type { ChatMessage } from '@/lib/providers/index.js'
 import { debounce } from '@/lib/timeout.js'
-import { onToolCall, tools } from '@/lib/tools/index.js'
 import { createMenuItem, ResizeTracker } from '@/lib/ui.js'
-import { convertSummaryToTitle } from '@/lib/utils.js'
 
 export class Chat {
   private _app: AppInterface
@@ -32,7 +29,7 @@ export class Chat {
   private _inputClamp!: Adw.Clamp
   private _scrollButton!: Gtk.Button
   private _shouldShowScrollButton = false
-  private _cancellables: Map<number, Gio.Cancellable> = new Map()
+  private _chatService: ChatService
   private _isInputCentered: boolean = false
   private _centerAnim?: Adw.TimedAnimation
   private _updateBanner!: Adw.Banner
@@ -59,6 +56,7 @@ export class Chat {
     this._app = app
     this._box = box
     this._splitView = splitView
+    this._chatService = new ChatService(this._app)
 
     this._setup()
   }
@@ -218,7 +216,7 @@ export class Chat {
       return
     }
     try {
-      const hasUpdate = await this._app.ollama.checkUpdate(currentModel)
+      const hasUpdate = await this._app.provider.checkUpdate(currentModel)
       if (this._app.model === currentModel) {
         this._updateBanner.revealed = hasUpdate
       }
@@ -280,9 +278,9 @@ export class Chat {
     this._input.grabFocus()
   }
 
-  public async regenerateFromMessage(message: OllamaMessage): Promise<void> {
+  public async regenerateFromMessage(message: ChatMessage): Promise<void> {
     const conversation = this._app.conversation
-    if (!conversation || this._app.isGeneratingMessage(conversation.id)) {
+    if (!conversation || this._chatService.isGenerating(conversation.id)) {
       return
     }
 
@@ -306,25 +304,47 @@ export class Chat {
     this._app.saveConversations()
     this.loadMessages(conversation)
 
-    this._app.setGeneratingMessage(conversation.id, true)
     this._input.setSensitive(false)
     this._input.setSendMode('stop')
-    await this._generateResponse(conversation, conversation.messages.length === 1)
+
+    let currentMessageComponent: Message | undefined
+    await this._chatService.generateResponse(conversation.id, conversation.messages.length === 1, {
+      onNewResponse: () => {
+        if (this._app.conversation?.id !== conversation.id) {
+          return
+        }
+        currentMessageComponent = this._renderMessage({ role: 'assistant', content: '•••' })
+        this._history.scrollToBottom()
+      },
+      onMessageChunk: (chunk) => {
+        if (this._app.conversation?.id === conversation.id) {
+          const shouldScroll = this._history.stickToBottom
+          currentMessageComponent?.update(chunk)
+          if (shouldScroll) {
+            this._history.scrollToBottom()
+          }
+        }
+      },
+      onError: (error) => {
+        this._app.showToast(error, true)
+      },
+      onFinish: () => {
+        if (this._app.conversation?.id === conversation.id) {
+          this._input.setSensitive(true)
+          this._input.grabFocus()
+          this._input.setSendMode('send')
+          this._history.scrollToBottom()
+        }
+      }
+    })
   }
 
   public stopGeneration(id: number): void {
-    const cancellable = this._cancellables.get(id)
-    if (cancellable) {
-      cancellable.cancel()
-      this._cancellables.delete(id)
-    }
+    this._chatService.stopGeneration(id)
   }
 
   public stopAllGenerations(): void {
-    for (const cancellable of this._cancellables.values()) {
-      cancellable.cancel()
-    }
-    this._cancellables.clear()
+    this._chatService.stopAllGenerations()
   }
 
   public async sendMessage(): Promise<void> {
@@ -336,7 +356,7 @@ export class Chat {
       return
     }
 
-    if (this._app.isGeneratingMessage(conversation.id)) {
+    if (this._chatService.isGenerating(conversation.id)) {
       this.stopGeneration(conversation.id)
       return
     }
@@ -355,12 +375,11 @@ export class Chat {
       this._centerInput(false)
     }
 
-    this._app.setGeneratingMessage(conversation.id, true)
     buffer.set_text('', -1)
     this._input.setSensitive(false)
     this._input.setSendMode('stop')
 
-    const userMessage: OllamaMessage = { role: 'user', content: text }
+    const userMessage: ChatMessage = { role: 'user', content: text }
     if (this._input.attachments.hasAttachments) {
       const textFiles = this._input.attachments.textFiles
       if (textFiles.length > 0) {
@@ -390,132 +409,37 @@ export class Chat {
     this._app.saveConversations()
 
     this._history.scrollToBottom()
-    await this._generateResponse(conversation, isFirstMessage)
-  }
-
-  private async _generateResponse(conversation: ChatConversation, isFirstMessage: boolean): Promise<void> {
-    const cancellable = new Gio.Cancellable()
-    this._cancellables.set(conversation.id, cancellable)
 
     let currentMessageComponent: Message | undefined
-    let fullContent = ''
-    let fullThinking = ''
-    let fullToolCalls: OllamaToolCall[] = []
-
-    try {
-      const messages = await this._app.ollama.chat({
-        model: this._app.model ?? DEFAULT_CHAT_MODEL,
-        system: this._app.settings.system,
-        stream: this._app.settings.stream,
-        think: this._app.settings.think,
-        options: this._app.settings.options,
-        messages: conversation.messages,
-        skills: this._app.skills,
-        tools,
-        onNewResponse: () => {
-          if (this._app.conversation?.id !== conversation.id) {
-            return
-          }
-          currentMessageComponent = this._renderMessage({ role: 'assistant', content: '•••' })
-          fullContent = ''
-          fullThinking = ''
-          fullToolCalls = []
-          this._history.scrollToBottom()
-        },
-        onMessageChunk: (chunk) => {
-          if (chunk.message?.thinking) {
-            fullThinking += chunk.message.thinking
-          }
-          if (chunk.message?.content) {
-            fullContent += chunk.message.content
-          }
-          if (chunk.message?.tool_calls) {
-            fullToolCalls = [...fullToolCalls, ...chunk.message.tool_calls]
-          }
-
-          if (this._app.conversation?.id === conversation.id) {
-            const shouldScroll = this._history.stickToBottom
-            currentMessageComponent?.update({
-              ...(chunk.message || {}),
-              content: fullContent,
-              thinking: fullThinking,
-              tool_calls: fullToolCalls
-            })
-            if (shouldScroll) {
-              this._history.scrollToBottom()
-            }
-          }
-        },
-        onToolCall: (name, args) => {
-          return onToolCall(this._app, name, args)
-        },
-        cancellable
-      })
-      for (const msg of messages) {
-        conversation.messages.push(msg)
-      }
-
-      if (cancellable.is_cancelled() && currentMessageComponent && (fullContent || fullThinking || fullToolCalls.length > 0)) {
-        conversation.messages.push({
-          role: 'assistant',
-          content: fullContent,
-          thinking: fullThinking,
-          tool_calls: fullToolCalls.length > 0 ? fullToolCalls : undefined
-        })
-      }
-
-      await conversationsStore.saveMessages(conversation.id, conversation.messages)
-      conversation.updated_at = new Date().toISOString()
-      conversation.embeddings = undefined
-      const conv = this._app.conversations.find((c) => {
-        return c.id === conversation.id
-      })
-      if (conv) {
-        conv.updated_at = conversation.updated_at
-        conv.embeddings = undefined
-        this._app.sidebar.updateConversation(conv)
-      }
-      this._app.saveConversations()
-
-      if (!this._app.window.is_active || this._app.conversation?.id !== conversation.id) {
-        const notification = new Gio.Notification()
-        notification.set_title('Gnome AI Chat')
-        notification.set_body('The assistant has finished responding.')
-        notification.set_default_action_and_target('app.open-conversation', GLib.Variant.new_string(conversation.id.toString()))
-        this._app.sendNotification(`message-completed-${conversation.id}`, notification)
-      }
-
-      if (isFirstMessage && !cancellable.is_cancelled()) {
-        this._app.setSummarizing(conversation.id, true)
-        void summarizeConversation({ ollama: this._app.ollama, messages: conversation.messages })
-          .then((summary) => {
-            if (summary) {
-              const title = convertSummaryToTitle(summary)
-              this._app.setConversationTitle(conversation, title)
-              this._app.saveConversations()
-            }
-          })
-          .catch((err) => {
-            console.error('Failed to auto-summarize conversation:', err)
-          })
-          .finally(() => {
-            this._app.setSummarizing(conversation.id, false)
-          })
-      }
-    } catch (err) {
-      console.error(err)
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      this._app.showToast(errorMessage, true)
-    } finally {
-      this._app.setGeneratingMessage(conversation.id, false)
-      this._cancellables.delete(conversation.id)
-      if (this._app.conversation?.id === conversation.id) {
-        this._input.setSensitive(true)
-        this._input.grabFocus()
-        this._input.setSendMode('send')
+    await this._chatService.generateResponse(conversation.id, isFirstMessage, {
+      onNewResponse: () => {
+        if (this._app.conversation?.id !== conversation.id) {
+          return
+        }
+        currentMessageComponent = this._renderMessage({ role: 'assistant', content: '•••' })
         this._history.scrollToBottom()
+      },
+      onMessageChunk: (chunk) => {
+        if (this._app.conversation?.id === conversation.id) {
+          const shouldScroll = this._history.stickToBottom
+          currentMessageComponent?.update(chunk)
+          if (shouldScroll) {
+            this._history.scrollToBottom()
+          }
+        }
+      },
+      onError: (error) => {
+        this._app.showToast(error, true)
+      },
+      onFinish: () => {
+        if (this._app.conversation?.id === conversation.id) {
+          this._input.setSensitive(true)
+          this._input.grabFocus()
+          this._input.setSendMode('send')
+          this._history.scrollToBottom()
+        }
       }
-    }
+    })
   }
 
   public clearAllMessages(): void {
@@ -529,9 +453,9 @@ export class Chat {
     }
   }
 
-  public async startFromMessage(message: OllamaMessage): Promise<void> {
+  public async startFromMessage(message: ChatMessage): Promise<void> {
     const conversation = this._app.conversation
-    if (!conversation || this._app.isGeneratingMessage(conversation.id)) {
+    if (!conversation || this._chatService.isGenerating(conversation.id)) {
       return
     }
     const index = conversation.messages.indexOf(message)
@@ -556,7 +480,7 @@ export class Chat {
     this._input.getBuffer().set_text(text, -1)
   }
 
-  private _renderMessage(message: OllamaMessage): Message | undefined {
+  private _renderMessage(message: ChatMessage): Message | undefined {
     if (message.role === 'tool') {
       return undefined
     }

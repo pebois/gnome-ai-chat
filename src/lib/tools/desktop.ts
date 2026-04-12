@@ -1,7 +1,7 @@
 import Gio from 'gi://Gio'
 import GioUnix from 'gi://GioUnix?version=2.0'
 
-import type { OllamaTool } from '@/lib/ollama.js'
+import type { Tool } from '@/lib/providers/index.js'
 
 interface DesktopAppInfoProxy {
   get_display_name(): string
@@ -11,7 +11,7 @@ interface DesktopAppInfoProxy {
   launch_action(action: string, context: Gio.AppLaunchContext | null): void
 }
 
-export const list_installed_apps: OllamaTool = {
+export const list_installed_apps: Tool = {
   type: 'function',
   function: {
     name: 'list_installed_apps',
@@ -20,7 +20,7 @@ export const list_installed_apps: OllamaTool = {
   }
 }
 
-export const launch_app: OllamaTool = {
+export const launch_app: Tool = {
   type: 'function',
   function: {
     name: 'launch_app',
@@ -43,7 +43,7 @@ export const launch_app: OllamaTool = {
   }
 }
 
-export const get_app_details: OllamaTool = {
+export const get_app_details: Tool = {
   type: 'function',
   function: {
     name: 'get_app_details',
@@ -61,7 +61,7 @@ export const get_app_details: OllamaTool = {
   }
 }
 
-export const launch_app_action: OllamaTool = {
+export const launch_app_action: Tool = {
   type: 'function',
   function: {
     name: 'launch_app_action',

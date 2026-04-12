@@ -1,7 +1,7 @@
 import Adw from 'gi://Adw?version=1'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import { showPreferencesWindow } from '@/app/window/preferences.js'
+import { showPreferencesWindow } from '@/app/window/preferences/index.js'
 import type { AppInterface } from '@/lib/app.js'
 import { createPillButton } from '@/lib/ui.js'
 
@@ -15,7 +15,7 @@ export class ErrorPage {
   constructor(app: AppInterface) {
     const statusPage = new Adw.StatusPage({
       icon_name: 'network-error-symbolic',
-      title: 'Ollama is Unreachable',
+      title: 'Provider is Unreachable',
       vexpand: true
     })
 

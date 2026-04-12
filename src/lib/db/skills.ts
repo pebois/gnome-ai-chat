@@ -1,9 +1,9 @@
 import type Gio from 'gi://Gio'
 
-import { DEFAULT_EMBEDDING_MODEL, DEFAULT_SKILLS } from '@/lib/constants.js'
+import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import { db } from '@/lib/db/index.js'
 import type { Skill } from '@/lib/db/types.js'
-import type { Ollama } from '@/lib/ollama.js'
+import type { Provider } from '@/lib/providers/index.js'
 
 export class SkillsStore {
   public async getSkills(): Promise<Skill[]> {
@@ -57,7 +57,7 @@ export class SkillsStore {
     await db.execSql(sqls)
   }
 
-  public async indexSkills(ollama: Ollama, skills: Skill[], force: boolean = false, cancellable?: Gio.Cancellable, onProgress?: (fraction: number) => void): Promise<void> {
+  public async indexSkills(provider: Provider, skills: Skill[], force: boolean = false, cancellable?: Gio.Cancellable, onProgress?: (fraction: number) => void): Promise<void> {
     const total = skills.length
     if (total === 0) {
       return
@@ -79,7 +79,7 @@ export class SkillsStore {
 
       const textContent = `${skill.name}\n${skill.description || ''}\n${skill.prompt}`
       try {
-        const response = await ollama.embed({
+        const response = await provider.embed({
           model: DEFAULT_EMBEDDING_MODEL,
           input: textContent.slice(0, 8000)
         })
@@ -88,7 +88,7 @@ export class SkillsStore {
           const embeddingsStr = JSON.stringify(skill.embeddings)
           await db.execSql(`UPDATE skills SET embeddings = '${db.escape(embeddingsStr)}' WHERE id = '${db.escape(skill.id)}';`)
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(`Failed to index skill ${skill.id}:`, err)
       }
 

@@ -1,10 +1,10 @@
 import GLib from 'gi://GLib?version=2.0'
 
 import type { AppInterface } from '@/lib/app.js'
-import type { OllamaTool } from '@/lib/ollama.js'
+import type { Tool } from '@/lib/providers/index.js'
 import { takeScreenshot } from '@/lib/screenshot.js'
 
-export const get_system_info: OllamaTool = {
+export const get_system_info: Tool = {
   type: 'function',
   function: {
     name: 'get_system_info',
@@ -13,7 +13,7 @@ export const get_system_info: OllamaTool = {
   }
 }
 
-export const take_screenshot: OllamaTool = {
+export const take_screenshot: Tool = {
   type: 'function',
   function: {
     name: 'take_screenshot',

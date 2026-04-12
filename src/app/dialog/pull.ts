@@ -191,7 +191,7 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
 
     cancellable = new Gio.Cancellable()
 
-    app.ollama.pull({
+    app.provider.pull({
       model: modelName,
       stream: true,
       onProgress: (progress) => {

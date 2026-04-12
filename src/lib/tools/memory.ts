@@ -1,8 +1,8 @@
 import { memoryStore } from '@/lib/db/memory.js'
 import type { Entity, Relation } from '@/lib/db/types.js'
-import type { OllamaTool } from '@/lib/ollama.js'
+import type { Tool } from '@/lib/providers/index.js'
 
-export const create_entities: OllamaTool = {
+export const create_entities: Tool = {
   type: 'function',
   function: {
     name: 'create_entities',
@@ -28,7 +28,7 @@ export const create_entities: OllamaTool = {
   }
 }
 
-export const create_relations: OllamaTool = {
+export const create_relations: Tool = {
   type: 'function',
   function: {
     name: 'create_relations',
@@ -54,7 +54,7 @@ export const create_relations: OllamaTool = {
   }
 }
 
-export const add_observations: OllamaTool = {
+export const add_observations: Tool = {
   type: 'function',
   function: {
     name: 'add_observations',
@@ -79,7 +79,7 @@ export const add_observations: OllamaTool = {
   }
 }
 
-export const delete_entities: OllamaTool = {
+export const delete_entities: Tool = {
   type: 'function',
   function: {
     name: 'delete_entities',
@@ -98,7 +98,7 @@ export const delete_entities: OllamaTool = {
   }
 }
 
-export const delete_observations: OllamaTool = {
+export const delete_observations: Tool = {
   type: 'function',
   function: {
     name: 'delete_observations',
@@ -123,7 +123,7 @@ export const delete_observations: OllamaTool = {
   }
 }
 
-export const delete_relations: OllamaTool = {
+export const delete_relations: Tool = {
   type: 'function',
   function: {
     name: 'delete_relations',
@@ -149,7 +149,7 @@ export const delete_relations: OllamaTool = {
   }
 }
 
-export const read_graph: OllamaTool = {
+export const read_graph: Tool = {
   type: 'function',
   function: {
     name: 'read_graph',
@@ -161,7 +161,7 @@ export const read_graph: OllamaTool = {
   }
 }
 
-export const search_nodes: OllamaTool = {
+export const search_nodes: Tool = {
   type: 'function',
   function: {
     name: 'search_nodes',
@@ -176,7 +176,7 @@ export const search_nodes: OllamaTool = {
   }
 }
 
-export const open_nodes: OllamaTool = {
+export const open_nodes: Tool = {
   type: 'function',
   function: {
     name: 'open_nodes',

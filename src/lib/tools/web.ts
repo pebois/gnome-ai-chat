@@ -2,7 +2,7 @@ import GLib from 'gi://GLib?version=2.0'
 import Soup from 'gi://Soup?version=3.0'
 
 import { APPLICATION_ID } from '@/lib/constants.js'
-import type { OllamaTool } from '@/lib/ollama.js'
+import type { Tool } from '@/lib/providers/index.js'
 
 let _session: Soup.Session | undefined
 
@@ -23,7 +23,7 @@ function getSession(): Soup.Session {
   return _session
 }
 
-export const fetch_web_page: OllamaTool = {
+export const fetch_web_page: Tool = {
   type: 'function',
   function: {
     name: 'fetch_web_page',
@@ -41,7 +41,7 @@ export const fetch_web_page: OllamaTool = {
   }
 }
 
-export const fetch_rss_feed: OllamaTool = {
+export const fetch_rss_feed: Tool = {
   type: 'function',
   function: {
     name: 'fetch_rss_feed',

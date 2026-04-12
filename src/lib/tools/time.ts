@@ -1,8 +1,8 @@
 import GLib from 'gi://GLib?version=2.0'
 
-import type { OllamaTool } from '@/lib/ollama.js'
+import type { Tool } from '@/lib/providers/index.js'
 
-export const get_user_timezone: OllamaTool = {
+export const get_user_timezone: Tool = {
   type: 'function',
   function: {
     name: 'get_user_timezone',
@@ -11,7 +11,7 @@ export const get_user_timezone: OllamaTool = {
   }
 }
 
-export const get_current_datetime: OllamaTool = {
+export const get_current_datetime: Tool = {
   type: 'function',
   function: {
     name: 'get_current_datetime',

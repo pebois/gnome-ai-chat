@@ -1,13 +1,13 @@
 import type Gio from 'gi://Gio'
 import type GLib from 'gi://GLib?version=2.0'
 
-import type { Chat } from '@/app/ui/chat.js'
 import type { ChatConversation } from '@/app/ui/history.js'
-import type { Sidebar } from '@/app/ui/sidebar.js'
 import type { ArtifactWindow } from '@/app/window/artifact.js'
-import type { AppWindow } from '@/app/window/main.js'
+import type { Chat } from '@/app/window/main/chat.js'
+import type { AppWindow } from '@/app/window/main/index.js'
+import type { Sidebar } from '@/app/window/main/sidebar.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
-import type { Ollama } from '@/lib/ollama.js'
+import type { Provider } from '@/lib/providers/index.js'
 import type { Tracker } from '@/lib/tracker.js'
 
 export interface AppInterface {
@@ -18,7 +18,7 @@ export interface AppInterface {
   readonly isBusy: boolean
   readonly model: string
   readonly models: string[]
-  readonly ollama: Ollama
+  readonly provider: Provider
   readonly settings: Settings
   readonly sidebar: Sidebar
   readonly skills: Skill[]

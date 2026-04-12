@@ -41,7 +41,7 @@ export function showFilesDialog(app: AppInterface): void {
           const path = file.get_path()
           if (path) {
             await filesStore.addPath(path)
-            void filesStore.indexPath(app.ollama, path)
+            void filesStore.indexPath(app.provider, path)
           }
         }
       } catch {
@@ -205,7 +205,7 @@ export function showFilesDialog(app: AppInterface): void {
         })
         indexBtn.add_css_class('flat')
         indexBtn.connect('clicked', () => {
-          void filesStore.indexPath(app.ollama, p.path)
+          void filesStore.indexPath(app.provider, p.path)
         })
         actionsBox.append(indexBtn)
         row.add_suffix(actionsBox)

@@ -14,6 +14,8 @@ export interface SidebarCallbacks {
   onSkillSelected: (skillId: string | null) => void
   onNewSkill: () => void
   onDeleteSkill: (skillId: string) => void
+  onResetBuiltins?: () => void
+  hasModifiedBuiltins?: () => boolean
 }
 
 export class SkillsSidebar {
@@ -185,7 +187,20 @@ export class SkillsSidebar {
     }
 
     if (builtins.length > 0) {
-      this._addHeaderRow('Builtins')
+      let resetBtn: Gtk.Button | undefined
+      if (this._callbacks.hasModifiedBuiltins?.()) {
+        resetBtn = new Gtk.Button({
+          icon_name: 'edit-undo-symbolic',
+          tooltip_text: 'Reset all built-ins',
+          valign: Gtk.Align.CENTER
+        })
+        resetBtn.add_css_class('flat')
+        resetBtn.add_css_class('circular')
+        resetBtn.connect('clicked', () => {
+          return this._callbacks.onResetBuiltins?.()
+        })
+      }
+      this._addHeaderRow('Builtins', resetBtn)
       builtins.forEach((s) => {
         return this._addSkillRow(s)
       })
@@ -197,16 +212,32 @@ export class SkillsSidebar {
       })
     }
 
+    this._isSaving = false
+
+    let found = false
     if (selectedId) {
       for (const [row, id] of this._rowToSkillId) {
         if (id === selectedId) {
           this._listBox.select_row(row)
+          found = true
           break
         }
       }
     }
 
-    this._isSaving = false
+    if (!found) {
+      let child = this._listBox.get_first_child()
+      while (child) {
+        if (child instanceof Gtk.ListBoxRow) {
+          const id = this._rowToSkillId.get(child)
+          if (id) {
+            this._listBox.select_row(child)
+            break
+          }
+        }
+        child = child.get_next_sibling()
+      }
+    }
   }
 
   private _addHeaderRow(label: string): void {

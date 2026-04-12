@@ -7,20 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Generic Provider Architecture**: Refactored the core AI logic to use a standardized `Provider` interface. This decouples the application from Ollama-specific implementations and paves the way for supporting multiple LLM backends.
+- **Unified Messaging Types**: Introduced generic `ChatMessage`, `Tool`, and `ToolCall` types, replacing their Ollama-specific counterparts across the entire codebase.
+- **Chat Service**: Introduced `ChatService` in `src/lib/agent/chat.ts` to centralize message generation logic, recursive tool calling, and conversation state management.
 - **Markdown Parser**: Decoupled Markdown parsing logic from UI components into a dedicated `src/lib/parser.ts` module, supporting text, code block, and table chunking.
-- **Message Components**: Introduced specialized `CodeWidget` and `TableWidget` components in `src/app/ui/message/` to modularize message rendering.
+- **Main Window Modularization**: Refactored the main application window by moving its core components (`Sidebar`, `Chat`) into a dedicated `src/app/window/main/` directory, mirroring the modular architecture of the Skills and Preferences windows.
+- **Message Components**: Moved the `Message` class and its specialized sub-components (`CodeWidget`, `TableWidget`) into a consolidated `src/app/ui/message/` directory for better structural organization.
+- **Preferences Modularization**: Decomposed the large `Preferences` window into a modular architecture under `src/app/window/preferences/`. Each settings tab (General, Appearance, Prompt, Permissions, Advanced, Data) is now a dedicated, manageable component.
+- **Skills Editor Refactoring**: Refactored the Skills Editor into a class-based architecture in `src/app/window/skills/`, separating the sidebar (list management and semantic search) from the editor (metadata and prompt editing).
 - **Download Image**: Added a download button to the image preview dialog, allowing users to save images directly to their local filesystem.
 - **Photo Component**: Extracted core image rendering and scaling logic into a reusable `Photo` component for consistent visual handling across the application.
 
 ### Fixed
 - **Tool Call Wrapping**: Improved text wrapping for arguments and responses in the tool call dialog by using `Pango.WrapMode.WORD_CHAR`, ensuring that long strings or JSON data don't overflow the dialog.
+- **Type Safety**: Resolved multiple linting warnings related to unsafe assignments and missing type imports in the new provider module.
 
 ### Changed
+- **Modular API Client**: Refactored the internal API client (now `OllamaProvider`) to focus on low-level HTTP communication, moving high-level tool orchestration to the `ChatService`.
+- **Generalized UI Strings**: Updated user-facing labels to be provider-agnostic. The default assistant is now labeled "Assistant" instead of "Ollama", and connection settings now refer to a generic "API URL".
+- **Chat UI Refactoring**: Simplified `src/app/ui/chat.ts` by offloading response orchestration and state management to the new `ChatService`.
 - **Message UI Refactoring**: Significantly reduced the complexity of `src/app/ui/message.ts` by leveraging the new parser and specialized components, improving maintainability and code readability.
 - **HTML Content Safety**: The `render_html` tool now automatically truncates its output after the closing `</html>` tag, preventing the rendering of accidental trailing text or hallucinations from the model.
 - **Tool Parameter Refactoring**: Renamed the `title` parameter to `window_title` in the `render_html` tool and moved it to the first position in the argument list for better clarity. The parameter is now optional and defaults to "Preview" if not provided. Updated the `@canvas` skill prompt to reflect these changes, removed the restriction on using external CDNs, and added a mandate for well-formed HTML with properly closed `<html>` and `</html>` tags.
 - **Modernized Image Preview**: Redesigned the image preview dialog with a solid black background, centered photo layout, and integrated navigation indicators within the header bar. The header now features a persistent bottom border for better visual definition against the dark background.
 - **Adaptive Sidebar Headers**: Updated the main chat history and skills editor sidebars to use adaptive headers that automatically show a bottom border when scrolled, enhancing the depth and clarity of the navigation interface.
+- **Absolute Imports**: Replaced relative imports (starting with `./`) with absolute imports using the `@/` path alias in the preferences window modules to improve codebase consistency and align with project standards.
 
 ### Fixed
 - **Missing Tool Call Response**: Fixed an issue where calling a tool not present in the tool list would return an empty response instead of a descriptive error message.

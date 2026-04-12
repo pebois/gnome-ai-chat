@@ -3,7 +3,7 @@ import Gio from 'gi://Gio'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import { db } from '@/lib/db/index.js'
 import type { Conversation } from '@/lib/db/types.js'
-import type { Ollama, OllamaMessage, OllamaToolCall } from '@/lib/ollama.js'
+import type { ChatMessage, Provider, ToolCall } from '@/lib/providers/index.js'
 
 export class ConversationsStore {
   public async getConversations(): Promise<Conversation[]> {
@@ -63,7 +63,7 @@ export class ConversationsStore {
     await db.execSql(`DELETE FROM conversations WHERE id = ${id};`)
   }
 
-  public async getMessages(conversation_id: number): Promise<OllamaMessage[]> {
+  public async getMessages(conversation_id: number): Promise<ChatMessage[]> {
     const stdout = await db.execSql(`SELECT role, content, images, files, thinking, tool_calls, tool_name FROM messages WHERE conversation_id = ${conversation_id} ORDER BY id ASC;`, ['-json'])
     if (!stdout) {
       return []
@@ -77,7 +77,7 @@ export class ConversationsStore {
           images: r.images ? JSON.parse(r.images) as string[] : undefined,
           files: r.files ? JSON.parse(r.files) as { name: string; content: string }[] : undefined,
           thinking: r.thinking,
-          tool_calls: r.tool_calls ? JSON.parse(r.tool_calls) as OllamaToolCall[] : undefined,
+          tool_calls: r.tool_calls ? JSON.parse(r.tool_calls) as ToolCall[] : undefined,
           tool_name: r.tool_name
         }
       })
@@ -87,7 +87,7 @@ export class ConversationsStore {
     }
   }
 
-  public async saveMessages(conversation_id: number, messages: OllamaMessage[]): Promise<void> {
+  public async saveMessages(conversation_id: number, messages: ChatMessage[]): Promise<void> {
     const sqls: string[] = []
     sqls.push(`DELETE FROM messages WHERE conversation_id = ${conversation_id};`)
 
@@ -119,7 +119,7 @@ export class ConversationsStore {
     await db.execSql(`DELETE FROM messages WHERE conversation_id = ${conversation_id};`)
   }
 
-  public async indexConversations(ollama: Ollama, conversations: Conversation[], force: boolean = false, cancellable?: Gio.Cancellable, onProgress?: (fraction: number) => void): Promise<void> {
+  public async indexConversations(provider: Provider, conversations: Conversation[], force: boolean = false, cancellable?: Gio.Cancellable, onProgress?: (fraction: number) => void): Promise<void> {
     const total = conversations.length
     if (total === 0) {
       return
@@ -145,14 +145,14 @@ export class ConversationsStore {
           return m.content
         }).join('\n')
         try {
-          const response = await ollama.embed({
+          const response = await provider.embed({
             model: DEFAULT_EMBEDDING_MODEL,
             input: textContent.slice(0, 8000)
           })
           if (response && response.embeddings && response.embeddings.length > 0) {
             conv.embeddings = response.embeddings[0]
           }
-        } catch (err) {
+        } catch (err: unknown) {
           console.error(`Failed to index conversation ${conv.id}:`, err)
         }
       }

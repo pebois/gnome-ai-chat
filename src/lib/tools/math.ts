@@ -1,6 +1,6 @@
-import type { OllamaTool } from '@/lib/ollama.js'
+import type { Tool } from '@/lib/providers/index.js'
 
-export const roll_die: OllamaTool = {
+export const roll_die: Tool = {
   type: 'function',
   function: {
     name: 'roll_die',
@@ -19,7 +19,7 @@ export const roll_die: OllamaTool = {
   }
 }
 
-export const calculate: OllamaTool = {
+export const calculate: Tool = {
   type: 'function',
   function: {
     name: 'calculate',
