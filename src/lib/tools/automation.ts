@@ -2,9 +2,9 @@ import Gdk from 'gi://Gdk'
 import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
-import type { OllamaTool } from '@/lib/ollama.js'
+import type { Tool } from '@/lib/providers/index.js'
 
-export const run_automation_command: OllamaTool = {
+export const run_automation_command: Tool = {
   type: 'function',
   function: {
     name: 'run_automation_command',

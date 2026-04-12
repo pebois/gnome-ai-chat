@@ -1,5 +1,5 @@
 import { DEFAULT_GENRATE_MODEL } from '@/lib/constants.js'
-import type { Ollama, OllamaMessage } from '@/lib/ollama.js'
+import type { ChatMessage, Provider } from '@/lib/providers/index.js'
 
 export interface SummaryResponse {
   title: string
@@ -7,12 +7,12 @@ export interface SummaryResponse {
 }
 
 interface SummaryRequest {
-  ollama: Ollama
+  provider: Provider
   model?: string
-  messages: OllamaMessage[]
+  messages: ChatMessage[]
 }
 
-export async function summarizeConversation({ messages, model, ollama }: SummaryRequest): Promise<SummaryResponse | null> {
+export async function summarizeConversation({ messages, model, provider }: SummaryRequest): Promise<SummaryResponse | null> {
   if (messages.length === 0) {
     return null
   }
@@ -28,7 +28,7 @@ export async function summarizeConversation({ messages, model, ollama }: Summary
 
   const prompt = `Summarize this conversation in exactly 3 to 5 words and provide one relevant emoji.\n\nConversation:\n${conversationText}`
 
-  const response = await ollama.generate({
+  const response = await provider.generate({
     model: model ?? DEFAULT_GENRATE_MODEL,
     prompt,
     system: 'You are a summarization agent. You must output valid JSON containing a "title" (3-5 words) and an "emoji".',

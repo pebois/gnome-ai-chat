@@ -3,8 +3,8 @@ import { showPullDialog } from '@/app/dialog/pull.js'
 import { showShortcutsDialog } from '@/app/dialog/shortcuts.js'
 import { showStatsDialog } from '@/app/dialog/stats.js'
 import { showAboutWindow } from '@/app/window/about.js'
-import { showPreferencesWindow } from '@/app/window/preferences.js'
-import { showSkillsWindow } from '@/app/window/skills.js'
+import { showPreferencesWindow } from '@/app/window/preferences/index.js'
+import { showSkillsWindow } from '@/app/window/skills/index.js'
 import type { Command } from '@/lib/commands/index.js'
 
 export const settings: Command = {

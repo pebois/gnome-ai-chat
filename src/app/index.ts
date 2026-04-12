@@ -6,11 +6,11 @@ import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import { css } from '@/app/global.css.js'
-import type { Chat } from '@/app/ui/chat.js'
 import type { ChatConversation } from '@/app/ui/history.js'
-import type { Sidebar } from '@/app/ui/sidebar.js'
 import { ArtifactWindow } from '@/app/window/artifact.js'
-import { AppWindow } from '@/app/window/main.js'
+import { Chat } from '@/app/window/main/chat.js'
+import { AppWindow } from '@/app/window/main/index.js'
+import { Sidebar } from '@/app/window/main/sidebar.js'
 import type { AppInterface } from '@/lib/app.js'
 import { COMMANDS } from '@/lib/commands/index.js'
 import { APPLICATION_ID, DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
@@ -20,8 +20,8 @@ import { db } from '@/lib/db/index.js'
 import { settingsStore } from '@/lib/db/settings.js'
 import { skillsStore } from '@/lib/db/skills.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
-import { Ollama } from '@/lib/ollama.js'
 import { pangoEscape } from '@/lib/parser.js'
+import { OllamaProvider } from '@/lib/providers/ollama.js'
 import { Tracker } from '@/lib/tracker.js'
 import { createSimpleAction } from '@/lib/ui.js'
 import { convertMessageToTitle } from '@/lib/utils.js'
@@ -40,7 +40,7 @@ export class App extends Adw.Application implements AppInterface {
   public conversations: Conversation[]
   public model: string
   public models: string[]
-  public ollama: Ollama
+  public provider!: OllamaProvider
   public skills: Skill[] = []
   public supportsVision = true
   public toolModels: string[] = []
@@ -58,7 +58,7 @@ export class App extends Adw.Application implements AppInterface {
     this.model = DEFAULT_CHAT_MODEL
     this.conversations = []
     this.tracker = new Tracker()
-    this.ollama = new Ollama(this.settings, this.tracker)
+    this.provider = new OllamaProvider(this.settings, this.tracker)
   }
 
   public get chat(): Chat {
@@ -173,7 +173,7 @@ export class App extends Adw.Application implements AppInterface {
         this.window.add_css_class('devel')
       }
 
-      const version = await this.ollama.version()
+      const version = await this.provider.version()
       if (!version) {
         throw new Error('Could not connect to Ollama')
       }
@@ -207,13 +207,13 @@ export class App extends Adw.Application implements AppInterface {
 
     if (this.isLoaded) {
       await conversationsStore.saveConversations(this.conversations)
-      await conversationsStore.indexConversations(this.ollama, this.conversations, false)
+      await conversationsStore.indexConversations(this.provider, this.conversations, false)
     }
 
     if (this._settingsLoaded) {
       await settingsStore.saveSettings(this.settings)
       await skillsStore.saveSkills(this.skills)
-      await skillsStore.indexSkills(this.ollama, this.skills, false)
+      await skillsStore.indexSkills(this.provider, this.skills, false)
     }
 
     this.sidebar.clearList()
@@ -244,14 +244,14 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   public saveSettings(): void {
-    this.ollama.url = this.settings.url
+    this.provider.url = this.settings.url
     this.window.updateCssClass()
     void settingsStore.saveSettings(this.settings)
   }
 
   public saveSkills(): void {
     void skillsStore.saveSkills(this.skills).then(() => {
-      return skillsStore.indexSkills(this.ollama, this.skills, false)
+      return skillsStore.indexSkills(this.provider, this.skills, false)
     }).catch((err) => {
       console.error('Failed to save/index skills:', err)
     })
@@ -262,7 +262,7 @@ export class App extends Adw.Application implements AppInterface {
       return
     }
     void conversationsStore.saveConversations(this.conversations).then(() => {
-      return conversationsStore.indexConversations(this.ollama, this.conversations, false)
+      return conversationsStore.indexConversations(this.provider, this.conversations, false)
     }).catch((err) => {
       console.error('Failed to save/index conversations:', err)
     })
@@ -280,7 +280,7 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   private async _updateCapabilities(model: string): Promise<void> {
-    const details = await this.ollama.model(model)
+    const details = await this.provider.model(model)
     const capabilities = details?.capabilities || []
     this.supportsVision = capabilities.includes('vision')
     this.emit('capabilities-changed')
@@ -386,7 +386,7 @@ export class App extends Adw.Application implements AppInterface {
 
     try {
       const paths = await filesStore.getPaths()
-      await filesStore.indexPaths(this.ollama, paths, this._filesIndexingCancellable, (fraction) => {
+      await filesStore.indexPaths(this.provider, paths, this._filesIndexingCancellable, (fraction) => {
         this.emit('files-indexing-changed', true, fraction)
       })
     } catch (err) {
@@ -493,16 +493,16 @@ export class App extends Adw.Application implements AppInterface {
   private async _loadSettings(): Promise<void> {
     await settingsStore.loadSettings()
     this.skills = await skillsStore.getSkills()
-    this.ollama.url = this.settings.url
+    this.provider.url = this.settings.url
     this._settingsLoaded = true
   }
 
   private async _loadModels(): Promise<void> {
-    this.models = await this.ollama.models()
+    this.models = await this.provider.models()
 
     const toolModels: string[] = []
     for (const m of this.models) {
-      const details = await this.ollama.model(m)
+      const details = await this.provider.model(m)
       if (details?.capabilities?.includes('tools')) {
         toolModels.push(m)
       }

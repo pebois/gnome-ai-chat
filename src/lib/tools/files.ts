@@ -4,13 +4,13 @@ import GLib from 'gi://GLib?version=2.0'
 import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import { filesStore } from '@/lib/db/files.js'
-import type { OllamaTool } from '@/lib/ollama.js'
+import type { Tool } from '@/lib/providers/index.js'
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish')
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish')
 Gio._promisify(Gio.FileEnumerator.prototype, 'close_async', 'close_finish')
 
-export const search_vector_index: OllamaTool = {
+export const search_vector_index: Tool = {
   type: 'function',
   function: {
     name: 'search_vector_index',
@@ -35,7 +35,7 @@ export async function handle_search_vector_index(app: AppInterface, args: Record
   }
 
   try {
-    const resp = await app.ollama.embed({
+    const resp = await app.provider.embed({
       model: DEFAULT_EMBEDDING_MODEL,
       input: query
     })
@@ -56,7 +56,7 @@ export async function handle_search_vector_index(app: AppInterface, args: Record
   }
 }
 
-export const search_files: OllamaTool = {
+export const search_files: Tool = {
   type: 'function',
   function: {
     name: 'search_files',

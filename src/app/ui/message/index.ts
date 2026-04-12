@@ -11,17 +11,17 @@ import { createCodeWidget } from '@/app/ui/message/code.js'
 import { createTableWidget, TableRowItem } from '@/app/ui/message/table.js'
 import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_SPACING, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
-import type { OllamaMessage, OllamaToolCall } from '@/lib/ollama.js'
 import { markdownToPango, parseCodeBlock, parseMarkdownChunks, parseTable } from '@/lib/parser.js'
+import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
 import { handle_render_html } from '@/lib/tools/html.js'
 import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setupContextMenu } from '@/lib/ui.js'
 import { getLanguageMetadata } from '@/lib/utils.js'
 
 export interface MessageProps {
-  message: OllamaMessage
-  onReload: (message: OllamaMessage) => void
+  message: ChatMessage
+  onReload: (message: ChatMessage) => void
   onCopy: () => void
-  onRegenerate: (message: OllamaMessage) => void
+  onRegenerate: (message: ChatMessage) => void
 }
 
 interface ContentPart {
@@ -48,7 +48,7 @@ export class Message {
   private _fileBuffers: GtkSource.Buffer[] = []
   private _roleBox!: Gtk.Box
   private _toolRows: Gtk.Widget[] = []
-  private _currentMessage: OllamaMessage
+  private _currentMessage: ChatMessage
   private _copyButton?: Gtk.Button
   private _copyAction?: Gio.SimpleAction
   private _reloadButton?: Gtk.Button
@@ -134,7 +134,7 @@ export class Message {
     this._regenerateAction?.set_enabled(sensitive)
   }
 
-  private _setupThinking(message: OllamaMessage): void {
+  private _setupThinking(message: ChatMessage): void {
     const [listBox, expander] = createBoxedExpanderRow('Thought Process', 'dialog-information-symbolic')
     this._thinkingListBox = listBox
     this._thinkingExpander = expander
@@ -154,7 +154,7 @@ export class Message {
     this._thinkingExpander.add_row(this._thinkingLabel)
   }
 
-  private _setupToolCalls(message: OllamaMessage): void {
+  private _setupToolCalls(message: ChatMessage): void {
     const [listBox, expander] = createBoxedExpanderRow('Tool Calls', 'emblem-system-symbolic')
     this._toolCallsListBox = listBox
     this._toolCallsExpander = expander
@@ -163,14 +163,14 @@ export class Message {
     this._updateToolCalls(message.tool_calls)
   }
 
-  private _setupImages(message: OllamaMessage): void {
+  private _setupImages(message: ChatMessage): void {
     if (message.images?.length) {
       const images = new Images(this._app, message.images, message.role)
       this._widget.append(images.widget)
     }
   }
 
-  private _setupFiles(message: OllamaMessage): void {
+  private _setupFiles(message: ChatMessage): void {
     if (!message.files?.length) {
       return
     }
@@ -224,7 +224,7 @@ export class Message {
     this._widget.append(filesBox)
   }
 
-  private _setupContent(message: OllamaMessage): void {
+  private _setupContent(message: ChatMessage): void {
     const isVisible = !!message.content?.length && ['user', 'assistant'].includes(message.role)
 
     this._contentBox = new Gtk.Box({
@@ -248,7 +248,7 @@ export class Message {
     this._renderContent(message)
   }
 
-  private _renderContent(message: OllamaMessage): void {
+  private _renderContent(message: ChatMessage): void {
     if (!message.content) {
       this._contentParts.forEach((p) => {
         return this._contentBox.remove(p.widget)
@@ -369,7 +369,7 @@ export class Message {
     })
 
     const roleLabel = new Gtk.Label({
-      label: message.role === 'user' ? 'You' : 'Ollama',
+      label: message.role === 'user' ? 'You' : 'Assistant',
       selectable: false
     })
     roleLabel.add_css_class('dim-label')
@@ -491,7 +491,7 @@ export class Message {
     setupContextMenu(this._messageGroup, popover)
   }
 
-  private _updateToolCalls(calls?: OllamaToolCall[]): void {
+  private _updateToolCalls(calls?: ToolCall[]): void {
     this._toolRows.forEach((row) => {
       return this._toolCallsExpander.remove(row)
     })
@@ -547,7 +547,7 @@ export class Message {
     })
   }
 
-  public update(updated: OllamaMessage): void {
+  public update(updated: ChatMessage): void {
     this._currentMessage = updated
     this._thinkingListBox.set_visible(!!updated.thinking?.length)
     this._thinkingLabel.set_text(updated.thinking || '')

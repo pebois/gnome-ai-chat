@@ -2,15 +2,15 @@ import Adw from 'gi://Adw?version=1'
 import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import { Message } from '@/app/ui/message.js'
+import { Message } from '@/app/ui/message/index.js'
 import { ScrollManager } from '@/app/ui/scroll.js'
 import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_LIMIT } from '@/lib/constants.js'
 import type { Conversation } from '@/lib/db/types.js'
-import type { OllamaMessage } from '@/lib/ollama.js'
+import type { ChatMessage } from '@/lib/providers/index.js'
 
 export interface ChatConversation extends Conversation {
-  messages: OllamaMessage[]
+  messages: ChatMessage[]
 }
 
 export interface HistoryCallbacks {
@@ -187,7 +187,7 @@ export class History {
     }
   }
 
-  public renderMessage(message: OllamaMessage, atStart: boolean = false): Message | undefined {
+  public renderMessage(message: ChatMessage, atStart: boolean = false): Message | undefined {
     if (message.role === 'tool') {
       return undefined
     }

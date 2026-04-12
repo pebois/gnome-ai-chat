@@ -3,8 +3,24 @@ import GLib from 'gi://GLib?version=2.0'
 import Soup from 'gi://Soup?version=3.0'
 
 import { DEFAULT_TIMEOUT } from '@/lib/constants.js'
-import type { Settings, Think } from '@/lib/db/types.js'
+import type { Settings } from '@/lib/db/types.js'
 import { debug } from '@/lib/debug.js'
+import type {
+  ChatMessage,
+  ChatProps,
+  ChatRequest,
+  ChatResponse,
+  EmbedRequest,
+  EmbedResponse,
+  GenerateRequest,
+  GenerateResponse,
+  ModelDetails,
+  Provider,
+  PsResponse,
+  PullProgress,
+  PullProps,
+  ToolCall
+} from '@/lib/providers/index.js'
 import { buildSkillPrompt } from '@/lib/skills/index.js'
 import type { Tracker } from '@/lib/tracker.js'
 
@@ -12,160 +28,7 @@ Gio._promisify(Soup.Session.prototype, 'send_async', 'send_finish')
 Gio._promisify(Soup.Session.prototype, 'send_and_read_async', 'send_and_read_finish')
 Gio._promisify(Gio.DataInputStream.prototype, 'read_line_async', 'read_line_finish_utf8')
 
-export interface OllamaChatProps extends OllamaChatRequest {
-  onNewResponse?: () => void
-  onMessageChunk?: (response: OllamaChatResponse) => void
-  onToolCall?: (name: string, args: Record<string, unknown>) => Promise<string>
-  cancellable: Gio.Cancellable
-  skills?: { name: string; description?: string; prompt: string }[]
-}
-
-export interface OllamaChatRequest {
-  model: string
-  system?: string
-  stream?: boolean
-  think?: Think | true
-  options?: Record<string, number>
-  messages?: OllamaMessage[]
-  tools?: OllamaTool[]
-  format?: string | object
-  keep_alive?: string | number
-  logprobs?: boolean
-  top_logprobs?: number
-}
-
-export interface OllamaChatResponse {
-  model: string
-  created_at: string
-  message: OllamaMessage
-  done: boolean
-  done_reason?: string
-  total_duration?: number
-  load_duration?: number
-  prompt_eval_count?: number
-  prompt_eval_duration?: number
-  eval_count?: number
-  eval_duration?: number
-}
-
-export interface OllamaMessage {
-  role: 'user' | 'assistant' | 'system' | 'tool'
-  content: string
-  images?: string[]
-  files?: { name: string; content: string }[]
-  thinking?: string
-  tool_calls?: OllamaToolCall[]
-  tool_name?: string
-}
-
-export interface OllamaToolCall {
-  id: string
-  function: {
-    index: number
-    name: string
-    arguments: Record<string, unknown>
-  }
-}
-
-export interface OllamaTool {
-  type: string
-  function: {
-    name: string
-    parameters: object
-    description?: string
-  }
-}
-
-export interface OllamaGenerateRequest {
-  model: string
-  prompt: string
-  system?: string
-  template?: string
-  context?: number[]
-  stream?: boolean
-  raw?: boolean
-  format?: string | object
-  options?: Record<string, number>
-  keep_alive?: string | number
-}
-
-export interface OllamaGenerateResponse {
-  model: string
-  created_at: string
-  response: string
-  done: boolean
-  context?: number[]
-  total_duration?: number
-  load_duration?: number
-  prompt_eval_count?: number
-  prompt_eval_duration?: number
-  eval_count?: number
-  eval_duration?: number
-}
-
-export interface OllamaEmbedRequest {
-  model: string
-  input: string | string[]
-  truncate?: boolean
-  options?: Record<string, number>
-  keep_alive?: string | number
-}
-
-export interface OllamaEmbedResponse {
-  model: string
-  embeddings: number[][]
-  total_duration?: number
-  load_duration?: number
-  prompt_eval_count?: number
-}
-
-export interface OllamaPullRequest {
-  model: string
-  stream?: boolean
-}
-
-export interface OllamaPullProps extends OllamaPullRequest {
-  onProgress?: (progress: OllamaPullProgress) => void
-  cancellable?: Gio.Cancellable
-}
-
-export interface OllamaPullProgress {
-  status: string
-  digest?: string
-  total?: number
-  completed?: number
-  error?: string
-}
-
-export interface OllamaPsResponse {
-  models: {
-    name: string
-    model: string
-    size: number
-    digest: string
-    details: Record<string, unknown>
-    expires_at: string
-    size_vram: number
-  }[]
-}
-
-export interface OllamaModelDetails {
-  parameters: string
-  license: string
-  capabilities: string[]
-  modified_at: string
-  details: {
-    parent_model: string
-    format: string
-    family: string
-    families: string[]
-    parameter_size: string
-    quantization_level: string
-  }
-  model_info: Record<string, unknown>
-}
-
-export class Ollama {
+export class OllamaProvider implements Provider {
   private _tracker: Tracker
   private _session: Soup.Session
   private _settings: Settings
@@ -202,7 +65,7 @@ export class Ollama {
     return ''
   }
 
-  public async model(model: string): Promise<OllamaModelDetails | null> {
+  public async model(model: string): Promise<ModelDetails | null> {
     const url = `${this.url}/api/show`
     this._debug(`POST ${url}`)
     const body = JSON.stringify({ model })
@@ -215,7 +78,7 @@ export class Ollama {
       const decoder = new TextDecoder()
       const data = bytes.toArray()
       if (data) {
-        return JSON.parse(decoder.decode(data)) as OllamaModelDetails
+        return JSON.parse(decoder.decode(data)) as ModelDetails
       }
     }
     return null
@@ -293,37 +156,12 @@ export class Ollama {
     return false
   }
 
-  public async chat(props: OllamaChatProps): Promise<OllamaMessage[]> {
-    props.onNewResponse?.()
+  public async chat(props: ChatProps): Promise<ChatMessage | undefined> {
     const messages = props.messages || []
-    const message = await this._doChatRequest(props, messages)
-    if (!message) {
-      return []
-    }
-
-    if (!message.tool_calls?.length || !props.onToolCall) {
-      return [message]
-    }
-
-    const startToolTime = GLib.get_monotonic_time()
-
-    const toolMessages: OllamaMessage[] = await Promise.all(message.tool_calls.map(async (tc) => {
-      return {
-        role: 'tool',
-        tool_name: tc.function.name,
-        content: await props.onToolCall?.(tc.function.name, tc.function.arguments) || ''
-      }
-    }))
-
-    const endToolTime = GLib.get_monotonic_time()
-    const toolDurationMs = (endToolTime - startToolTime) / 1000
-    this._tracker.recordToolCall(toolDurationMs)
-
-    const next = await this.chat({ ...props, messages: [...messages, message, ...toolMessages] })
-    return [message, ...toolMessages, ...next]
+    return this._doChatRequest(props, messages)
   }
 
-  private async _doChatRequest(props: OllamaChatProps, messages: OllamaMessage[]): Promise<OllamaMessage | undefined> {
+  private async _doChatRequest(props: ChatProps, messages: ChatMessage[]): Promise<ChatMessage | undefined> {
     try {
       const url = `${this.url}/api/chat`
       this._debug(`POST ${url}`)
@@ -338,16 +176,16 @@ export class Ollama {
           throw new Error(`Ollama error: ${msg.get_reason_phrase() || msg.get_status()}`)
         }
         const dataStream = new Gio.DataInputStream({ base_stream: inputStream })
-        let role: OllamaMessage['role'] = 'assistant'
+        let role: ChatMessage['role'] = 'assistant'
         let content = ''
         let thinking = ''
-        let tool_calls: OllamaToolCall[] = []
+        let tool_calls: ToolCall[] = []
         while (true) {
           const [line] = await dataStream.read_line_async(GLib.PRIORITY_DEFAULT, props.cancellable)
           if (line === null) {
             break
           }
-          const response = JSON.parse(line.toString()) as OllamaChatResponse
+          const response = JSON.parse(line.toString()) as ChatResponse
           if (response) {
             if (response.message) {
               role = response.message.role
@@ -382,7 +220,7 @@ export class Ollama {
           const decoder = new TextDecoder()
           const data = bytes.toArray()
           if (data) {
-            const response = JSON.parse(decoder.decode(data)) as OllamaChatResponse
+            const response = JSON.parse(decoder.decode(data)) as ChatResponse
             if (response.message) {
               props.onMessageChunk?.(response)
               if (response.done) {
@@ -406,7 +244,7 @@ export class Ollama {
     }
   }
 
-  private async _buildChatRequest(props: OllamaChatProps, messages: OllamaMessage[]): Promise<OllamaChatRequest> {
+  private async _buildChatRequest(props: ChatProps, messages: ChatMessage[]): Promise<ChatRequest> {
     const details = await this.model(props.model)
     const capabilities = details?.capabilities || []
 
@@ -456,7 +294,7 @@ export class Ollama {
       finalMessages.unshift({ role: 'system', content: systemContent })
     }
 
-    const req: OllamaChatRequest = {
+    const req: ChatRequest = {
       model: props.model,
       messages: finalMessages,
       stream: props.stream !== false
@@ -487,7 +325,7 @@ export class Ollama {
     return req
   }
 
-  public async generate(req: OllamaGenerateRequest): Promise<OllamaGenerateResponse | null> {
+  public async generate(req: GenerateRequest): Promise<GenerateResponse | null> {
     const url = `${this.url}/api/generate`
     this._debug(`POST ${url}`)
     const body = JSON.stringify(req)
@@ -500,7 +338,7 @@ export class Ollama {
       const decoder = new TextDecoder()
       const data = bytes.toArray()
       if (data) {
-        const response = JSON.parse(decoder.decode(data)) as OllamaGenerateResponse
+        const response = JSON.parse(decoder.decode(data)) as GenerateResponse
         if (response.done) {
           this._tracker.recordApiCall(
             response.model,
@@ -515,12 +353,12 @@ export class Ollama {
     return null
   }
 
-  public async pull(props: OllamaPullProps): Promise<boolean> {
+  public async pull(props: PullProps): Promise<boolean> {
     try {
       const url = `${this.url}/api/pull`
       this._debug(`POST ${url}`)
 
-      const req: OllamaPullRequest = {
+      const req = {
         model: props.model,
         stream: props.stream
       }
@@ -562,14 +400,14 @@ export class Ollama {
         }
 
         try {
-          const progress = JSON.parse(line.toString()) as OllamaPullProgress
+          const progress = JSON.parse(line) as PullProgress
           if (progress.error) {
             throw new Error(progress.error)
           }
           if (progress && props.onProgress) {
             props.onProgress(progress)
           }
-        } catch (e) {
+        } catch (e: unknown) {
           if (e instanceof Error && !e.message.includes('JSON')) {
             throw e
           }
@@ -609,7 +447,7 @@ export class Ollama {
     return msg.get_status() === Soup.Status.OK
   }
 
-  public async embed(req: OllamaEmbedRequest): Promise<OllamaEmbedResponse | null> {
+  public async embed(req: EmbedRequest): Promise<EmbedResponse | null> {
     const url = `${this.url}/api/embed`
     this._debug(`POST ${url}`)
     const body = JSON.stringify(req)
@@ -622,7 +460,7 @@ export class Ollama {
       const decoder = new TextDecoder()
       const data = bytes.toArray()
       if (data) {
-        const response = JSON.parse(decoder.decode(data)) as OllamaEmbedResponse
+        const response = JSON.parse(decoder.decode(data)) as EmbedResponse
         this._tracker.recordApiCall(
           response.model,
           response.prompt_eval_count || 0,
@@ -635,7 +473,7 @@ export class Ollama {
     return null
   }
 
-  public async ps(): Promise<OllamaPsResponse | null> {
+  public async ps(): Promise<PsResponse | null> {
     const url = `${this.url}/api/ps`
     this._debug(`GET ${url}`)
     const msg = Soup.Message.new('GET', url)
@@ -644,7 +482,7 @@ export class Ollama {
       const decoder = new TextDecoder()
       const data = bytes.toArray()
       if (data) {
-        return JSON.parse(decoder.decode(data)) as OllamaPsResponse
+        return JSON.parse(decoder.decode(data)) as PsResponse
       }
     }
     return null

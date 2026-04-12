@@ -195,7 +195,7 @@ src/
 - **Responsiveness**: Use `Adw.Breakpoint` and `Adw.Clamp` to ensure the application remains usable at narrow widths (e.g., on mobile or tiled views).
 
 ### Tool Development
-- **Definition**: New tools must be defined as an `OllamaTool` object in a relevant file under `lib/tools/`.
+- **Definition**: New tools must be defined as a `Tool` object in a relevant file under `lib/tools/`.
 - **Registration**: Export the tool and its handler, then register it in `lib/tools/index.ts` within the `onToolCall` dispatcher.
 - **Execution**: Handlers should return a `string` (or a `Promise<string>`). Web fetching utilizes a singleton `Soup.Session` with `Soup.Cache` for efficiency.
 - **Security & Permissions**: High-risk tools (like shell commands or file writes) must integrate with the Tool Execution Permissions layer to prompt users for approval before executing side effects.

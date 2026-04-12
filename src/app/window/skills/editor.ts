@@ -166,20 +166,35 @@ export class SkillEditor {
   }
 
   public load(skill: Skill | null, isBuiltin: boolean, differsFromDefault: boolean): void {
-    this._nameRow.set_text(skill?.name ?? '')
-    this._descRow.set_text(skill?.description ?? '')
-    this._buffer.set_text(skill?.prompt ?? '', -1)
+    const name = skill?.name ?? ''
+    if (this._nameRow.get_text() !== name) {
+      this._nameRow.set_text(name)
+    }
+
+    const description = skill?.description ?? ''
+    if (this._descRow.get_text() !== description) {
+      this._descRow.set_text(description)
+    }
+
+    const prompt = skill?.prompt ?? ''
+    const currentPrompt = this._buffer.get_text(this._buffer.get_start_iter(), this._buffer.get_end_iter(), false)
+    if (currentPrompt !== prompt) {
+      this._buffer.set_text(prompt, -1)
+    }
 
     const active = skill !== null
     this._nameRow.sensitive = active
     this._descRow.sensitive = active
     this._sourceView.sensitive = active
 
+    this.updateActions(active && isBuiltin, differsFromDefault)
     this._deleteBtn.visible = active && !isBuiltin
     this._deleteBtn.sensitive = active && !isBuiltin
+  }
 
-    this._resetBtn.visible = active && isBuiltin
-    this._resetBtn.sensitive = active && isBuiltin && differsFromDefault
+  public updateActions(isBuiltin: boolean, differsFromDefault: boolean): void {
+    this._resetBtn.visible = isBuiltin
+    this._resetBtn.sensitive = isBuiltin && differsFromDefault
   }
 
   public grabFocus(): void {

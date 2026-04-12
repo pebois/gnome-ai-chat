@@ -59,7 +59,7 @@ export function showRunningModelsDialog(app: AppInterface): void {
 
   async function updateContent(): Promise<void> {
     try {
-      const response = await app.ollama.ps()
+      const response = await app.provider.ps()
       const models = response?.models || []
 
       if (models.length === 0) {

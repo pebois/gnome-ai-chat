@@ -1,8 +1,8 @@
 import { ArtifactWindow } from '@/app/window/artifact.js'
 import type { AppInterface } from '@/lib/app.js'
-import type { OllamaTool } from '@/lib/ollama.js'
+import type { Tool } from '@/lib/providers/index.js'
 
-export const render_html: OllamaTool = {
+export const render_html: Tool = {
   type: 'function',
   function: {
     name: 'render_html',

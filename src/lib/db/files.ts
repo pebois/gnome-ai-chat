@@ -4,7 +4,7 @@ import GLib from 'gi://GLib?version=2.0'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import { db } from '@/lib/db/index.js'
 import type { FileChunk, IndexedPath, SearchResult } from '@/lib/db/types.js'
-import type { Ollama } from '@/lib/ollama.js'
+import type { Provider } from '@/lib/providers/index.js'
 import { RecursiveCharacterTextSplitter } from '@/lib/splitter.js'
 import { cosineSimilarity } from '@/lib/utils.js'
 
@@ -138,11 +138,11 @@ export class FilesStore {
     }
   }
 
-  public async indexPath(ollama: Ollama, targetPath: string): Promise<void> {
-    await this.indexPaths(ollama, [{ path: targetPath } as IndexedPath])
+  public async indexPath(provider: Provider, targetPath: string): Promise<void> {
+    await this.indexPaths(provider, [{ path: targetPath } as IndexedPath])
   }
 
-  public async indexPaths(ollama: Ollama, paths: IndexedPath[], cancellable?: Gio.Cancellable, onProgress?: (fraction: number) => void): Promise<void> {
+  public async indexPaths(provider: Provider, paths: IndexedPath[], cancellable?: Gio.Cancellable, onProgress?: (fraction: number) => void): Promise<void> {
     if (paths.length === 0) {
       return
     }
@@ -188,7 +188,7 @@ export class FilesStore {
         break
       }
 
-      await this._indexFile(ollama, entry.file, entry.path)
+      await this._indexFile(provider, entry.file, entry.path)
       processed++
 
       const pathProcessed = (processedPerPath.get(entry.rootPath) ?? 0) + 1
@@ -251,7 +251,7 @@ export class FilesStore {
     }
   }
 
-  private async _indexFile(ollama: Ollama, child: Gio.File, path: string): Promise<void> {
+  private async _indexFile(provider: Provider, child: Gio.File, path: string): Promise<void> {
     try {
       const [contents] = await child.load_contents_async(null)
       const text = new TextDecoder().decode(contents)
@@ -263,7 +263,7 @@ export class FilesStore {
 
       const chunks = splitter.splitText(text)
       for (const chunkText of chunks) {
-        const resp = await ollama.embed({
+        const resp = await provider.embed({
           model: DEFAULT_EMBEDDING_MODEL,
           input: chunkText
         })
@@ -275,7 +275,7 @@ export class FilesStore {
           })
         }
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(`Error indexing file ${path}:`, e)
     }
   }
