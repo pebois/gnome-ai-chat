@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Improved the "Reset all built-ins" button in the skills sidebar: it is now always visible and automatically restores missing (deleted) built-in skills.
+- Fixed GtkSourceView critical warnings in Skills Editor during typing by optimizing buffer updates.
 ### Added
 - **Generic Provider Architecture**: Refactored the core AI logic to use a standardized `Provider` interface. This decouples the application from Ollama-specific implementations and paves the way for supporting multiple LLM backends.
 - **Unified Messaging Types**: Introduced generic `ChatMessage`, `Tool`, and `ToolCall` types, replacing their Ollama-specific counterparts across the entire codebase.

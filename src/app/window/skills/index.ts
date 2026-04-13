@@ -39,6 +39,12 @@ export class SkillsWindow {
       },
       onDeleteSkill: (id) => {
         return this._deleteSkill(id)
+      },
+      onResetBuiltins: () => {
+        return this._resetAllBuiltins()
+      },
+      hasModifiedBuiltins: () => {
+        return this._hasModifiedBuiltins()
       }
     })
 
@@ -210,6 +216,41 @@ export class SkillsWindow {
     )
   }
 
+  private _resetAllBuiltins(): void {
+    showDestructiveConfirmation(
+      this._win,
+      'Reset All Built-ins',
+      'Are you sure you want to reset all built-in skills to their defaults? This cannot be undone.',
+      () => {
+        const customs = this._app.skills.filter((s) => {
+          return !this._defaultIds.has(s.id)
+        })
+        const builtins = DEFAULT_SKILLS.map((s) => {
+          return { ...s }
+        })
+        this._app.skills = [...builtins, ...customs]
+        this._app.skills.sort((a, b) => {
+          return a.name.localeCompare(b.name)
+        })
+        this._app.saveSkills()
+        this._sidebar.refresh(this._selectedId)
+      }
+    )
+  }
+
+  private _hasModifiedBuiltins(): boolean {
+    let builtinCount = 0
+    for (const skill of this._app.skills) {
+      if (this._defaultIds.has(skill.id)) {
+        builtinCount++
+        if (this._skillDiffersFromDefault(skill)) {
+          return true
+        }
+      }
+    }
+    return builtinCount < this._defaultIds.size
+  }
+
   private _skillDiffersFromDefault(skill: Skill): boolean {
     const def = DEFAULT_SKILLS.find((s) => {
       return s.id === skill.id
@@ -243,9 +284,10 @@ export class SkillsWindow {
     skill.prompt = this._editor.prompt
 
     this._sidebar.updateRowLabel(skill.id, newName)
+    this._sidebar.updateResetButton()
 
     const isBuiltin = this._defaultIds.has(skill.id)
-    this._editor.load(skill, isBuiltin, this._skillDiffersFromDefault(skill))
+    this._editor.updateActions(isBuiltin, this._skillDiffersFromDefault(skill))
 
     this._app.saveSkills()
   }
