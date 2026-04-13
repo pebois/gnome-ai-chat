@@ -35,6 +35,7 @@ export class SkillsSidebar {
   }))
 
   private _isSaving = false
+  private _resetBtn: Gtk.Button | null = null
 
   public get widget(): Adw.ToolbarView {
     return this._widget
@@ -186,21 +187,19 @@ export class SkillsSidebar {
       customs = customs.filter(filter)
     }
 
-    if (builtins.length > 0) {
-      let resetBtn: Gtk.Button | undefined
-      if (this._callbacks.hasModifiedBuiltins?.()) {
-        resetBtn = new Gtk.Button({
-          icon_name: 'edit-undo-symbolic',
-          tooltip_text: 'Reset all built-ins',
-          valign: Gtk.Align.CENTER
-        })
-        resetBtn.add_css_class('flat')
-        resetBtn.add_css_class('circular')
-        resetBtn.connect('clicked', () => {
-          return this._callbacks.onResetBuiltins?.()
-        })
-      }
-      this._addHeaderRow('Builtins', resetBtn)
+    if (builtins.length > 0 || (!this._searchText && this._callbacks.hasModifiedBuiltins?.())) {
+      this._resetBtn = new Gtk.Button({
+        icon_name: 'edit-undo-symbolic',
+        tooltip_text: 'Reset all built-ins',
+        valign: Gtk.Align.CENTER
+      })
+      this._resetBtn.add_css_class('flat')
+      this._resetBtn.add_css_class('circular')
+      this._resetBtn.sensitive = !!this._callbacks.hasModifiedBuiltins?.()
+      this._resetBtn.connect('clicked', () => {
+        return this._callbacks.onResetBuiltins?.()
+      })
+      this._addHeaderRow('Builtins', this._resetBtn)
       builtins.forEach((s) => {
         return this._addSkillRow(s)
       })
@@ -240,12 +239,19 @@ export class SkillsSidebar {
     }
   }
 
-  private _addHeaderRow(label: string): void {
-    const headerLabel = new Gtk.Label({ label, xalign: 0 })
+  private _addHeaderRow(label: string, actionWidget?: Gtk.Widget): void {
+    const headerLabel = new Gtk.Label({ label, xalign: 0, hexpand: true })
     headerLabel.add_css_class('dim-label')
     headerLabel.add_css_class('caption-heading')
+
+    const box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 6 })
+    box.append(headerLabel)
+    if (actionWidget) {
+      box.append(actionWidget)
+    }
+
     this._listBox.append(new Gtk.ListBoxRow({
-      child: headerLabel,
+      child: box,
       activatable: false,
       selectable: false
     }))
@@ -298,6 +304,12 @@ export class SkillsSidebar {
         row.tooltip_text = name
         return
       }
+    }
+  }
+
+  public updateResetButton(): void {
+    if (this._resetBtn) {
+      this._resetBtn.sensitive = !!this._callbacks.hasModifiedBuiltins?.()
     }
   }
 }
