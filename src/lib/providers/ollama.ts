@@ -166,6 +166,7 @@ export class OllamaProvider implements Provider {
       const url = `${this.url}/api/chat`
       this._debug(`POST ${url}`)
       const req = await this._buildChatRequest(props, messages)
+      this._debug('History', req.messages)
       const body = JSON.stringify(req)
       const msg = Soup.Message.new('POST', url)
       const encoder = new TextEncoder()

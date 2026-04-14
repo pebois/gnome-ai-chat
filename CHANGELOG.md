@@ -9,10 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved the "Reset all built-ins" button in the skills sidebar: it is now always visible and automatically restores missing (deleted) built-in skills.
 - Fixed GtkSourceView critical warnings in Skills Editor during typing by optimizing buffer updates.
 ### Added
+- **Planner Skill**: Added a new `@Planner` default skill that implements a structured 4-step Plan Mode workflow (Explore & Analyze, Consult, Draft, Review & Approval) to ensure the assistant obtains user approval before executing complex changes.
 - **Generic Provider Architecture**: Refactored the core AI logic to use a standardized `Provider` interface. This decouples the application from Ollama-specific implementations and paves the way for supporting multiple LLM backends.
 - **Unified Messaging Types**: Introduced generic `ChatMessage`, `Tool`, and `ToolCall` types, replacing their Ollama-specific counterparts across the entire codebase.
 - **Chat Service**: Introduced `ChatService` in `src/lib/agent/chat.ts` to centralize message generation logic, recursive tool calling, and conversation state management.
-- **Markdown Parser**: Decoupled Markdown parsing logic from UI components into a dedicated `src/lib/parser.ts` module, supporting text, code block, and table chunking.
+- **Markdown Parser**: Decoupled Markdown parsing logic from UI components into a dedicated `src/lib/parser.ts` module, supporting text, code block, and table chunking. Added support for native rendering of H1 through H5 headers using Pango markup.
 - **Main Window Modularization**: Refactored the main application window by moving its core components (`Sidebar`, `Chat`) into a dedicated `src/app/window/main/` directory, mirroring the modular architecture of the Skills and Preferences windows.
 - **Message Components**: Moved the `Message` class and its specialized sub-components (`CodeWidget`, `TableWidget`) into a consolidated `src/app/ui/message/` directory for better structural organization.
 - **Preferences Modularization**: Decomposed the large `Preferences` window into a modular architecture under `src/app/window/preferences/`. Each settings tab (General, Appearance, Prompt, Permissions, Advanced, Data) is now a dedicated, manageable component.
@@ -21,10 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Photo Component**: Extracted core image rendering and scaling logic into a reusable `Photo` component for consistent visual handling across the application.
 
 ### Fixed
+- **Skill Initialization**: Fixed a `ReferenceError: DEFAULT_SKILLS is not defined` in `SkillsStore` by adding the missing import in `src/lib/db/skills.ts`.
 - **Tool Call Wrapping**: Improved text wrapping for arguments and responses in the tool call dialog by using `Pango.WrapMode.WORD_CHAR`, ensuring that long strings or JSON data don't overflow the dialog.
 - **Type Safety**: Resolved multiple linting warnings related to unsafe assignments and missing type imports in the new provider module.
 
 ### Changed
+- **Ollama Provider Debugging**: Added debug logging for the complete message history in `OllamaProvider` when debug mode is enabled, facilitating easier inspection of the context sent to the API.
 - **Modular API Client**: Refactored the internal API client (now `OllamaProvider`) to focus on low-level HTTP communication, moving high-level tool orchestration to the `ChatService`.
 - **Generalized UI Strings**: Updated user-facing labels to be provider-agnostic. The default assistant is now labeled "Assistant" instead of "Ollama", and connection settings now refer to a generic "API URL".
 - **Chat UI Refactoring**: Simplified `src/app/ui/chat.ts` by offloading response orchestration and state management to the new `ChatService`.

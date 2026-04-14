@@ -228,9 +228,13 @@ export function markdownToPango(text: string): string {
   })
 
   // Handle headings
-  escaped = escaped.replace(/^### (.*)$/gm, '<b><big>$1</big></b>')
-  escaped = escaped.replace(/^## (.*)$/gm, '<b><big><big>$1</big></big></b>')
-  escaped = escaped.replace(/^# (.*)$/gm, '<b><big><big><big>$1</big></big></big></b>')
+  escaped = escaped.replace(/^####### (.*)$/gm, '<b>$1</b>')
+  escaped = escaped.replace(/^###### (.*)$/gm, '<b>$1</b>')
+  escaped = escaped.replace(/^##### (.*)$/gm, '<b>$1</b>')
+  escaped = escaped.replace(/^#### (.*)$/gm, '<b>$1</b>')
+  escaped = escaped.replace(/^### (.*)$/gm, '<b>$1</b>')
+  escaped = escaped.replace(/^## (.*)$/gm, '<b>$1</b>')
+  escaped = escaped.replace(/^# (.*)$/gm, '<b>$1</b>')
 
   // Handle blockquotes
   escaped = escaped.replace(/^\s*&gt;\s?(.*)$/gm, '<i>$1</i>')

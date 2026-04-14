@@ -1,6 +1,6 @@
 import type Gio from 'gi://Gio'
 
-import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
+import { DEFAULT_EMBEDDING_MODEL, DEFAULT_SKILLS } from '@/lib/constants.js'
 import { db } from '@/lib/db/index.js'
 import type { Skill } from '@/lib/db/types.js'
 import type { Provider } from '@/lib/providers/index.js'

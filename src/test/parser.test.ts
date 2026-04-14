@@ -27,6 +27,14 @@ describe('parser', () => {
       expect(markdownToPango('### Header 3')).toBe('<b><big>Header 3</big></b>')
     })
 
+    it('Parses Header 4', () => {
+      expect(markdownToPango('#### Header 4')).toBe('<b>Header 4</b>')
+    })
+
+    it('Parses Header 5', () => {
+      expect(markdownToPango('##### Header 5')).toBe('<b><i>Header 5</i></b>')
+    })
+
     it('Parses Header 2', () => {
       expect(markdownToPango('## Header 2')).toBe('<b><big><big>Header 2</big></big></b>')
     })
