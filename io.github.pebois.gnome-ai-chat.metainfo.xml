@@ -50,6 +50,18 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.9.0" date="2026-04-14">
+      <description>
+        <p>This release optimizes code block rendering, enhances multimodal workflows with automatic tool attachments, and streamlines desktop integration.</p>
+        <ul>
+          <li>Optimized code block rendering during streaming to eliminate flickering.</li>
+          <li>Implemented automatic tool attachments for seamless multimodal sequences.</li>
+          <li>Added right-click context menu to images for quick downloading.</li>
+          <li>Streamlined desktop integration by removing autonomous agent control while preserving manual screenshot and app-launching tools.</li>
+          <li>Improved developer experience with global console types and stable file promisification.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.8.0" date="2026-04-09">
       <description>
         <p>This release introduces a new Regenerate Response action, RSS feed tools, and major enhancements to slash commands and file attachments.</p>

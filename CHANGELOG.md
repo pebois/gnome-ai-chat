@@ -7,65 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-04-14
+
 ### Added
 - **Automatic Tool Attachments**: Attachments in the chat input (like screenshots or dragged files) are now automatically sent to the model during tool-call sequences and cleared from the UI, enabling seamless multimodal workflows.
-- **Image Download Context Menu**: Added a right-click context menu to images in the chat history, allowing users to quickly save images to their local filesystem.
+- **Image Download Context Menu**: Added a right-click context menu to images in the chat history and a download button to the preview dialog, allowing users to quickly save images to their local filesystem.
 - **Global Console Types**: Added native `console` type definitions to the ambient declarations, improving developer experience and resolving TypeScript errors in GJS.
 - **Stable File Promisification**: Introduced the `PromisifiedFile` interface to ensure robust type safety and correct API mapping for asynchronous Gio file operations.
+- **Integrated WebKitGTK PDF Export**: High-quality PDF generation with clean styling and image attachment support via right-click in the sidebar.
+- **Planner Skill**: Added a new `@Planner` default skill that implements a structured 4-step Plan Mode workflow (Explore & Analyze, Consult, Draft, Review & Approval) to ensure the assistant obtains user approval before executing complex changes.
+- **Generic Provider Architecture**: Refactored the core AI logic to use a standardized `Provider` interface, decoupling the application from Ollama-specific implementations.
+- **Unified Messaging Types**: Introduced generic `ChatMessage`, `Tool`, and `ToolCall` types, replacing their Ollama-specific counterparts across the entire codebase.
+- **Chat Service**: Introduced `ChatService` in `src/lib/agent/chat.ts` to centralize message generation logic, recursive tool calling, and conversation state management.
+- **Markdown Parser**: Decoupled Markdown parsing logic from UI components into a dedicated `src/lib/parser.ts` module, supporting text, code block, and table chunking. Added support for native rendering of H1 through H5 headers using Pango markup.
+- **Main Window Modularization**: Refactored the main application window by moving its core components into a dedicated `src/app/window/main/` directory.
+- **Message Components**: Moved the `Message` class and its specialized sub-components into a consolidated `src/app/ui/message/` directory.
+- **Preferences Modularization**: Decomposed the large `Preferences` window into a modular architecture under `src/app/window/preferences/`.
+- **Skills Editor Refactoring**: Refactored the Skills Editor into a class-based architecture in `src/app/window/skills/`.
+- **Photo Component**: Extracted core image rendering and scaling logic into a reusable `Photo` component.
+- **Improved Skill Restoration**: The "Reset all built-ins" button in the skills sidebar is now always visible and automatically restores missing (deleted) built-in skills.
 
 ### Fixed
 - **Code Block Flickering**: Optimized code block rendering during streaming by appending new text to the existing buffer instead of replacing it entirely, resulting in a smooth, blink-free UI experience.
 - **File Tool Promisification**: Fixed a critical crash caused by an incorrect mapping in the promisification of `replace_contents_bytes_async`.
-- **Export Formatting**: Removed leading indentation from the generated HTML source when exporting conversations to PDF or JSON for cleaner file output.
-- Fixed a bug in file tool promisification where `replace_contents_bytes_async` was incorrectly mapped to `replace_contents_finish`.
-- Optimized code block rendering during streaming: the application now appends new text to the existing buffer instead of replacing it entirely, eliminating the flickering/blinking effect in the UI.
+- **Export Formatting**: Removed leading indentation from the generated HTML source when exporting conversations for cleaner file output.
+- **Skills Editor Stability**: Fixed GtkSourceView critical warnings in Skills Editor during typing by optimizing buffer updates.
+- **Skill Initialization**: Fixed a `ReferenceError: DEFAULT_SKILLS is not defined` in `SkillsStore`.
+- **Tool Call Wrapping**: Improved text wrapping for arguments and responses in the tool call dialog.
+- **App Orchestration Bugs**: Fixed background indexing loss on application quit and default settings overwrite on early exit.
+- **Generation Cancellation**: Ensured that deleting a conversation or clearing messages now correctly stops any active message generation for that conversation.
 
 ### Changed
-- **Streamlined Desktop Tools**: Preserved desktop application tools (`launch_app`, etc.) and manual screenshot capabilities while removing the autonomous screenshot tool to improve user control.
-- Updated user-facing documentation (`README.md`, `GEMINI.md`, `metainfo.xml`) to reflect the removal of autonomous desktop automation while highlighting manual screenshot attachments.
+- **Streamlined Desktop Tools**: Preserved desktop application tools (`launch_app`, etc.) and manual screenshot capabilities while removing the autonomous screenshot tool and `@automation` skill to improve user control and privacy.
+- **Generalized UI Strings**: Updated user-facing labels and connection settings to be provider-agnostic.
+- **Ollama Provider Debugging**: Added debug logging for the complete message history in `OllamaProvider` when debug mode is enabled.
 
 ### Removed
-- **Automation Skill & Tools**: Removed the `@automation` skill and the `run_automation_command` tool to focus on more robust, user-initiated workflows.
+- **Automation Skill & Tools**: Removed the `@automation` skill and the `run_automation_command` tool.
 - **Autonomous Screenshots**: The assistant can no longer trigger screenshots autonomously; screenshots are now exclusively a user-initiated attachment feature.
-
-### Added
-- Added right-click context menu to images in the chat history for quick downloading.
-- Export conversations as JSON or PDF via right-click in the sidebar.
-- Improved the "Reset all built-ins" button in the skills sidebar: it is now always visible and automatically restores missing (deleted) built-in skills.
-- Fixed GtkSourceView critical warnings in Skills Editor during typing by optimizing buffer updates.
-- **Planner Skill**: Added a new `@Planner` default skill that implements a structured 4-step Plan Mode workflow (Explore & Analyze, Consult, Draft, Review & Approval) to ensure the assistant obtains user approval before executing complex changes.
-- **Generic Provider Architecture**: Refactored the core AI logic to use a standardized `Provider` interface. This decouples the application from Ollama-specific implementations and paves the way for supporting multiple LLM backends.
-- **Unified Messaging Types**: Introduced generic `ChatMessage`, `Tool`, and `ToolCall` types, replacing their Ollama-specific counterparts across the entire codebase.
-- **Chat Service**: Introduced `ChatService` in `src/lib/agent/chat.ts` to centralize message generation logic, recursive tool calling, and conversation state management.
-- **Markdown Parser**: Decoupled Markdown parsing logic from UI components into a dedicated `src/lib/parser.ts` module, supporting text, code block, and table chunking. Added support for native rendering of H1 through H5 headers using Pango markup.
-- **Main Window Modularization**: Refactored the main application window by moving its core components (`Sidebar`, `Chat`) into a dedicated `src/app/window/main/` directory, mirroring the modular architecture of the Skills and Preferences windows.
-- **Message Components**: Moved the `Message` class and its specialized sub-components (`CodeWidget`, `TableWidget`) into a consolidated `src/app/ui/message/` directory for better structural organization.
-- **Preferences Modularization**: Decomposed the large `Preferences` window into a modular architecture under `src/app/window/preferences/`. Each settings tab (General, Appearance, Prompt, Permissions, Advanced, Data) is now a dedicated, manageable component.
-- **Skills Editor Refactoring**: Refactored the Skills Editor into a class-based architecture in `src/app/window/skills/`, separating the sidebar (list management and semantic search) from the editor (metadata and prompt editing).
-- **Download Image**: Added a download button to the image preview dialog, allowing users to save images directly to their local filesystem.
-- **Photo Component**: Extracted core image rendering and scaling logic into a reusable `Photo` component for consistent visual handling across the application.
-
-### Fixed
-- **Skill Initialization**: Fixed a `ReferenceError: DEFAULT_SKILLS is not defined` in `SkillsStore` by adding the missing import in `src/lib/db/skills.ts`.
-- **Tool Call Wrapping**: Improved text wrapping for arguments and responses in the tool call dialog by using `Pango.WrapMode.WORD_CHAR`, ensuring that long strings or JSON data don't overflow the dialog.
-- **Type Safety**: Resolved multiple linting warnings related to unsafe assignments and missing type imports in the new provider module.
-
-### Changed
-- **Ollama Provider Debugging**: Added debug logging for the complete message history in `OllamaProvider` when debug mode is enabled, facilitating easier inspection of the context sent to the API.
-- **Modular API Client**: Refactored the internal API client (now `OllamaProvider`) to focus on low-level HTTP communication, moving high-level tool orchestration to the `ChatService`.
-- **Generalized UI Strings**: Updated user-facing labels to be provider-agnostic. The default assistant is now labeled "Assistant" instead of "Ollama", and connection settings now refer to a generic "API URL".
-- **Chat UI Refactoring**: Simplified `src/app/ui/chat.ts` by offloading response orchestration and state management to the new `ChatService`.
-- **Message UI Refactoring**: Significantly reduced the complexity of `src/app/ui/message.ts` by leveraging the new parser and specialized components, improving maintainability and code readability.
-- **HTML Content Safety**: The `render_html` tool now automatically truncates its output after the closing `</html>` tag, preventing the rendering of accidental trailing text or hallucinations from the model.
-- **Tool Parameter Refactoring**: Renamed the `title` parameter to `window_title` in the `render_html` tool and moved it to the first position in the argument list for better clarity. The parameter is now optional and defaults to "Preview" if not provided. Updated the `@canvas` skill prompt to reflect these changes, removed the restriction on using external CDNs, and added a mandate for well-formed HTML with properly closed `<html>` and `</html>` tags.
-- **Modernized Image Preview**: Redesigned the image preview dialog with a solid black background, centered photo layout, and integrated navigation indicators within the header bar. The header now features a persistent bottom border for better visual definition against the dark background.
-- **Adaptive Sidebar Headers**: Updated the main chat history and skills editor sidebars to use adaptive headers that automatically show a bottom border when scrolled, enhancing the depth and clarity of the navigation interface.
-- **Absolute Imports**: Replaced relative imports (starting with `./`) with absolute imports using the `@/` path alias in the preferences window modules to improve codebase consistency and align with project standards.
-
-### Fixed
-- **Missing Tool Call Response**: Fixed an issue where calling a tool not present in the tool list would return an empty response instead of a descriptive error message.
-- **App Orchestration Bugs**: Fixed background indexing loss on application quit, default settings overwrite on early exit, and corrected UI icon fallback paths.
-- **Generation Cancellation**: Ensured that deleting a conversation or clearing messages now correctly stops any active message generation for that conversation.
 
 ## [1.8.0] - 2026-04-09
 ### Added
@@ -254,51 +233,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Wayland Desktop Automation**: `run_automation_command` tool using Wayland portals, with a new `@automation` skill for screenshot-based coordinate analysis.
 - **`@canvas` Skill**: Specialized skill for generating and rendering high-quality, self-contained HTML/JS applications, games, and visualizations using the `render_html` tool.
 - **`@memory` Skill**: Knowledge Graph specialist skill that proactively persists facts and relationships about the user using the new memory tools.
-- **Alphabetical Skill Sorting**: Skills are now sorted alphabetically in the autocomplete menu and settings for easier navigation.
-- **Embedding API Tracking**: Embedding API calls are now recorded in performance statistics.
+- **Alphabetical Skill Sorting**: Skills now sorted alphabetically in autocomplete.
+- **Embedding API Tracking**: API calls are now recorded in performance statistics.
 
 ### Changed
-- **`@canvas` Skill & `render_html` Tool**: Updated descriptions and prompts to prioritize responsive design using the shadcn UI style and zinc theme for all generated HTML content.
-- **Conversation Selection**: Default to selecting the most recently updated conversation instead of the oldest one on startup or deletion.
-- **Memory Saving Optimization**: Optimized background knowledge graph memory saving and refined file extension to language mapping.
-- **Improved Agent Robustness**: Enhanced default system prompt and skill descriptions for better tool sequencing, error recovery, and role-playing accuracy.
-- **Refined Tool Metadata**: Updated all tool descriptions with clearer usage constraints, warnings about side effects (e.g., file overwrites, non-interactive shell commands), and discovery prerequisites.
-- **Sub-command Autocompletion**: Enhanced slash commands to support nested sub-commands with unique icons and descriptions (e.g., `/memory summarize`).
-- **Cumulative System Prompts**: `@` skills now append their specialized instructions to the default system prompt rather than replacing it, maintaining core interaction rules.
-- **Robust Syntax Highlighting**: Improved language detection for code blocks and file attachments using a comprehensive mapping that resolves raw identifiers (e.g., `ts`) to standardized highlight IDs (`typescript`) and human-friendly UI titles (`TypeScript`).
-- **Intelligent Auto-scroll**: Streaming responses now respect manual scrolling; auto-scroll is temporarily disabled if you scroll up to read previous messages and re-engages once you return to the bottom.
-- **Refined Memory Architecture**: Extracted knowledge graph logic into a standalone `MemoryManager` library.
-- **Message Layout**: Content and role label are grouped in a shared box with consistent 4px spacing; group is hidden when content is empty.
-- **Uniform Message Spacing**: All message parts (thinking, tool calls, images, file attachments, content) use a consistent 12px gap.
-- **Optimized Message Rendering**: Content parser streams text and code chunks independently, reducing layout shifts during generation.
-- **Project Rebranding**: Renamed from **Ollama Chat** to **Gnome AI Chat** with updated application ID (`io.github.pebois.gnome-ai-chat`).
-- **Preferences Reorganization**: Behavior and Reasoning moved to General tab; Maintenance moved to Data tab; Data tab placed last.
-- **Improved Tool Architecture**: Web fetching uses a singleton `Soup.Session` for connection pooling and shared cache state.
-- **Skill Autocomplete**: Simplified `@` menu removes descriptions and uses a unified symbolic icon.
-- **Semantic Search**: Results maintain chronological order grouped by date section; threshold refined to 0.5; full re-index always performed.
+- **`@canvas` Skill & `render_html` Tool**: Updated descriptions and prompts to prioritize responsive design.
+- **Conversation Selection**: Default to selecting the most recently updated conversation.
+- **Memory Saving Optimization**: Optimized background knowledge graph memory saving.
+- **Improved Agent Robustness**: Enhanced default system prompt and skill descriptions.
+- **Refined Tool Metadata**: Updated all tool descriptions with clearer usage constraints.
+- **Sub-command Autocompletion**: Enhanced slash commands to support nested sub-commands.
+- **Cumulative System Prompts**: `@` skills now append their specialized instructions.
+- **Robust Syntax Highlighting**: Improved language detection for code blocks and file attachments.
+- **Intelligent Auto-scroll**: Streaming responses now respect manual scrolling.
+- **Refined Memory Architecture**: Extracted knowledge graph logic into a standalone library.
+- **Uniform Message Spacing**: Consistent 12px gap between all message parts.
+- **Optimized Message Rendering**: Reducing layout shifts during generation.
+- **Project Rebranding**: Renamed from **Ollama Chat** to **Gnome AI Chat**.
+- **Preferences Reorganization**: Behavior and Reasoning moved to General tab.
+- **Skill Autocomplete**: Simplified `@` menu removes descriptions.
+- **Semantic Search**: Results maintain chronological order grouped by date section.
 - **Sorted Statistics**: Model usage sorted by request count descending.
-- **Scroll Button**: 500ms delay before the "Go to bottom" button appears to prevent flicker.
-- **Slash Command Behavior**: `/` now triggers at the start of any line; `Return`/click completes the command name before execution; first match auto-focused.
-- **Centralized Storage Logic**: Indexing and persistence logic consolidated into the `Storage` class.
+- **Slash Command Behavior**: `/` now triggers at the start of any line.
+- **Centralized Storage Logic**: Indexing and persistence logic consolidated.
 - **Clean Settings UI**: Removed verbose descriptions and subtitles from Preferences.
-- **Silent Persona Selection**: Removed toast notification when selecting a skill from autocomplete.
 - **Images**: Consistently displayed at 250px width via `Gtk.Picture`.
 - **`formatSize`**: Always shows exactly two decimal places.
 
 ### Fixed
-- **Sidebar Dynamic Re-grouping**: Conversations now move between date headers immediately on update.
-- **Streaming Resiliency**: Fixed crash on empty final response chunks from the Ollama API.
-- **GTK Snapshot Warnings**: Eliminated `Trying to snapshot GtkBox without a current allocation` warnings.
-- **Streaming State Protection**: Interaction buttons disabled during response generation to prevent race conditions.
-- **Message UI Crash**: Fixed crash when updating button sensitivity for system messages without actions.
-- **Data Persistence on Quit**: Mandatory storage flush during exit prevents debounced saves from being lost.
-- **Empty Sidebar Headers**: Date headers now removed when their last conversation is deleted.
-- **GTK Compatibility**: Replaced `Gtk.ListBox.remove_all()` with manual removal loops for GTK 4.6+ support.
-- **GJS Warnings**: Resolved "Too many arguments" warnings for `Gtk.Window.present()`.
-- **New Conversation Focus**: Chat input buffer correctly cleared when creating or switching to an empty conversation.
-- **Type-Safe Debounce**: Refactored `debounce` to be fully type-safe with a `cancel()` method.
-- Fixed sidebar filtering to correctly show/hide date headers during search.
-- Fixed command popover not appearing on certain GTK versions due to uninitialized rectangle bounds.
+- **Sidebar Dynamic Re-grouping**: Conversations move between date headers immediately.
+- **Streaming Resiliency**: Fixed crash on empty final response chunks.
+- **GTK Snapshot Warnings**: Eliminated snapshotting box warnings.
+- **Streaming State Protection**: Interaction buttons disabled during generation.
+- **Message UI Crash**: Fixed crash when updating system messages without actions.
+- **Data Persistence on Quit**: Mandatory storage flush during exit.
+- **Empty Sidebar Headers**: Date headers removed when last conversation is deleted.
+- **GTK Compatibility**: Replaced remove_all() for GTK 4.6+ support.
+- **GJS Warnings**: Resolved "Too many arguments" warnings.
+- **New Conversation Focus**: Chat input buffer correctly cleared.
+- **Type-Safe Debounce**: Refactored debounce to be fully type-safe.
+- Fixed command popover uninitialized rectangle bounds.
 - Fixed focus management in the pull dialog.
-
-### Removed
