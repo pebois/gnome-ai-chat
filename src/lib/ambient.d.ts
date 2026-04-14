@@ -17,7 +17,7 @@ declare module 'gi://Gio' {
   import Gio from '@girs/gio-2.0'
   export default Gio
 
-  export interface File extends Omit<Gio.File, 'replace_contents_bytes_async' | 'enumerate_children_async' | 'load_contents_async'> {
+  export interface PromisifiedFile extends Omit<Gio.File, 'replace_contents_bytes_async' | 'enumerate_children_async' | 'load_contents_async'> {
     replace_contents_bytes_async(
       contents: unknown,
       etag: string | null,

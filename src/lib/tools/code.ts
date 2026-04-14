@@ -1,4 +1,4 @@
-import Gio, { type File } from 'gi://Gio'
+import Gio, { type PromisifiedFile } from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
 import type { AppInterface } from '@/lib/app.js'
@@ -93,7 +93,7 @@ export function handle_read_file(args: Record<string, unknown>): Promise<string>
   }
 
   try {
-    const file = Gio.File.new_for_path(filePath) as File
+    const file = Gio.File.new_for_path(filePath) as PromisifiedFile
     const [success, contents] = GLib.file_get_contents(file.get_path() || filePath)
     if (success) {
       return Promise.resolve(new TextDecoder().decode(contents))
@@ -122,7 +122,7 @@ export async function handle_write_file(app: AppInterface, args: Record<string, 
   }
 
   try {
-    const file = Gio.File.new_for_path(filePath) as File
+    const file = Gio.File.new_for_path(filePath) as PromisifiedFile
     const encoder = new TextEncoder()
     const bytes = encoder.encode(content || '')
 
@@ -146,7 +146,7 @@ export async function handle_list_directory(args: Record<string, unknown>): Prom
   }
 
   try {
-    const dir = Gio.File.new_for_path(dirPath) as File
+    const dir = Gio.File.new_for_path(dirPath) as PromisifiedFile
     const enumerator = (await dir.enumerate_children_async(
       'standard::name,standard::type',
       Gio.FileQueryInfoFlags.NONE,

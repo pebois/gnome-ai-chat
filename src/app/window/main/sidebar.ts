@@ -8,6 +8,7 @@ import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
 import type { Conversation } from '@/lib/db/types.js'
+import { exportConversation } from '@/lib/export.js'
 import { debounce } from '@/lib/timeout.js'
 import { createMenuItem, createSimpleAction, setupContextMenu } from '@/lib/ui.js'
 import { convertSummaryToTitle, cosineSimilarity, getDateGroup } from '@/lib/utils.js'
@@ -433,10 +434,22 @@ export class Sidebar {
     })
     actionGroup.add_action(deleteAction)
 
+    const exportJsonAction = createSimpleAction('export-json', () => {
+      exportConversation(this._app, conversation, 'json')
+    })
+    actionGroup.add_action(exportJsonAction)
+
+    const exportPdfAction = createSimpleAction('export-pdf', () => {
+      exportConversation(this._app, conversation, 'pdf')
+    })
+    actionGroup.add_action(exportPdfAction)
+
     row.insert_action_group('conversation', actionGroup)
 
     const menu = new Gio.Menu()
     menu.append_item(createMenuItem('Generate Summary', 'conversation.summarize', 'text-x-generic-symbolic'))
+    menu.append_item(createMenuItem('Export as JSON', 'conversation.export-json', 'text-x-script-symbolic'))
+    menu.append_item(createMenuItem('Export as PDF', 'conversation.export-pdf', 'x-office-document-symbolic'))
     menu.append_item(createMenuItem('Delete Chat', 'conversation.delete', 'user-trash-symbolic'))
 
     const popover = Gtk.PopoverMenu.new_from_model(menu)

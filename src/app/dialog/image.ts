@@ -1,11 +1,10 @@
 import Adw from 'gi://Adw?version=1'
 import Gdk from 'gi://Gdk'
-import Gio from 'gi://Gio'
-import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import { Photo } from '@/app/ui/photo.js'
 import type { AppInterface } from '@/lib/app.js'
+import { downloadImage } from '@/lib/ui.js'
 
 export function showImageDialog(app: AppInterface, images: string[], startIndex: number): void {
   const dialog = new Adw.Dialog({
@@ -27,33 +26,7 @@ export function showImageDialog(app: AppInterface, images: string[], startIndex:
   downloadBtn.connect('clicked', () => {
     const index = Math.round(carousel.get_position())
     const base64 = images[index]
-    if (!base64) {
-      return
-    }
-
-    const fileDialog = new Gtk.FileDialog({
-      title: 'Save Image',
-      initial_name: `image-${Date.now()}.png`
-    })
-
-    void fileDialog.save(app.window, null, (source, result) => {
-      try {
-        const file = fileDialog.save_finish(result)
-        if (file) {
-          const bytes = GLib.base64_decode(base64)
-          void file.replace_contents_async(
-            new GLib.Bytes(bytes),
-            null,
-            false,
-            Gio.FileCreateFlags.NONE,
-            null,
-            null
-          )
-        }
-      } catch (e) {
-        console.error('Failed to save image:', e)
-      }
-    })
+    downloadImage(app.window, base64)
   })
 
   headerBar.pack_start(downloadBtn)

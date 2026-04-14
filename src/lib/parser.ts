@@ -266,3 +266,107 @@ export function markdownToPango(text: string): string {
 
   return escaped
 }
+
+export function markdownToHtml(text: string): string {
+  if (!text) {
+    return ''
+  }
+
+  const chunks = parseMarkdownChunks(text)
+  let html = ''
+
+  for (const chunk of chunks) {
+    if (chunk.type === 'code') {
+      const { code, language } = parseCodeBlock(chunk.content)
+      const langClass = language ? ` class="language-${language}"` : ''
+      html += `<pre><code${langClass}>${pangoEscape(code)}</code></pre>`
+    } else if (chunk.type === 'table') {
+      const { headers, rows } = parseTable(chunk.content)
+      html += '<table>'
+      html += '<thead><tr>'
+      for (const h of headers) {
+        html += `<th>${pangoEscape(h)}</th>`
+      }
+      html += '</tr></thead>'
+      html += '<tbody>'
+      for (const row of rows) {
+        html += '<tr>'
+        for (const cell of row) {
+          html += `<td>${pangoEscape(cell)}</td>`
+        }
+        html += '</tr>'
+      }
+      html += '</tbody></table>'
+    } else {
+      // Escape special characters for HTML (using pangoEscape as it handles the common ones)
+      let escaped = pangoEscape(chunk.content)
+
+      // Handle escaped markdown characters
+      const escapedChars: string[] = []
+      const charPh = (i: number) => {
+        return `\x01${i}\x01`
+      }
+      escaped = escaped.replace(/\\([*~_`\\])/g, (_match, char: string) => {
+        escapedChars.push(char)
+        return charPh(escapedChars.length - 1)
+      })
+
+      // Strip horizontal rules
+      escaped = escaped.replace(/\n?^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$\n?/gm, '')
+
+      // Extract code spans as placeholders
+      const codeSpans: string[] = []
+      const ph = (i: number) => {
+        return `\x02${i}\x02`
+      }
+      escaped = escaped.replace(/`([^`]+)`/g, (_match, code: string) => {
+        codeSpans.push(`<code>${code}</code>`)
+        return ph(codeSpans.length - 1)
+      })
+
+      // Handle headings
+      escaped = escaped.replace(/^####### (.*)$/gm, '<strong>$1</strong>')
+      escaped = escaped.replace(/^###### (.*)$/gm, '<strong>$1</strong>')
+      escaped = escaped.replace(/^##### (.*)$/gm, '<strong>$1</strong>')
+      escaped = escaped.replace(/^#### (.*)$/gm, '<strong>$1</strong>')
+      escaped = escaped.replace(/^### (.*)$/gm, '<strong>$1</strong>')
+      escaped = escaped.replace(/^## (.*)$/gm, '<strong>$1</strong>')
+      escaped = escaped.replace(/^# (.*)$/gm, '<strong>$1</strong>')
+
+      // Handle blockquotes
+      escaped = escaped.replace(/^\s*&gt;\s?(.*)$/gm, '<em>$1</em>')
+
+      // Handle links
+      escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+
+      // Handle strikethrough text
+      escaped = escaped.replace(/~~([^~]+)~~/g, '<s>$1</s>')
+
+      // Handle bold and italic together
+      escaped = escaped.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+
+      // Handle bold text
+      escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+
+      // Handle italic text
+      escaped = escaped.replace(/(^|[^*\w])\*([^*\n]+?)\*(?![*\w])/gm, '$1<em>$2</em>')
+
+      // Restore code spans
+      escaped = escaped.replace(/\x02(\d+)\x02/g, (_match: string, i: string) => {
+        return codeSpans[parseInt(i)]
+      })
+
+      // Restore escaped characters
+      escaped = escaped.replace(/\x01(\d+)\x01/g, (_match: string, i: string) => {
+        return escapedChars[parseInt(i)]
+      })
+
+      // Convert line breaks to <br/>
+      escaped = escaped.replace(/\n/g, '<br/>')
+
+      html += `<p>${escaped}</p>`
+    }
+  }
+
+  return html
+}

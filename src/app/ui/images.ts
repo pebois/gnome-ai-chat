@@ -1,10 +1,12 @@
 import Gdk from 'gi://Gdk'
+import Gio from 'gi://Gio'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import { showImageDialog } from '@/app/dialog/image.js'
 import { Photo } from '@/app/ui/photo.js'
 import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_SPACING } from '@/lib/constants.js'
+import { createMenuItem, createSimpleAction, downloadImage, setupContextMenu } from '@/lib/ui.js'
 
 export class Images {
   private _widget: Gtk.Box
@@ -44,6 +46,21 @@ export class Images {
           showImageDialog(app, images, index)
         })
         canvas.add_controller(gesture)
+
+        const menu = new Gio.Menu()
+        menu.append_item(createMenuItem('Download Image', 'image.download', 'document-save-symbolic'))
+
+        const actionGroup = new Gio.SimpleActionGroup()
+        actionGroup.add_action(createSimpleAction('download', () => {
+          downloadImage(app.window, base64)
+        }))
+
+        const popover = Gtk.PopoverMenu.new_from_model(menu)
+        popover.set_parent(canvas)
+        popover.set_has_arrow(false)
+        canvas.insert_action_group('image', actionGroup)
+
+        setupContextMenu(canvas, popover)
 
         this._widget.append(canvas)
       }

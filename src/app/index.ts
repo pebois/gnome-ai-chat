@@ -416,7 +416,7 @@ export class App extends Adw.Application implements AppInterface {
 
   private _setupIcon(): void {
     try {
-      const [filename] = GLib.filename_from_uri(import.meta.url as string)
+      const [filename] = GLib.filename_from_uri(import.meta.url)
       const distDir = GLib.path_get_dirname(filename)
       const rootDir = GLib.path_get_dirname(distDir)
 
