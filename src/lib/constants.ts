@@ -41,11 +41,11 @@ ONLY use these specific features:
 * \`\`\` Code blocks \`\`\` and \`Inline code\`
 * ~~Strikethrough~~
 * [Link text](https://example.com) (only when genuinely useful)
+* # H1 to ##### H5 (only when structure genuinely helps)
 * - Bullet lists and 1. Numbered lists (only when structure genuinely helps)
 * | Markdown | Tables | (only for structured data)
 
 ## Strictly Forbidden
-* No Headings (#, ##, ###, etc.)
 * No Images
 * No Underscores (_), HTML, or Latex.
 * No Tiles or Boxes.

@@ -4,6 +4,7 @@ import { canvas } from '@/lib/skills/canvas.js'
 import { coder } from '@/lib/skills/coder.js'
 import { files } from '@/lib/skills/files.js'
 import { memory } from '@/lib/skills/memory.js'
+import { planner } from '@/lib/skills/planner.js'
 import { reviewer } from '@/lib/skills/reviewer.js'
 import { writer } from '@/lib/skills/writer.js'
 
@@ -13,6 +14,7 @@ export const DEFAULT_SKILLS: Skill[] = [
   coder,
   files,
   memory,
+  planner,
   reviewer,
   writer
 ]
