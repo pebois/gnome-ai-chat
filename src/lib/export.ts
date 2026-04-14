@@ -44,7 +44,6 @@ h1 {
   margin-bottom: 2.5rem;
   padding: 1.5rem;
   border-radius: 12px;
-  page-break-inside: avoid;
 }
 .user {
   background: var(--user-bg);
@@ -178,43 +177,50 @@ export function exportConversation(app: AppInterface, conversation: Conversation
         const webView = new WebKit.WebView()
         activeWebViews.add(webView)
 
-        let html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-${css}
-  </style>
-</head>
-<body>
-  <h1>${conversation.title.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>`
+        const htmlParts: string[] = [
+          '<!DOCTYPE html>',
+          '<html>',
+          '<head>',
+          '<meta charset="utf-8">',
+          '<style>',
+          css,
+          '</style>',
+          '</head>',
+          '<body>',
+          `<h1>${conversation.title.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>`
+        ]
 
         for (const msg of messages) {
           const roleName = msg.role === 'user' ? 'User' : (msg.role === 'assistant' ? 'Assistant' : 'System')
           const contentHtml = markdownToHtml(msg.content)
-          html += `<div class="message ${msg.role}">
-    <div class="role">${roleName}</div>`
+
+          htmlParts.push(`<div class="message ${msg.role}">`)
+          htmlParts.push(`<div class="role">${roleName}</div>`)
 
           if (msg.thinking) {
-            html += `<div class="thought">
-    <div class="thought-header">Thought Process</div>
-    ${msg.thinking.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}
-    </div>`
+            htmlParts.push('<div class="thought">')
+            htmlParts.push('<div class="thought-header">Thought Process</div>')
+            htmlParts.push(`${msg.thinking.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}`)
+            htmlParts.push('</div>')
           }
 
           if (msg.images && msg.images.length > 0) {
-            html += `<div class="images">`
+            htmlParts.push('<div class="images">')
             for (const img of msg.images) {
               const mimeType = img.startsWith('/') ? 'image/jpeg' : 'image/png'
-              html += `<img class="image" src="data:${mimeType};base64,${img}" />`
+              htmlParts.push(`<img class="image" src="data:${mimeType};base64,${img}" />`)
             }
-            html += `</div>`
+            htmlParts.push('</div>')
           }
 
-          html += `<div class="content">${contentHtml}</div>
-    </div>`
+          htmlParts.push(`<div class="content">${contentHtml}</div>`)
+          htmlParts.push('</div>')
         }
-        html += `</body></html>`
+
+        htmlParts.push('</body>')
+        htmlParts.push('</html>')
+
+        const html = htmlParts.join('\n')
 
         webView.connect('load-changed', (wv, event) => {
           if (event === WebKit.LoadEvent.FINISHED) {
