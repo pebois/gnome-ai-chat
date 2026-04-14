@@ -6,9 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+- Added right-click context menu to images in the chat history for quick downloading.
+- Export conversations as JSON or PDF via right-click in the sidebar.
+- Integrated WebKitGTK for high-quality PDF generation with clean styling and image attachment support.
+- Exported JSON files now automatically strip semantic embeddings for reduced file size and privacy.
+- Fixed a bug in file tool promisification where `replace_contents_bytes_async` was incorrectly mapped to `replace_contents_finish`.
+- Optimized code block rendering during streaming: the application now appends new text to the existing buffer instead of replacing it entirely, eliminating the flickering/blinking effect in the UI.
 - Improved the "Reset all built-ins" button in the skills sidebar: it is now always visible and automatically restores missing (deleted) built-in skills.
 - Fixed GtkSourceView critical warnings in Skills Editor during typing by optimizing buffer updates.
-### Added
 - **Planner Skill**: Added a new `@Planner` default skill that implements a structured 4-step Plan Mode workflow (Explore & Analyze, Consult, Draft, Review & Approval) to ensure the assistant obtains user approval before executing complex changes.
 - **Generic Provider Architecture**: Refactored the core AI logic to use a standardized `Provider` interface. This decouples the application from Ollama-specific implementations and paves the way for supporting multiple LLM backends.
 - **Unified Messaging Types**: Introduced generic `ChatMessage`, `Tool`, and `ToolCall` types, replacing their Ollama-specific counterparts across the entire codebase.

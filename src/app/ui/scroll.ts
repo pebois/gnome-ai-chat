@@ -44,7 +44,7 @@ export class ScrollManager {
       this._callbacks.onScroll(value)
     }
 
-    if (fromScroll && value < max - 5) {
+    if (fromScroll && !this._animation && value < max - 5) {
       this._stickToBottom = false
     }
 
@@ -65,6 +65,7 @@ export class ScrollManager {
   }
 
   public scrollToBottom(smooth = true): void {
+    this._stickToBottom = true
     const max = this._adj.get_upper() - this._adj.get_page_size()
 
     if (this._animation) {

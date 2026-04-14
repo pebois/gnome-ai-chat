@@ -5,6 +5,36 @@ import GLib from 'gi://GLib?version=2.0'
 import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 
+export function downloadImage(parent: Gtk.Window, base64: string): void {
+  if (!base64) {
+    return
+  }
+
+  const fileDialog = new Gtk.FileDialog({
+    title: 'Save Image',
+    initial_name: `image-${Date.now()}.png`
+  })
+
+  void fileDialog.save(parent, null, (source, result) => {
+    try {
+      const file = fileDialog.save_finish(result)
+      if (file) {
+        const bytes = GLib.base64_decode(base64)
+        void file.replace_contents_async(
+          new GLib.Bytes(bytes),
+          null,
+          false,
+          Gio.FileCreateFlags.NONE,
+          null,
+          null
+        )
+      }
+    } catch (e) {
+      console.error('Failed to save image:', e)
+    }
+  })
+}
+
 export function setupContextMenu(widget: Gtk.Widget, popover: Gtk.PopoverMenu, onBeforeShow?: () => void): void {
   const gesture = new Gtk.GestureClick({
     button: 3

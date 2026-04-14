@@ -270,7 +270,21 @@ export class Message {
             const lm = GtkSource.LanguageManager.get_default()
             const metadata = getLanguageMetadata(language)
             part.expanderRow!.set_title(metadata.title)
-            part.buffer!.set_text(code, -1)
+
+            const currentCode = part.buffer!.get_text(
+              part.buffer!.get_start_iter(),
+              part.buffer!.get_end_iter(),
+              false
+            )
+
+            if (code !== currentCode) {
+              if (code.startsWith(currentCode)) {
+                const diff = code.substring(currentCode.length)
+                part.buffer!.insert(part.buffer!.get_end_iter(), diff, -1)
+              } else {
+                part.buffer!.set_text(code, -1)
+              }
+            }
 
             const lang = lm.get_language(metadata.id) || lm.get_language('text')
             if (part.buffer!.get_language() !== lang) {
