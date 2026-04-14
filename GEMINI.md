@@ -10,7 +10,7 @@ This is a GNOME desktop application built with TypeScript, GJS, GTK4, and Libadw
 - **Multimodal Capabilities**: Effortlessly include images in prompts using drag-and-drop or the native file picker for vision-enabled models.
 - **Smart Chat Organization**: Automatically categorizes conversations with concise AI-generated titles and relevant emojis for effortless navigation.
 - **Rich Text Rendering**: Full Markdown support including code blocks, tables, headers, and text formatting, cleanly rendered natively using Pango markup and GTK widgets.
-- **Integrated System Tools**: Expand model capabilities with built-in function calling for time, math calculations, web fetching, HTML parsing, system info, file searching, app launching, desktop automation, code execution, persistent memory, and screenshots.
+- **Integrated System Tools**: Expand model capabilities with built-in function calling for time, math calculations, web fetching, HTML parsing, system info, file searching, app launching, code execution, and persistent memory.
 - **Comprehensive Analytics**: Monitor performance with detailed statistics on API latency, tool execution times, and per-model token consumption.
 - **Advanced Chat Controls**: Full-featured chat management including search, message copying, session restarting, keyboard shortcuts, and smart bottom-scrolling.
 - **Quick Slash Commands**: Execute powerful inline actions (e.g., `/hn` for Hacker News, `/compress` to optimize context) with a dynamic, filterable autocomplete interface.
@@ -126,7 +126,6 @@ src/
       skills.ts         # custom skills store
       types.ts          # database schemas
     skills/
-      automation.ts     # default instructions for automation
       canvas.ts         # default instructions for canvas rendering
       coder.ts          # default instructions for coding
       files.ts          # default instructions for file search
@@ -136,14 +135,13 @@ src/
       writer.ts         # default instructions for writing
     tools/
       index.ts          # tools export and runner
-      automation.ts     # desktop automation tools
       code.ts           # code evaluation and execution tools
       desktop.ts        # app listing and launching tools
       files.ts          # file search tool
       html.ts           # html parsing and extraction tools
       math.ts           # dice rolling and calculator tools
       memory.ts         # persistent memory tools
-      system.ts         # system info and screenshot tools
+      system.ts         # system info tools
       time.ts           # time and timezone tools
       web.ts            # web page fetching tool
     ambient.d.ts        # type definitions for GJS and external libraries

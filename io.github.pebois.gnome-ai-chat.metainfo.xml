@@ -98,7 +98,7 @@
         <ul>
           <li>Migrated data storage from legacy JSON files to a robust SQLite database with fully asynchronous operations.</li>
           <li>Implemented semantic matching for skills using local text embeddings.</li>
-          <li>Enhanced screenshot tool to automatically attach captured images to the chat input.</li>
+          <li>Auto-attach screenshots directly to the chat input for visual analysis.</li>
           <li>Optimized Ollama client for consistent persona application during complex tool-call sequences.</li>
           <li>Improved code block parsing strategy with support for nested blocks.</li>
         </ul>

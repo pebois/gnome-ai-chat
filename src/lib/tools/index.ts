@@ -1,12 +1,11 @@
 import type { AppInterface } from '@/lib/app.js'
-import { handle_run_automation_command, run_automation_command } from '@/lib/tools/automation.js'
 import { handle_list_directory, handle_read_file, handle_run_shell_command, handle_write_file, list_directory, read_file, run_shell_command, write_file } from '@/lib/tools/code.js'
 import { get_app_details, handle_get_app_details, handle_launch_app, handle_launch_app_action, handle_list_installed_apps, launch_app, launch_app_action, list_installed_apps } from '@/lib/tools/desktop.js'
 import { handle_search_files, handle_search_vector_index, search_files, search_vector_index } from '@/lib/tools/files.js'
 import { handle_render_html, render_html } from '@/lib/tools/html.js'
 import { calculate, handle_calculate, handle_roll_die, roll_die } from '@/lib/tools/math.js'
 import { add_observations, create_entities, create_relations, delete_entities, delete_observations, delete_relations, handle_add_observations, handle_create_entities, handle_create_relations, handle_delete_entities, handle_delete_observations, handle_delete_relations, handle_open_nodes, handle_read_graph, handle_search_nodes, open_nodes, read_graph, search_nodes } from '@/lib/tools/memory.js'
-import { get_system_info, handle_get_system_info, handle_take_screenshot, take_screenshot } from '@/lib/tools/system.js'
+import { get_system_info, handle_get_system_info } from '@/lib/tools/system.js'
 import { get_current_datetime, get_user_timezone, handle_get_current_datetime, handle_get_user_timezone } from '@/lib/tools/time.js'
 import { fetch_rss_feed, fetch_web_page, handle_fetch_rss_feed, handle_fetch_web_page } from '@/lib/tools/web.js'
 
@@ -33,12 +32,10 @@ export const tools = [
   read_graph,
   render_html,
   roll_die,
-  run_automation_command,
   run_shell_command,
   search_files,
   search_nodes,
   search_vector_index,
-  take_screenshot,
   write_file
 ]
 
@@ -64,16 +61,12 @@ export async function onToolCall(app: AppInterface, name: string, args: Record<s
       return handle_search_files(args)
     case 'search_vector_index':
       return handle_search_vector_index(app, args)
-    case 'run_automation_command':
-      return handle_run_automation_command(args)
     case 'fetch_rss_feed':
       return handle_fetch_rss_feed(args)
     case 'fetch_web_page':
       return handle_fetch_web_page(args)
     case 'calculate':
       return handle_calculate(args)
-    case 'take_screenshot':
-      return handle_take_screenshot(app)
     case 'render_html':
       return handle_render_html(app, args)
     case 'read_file':

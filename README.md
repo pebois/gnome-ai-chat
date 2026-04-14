@@ -8,12 +8,12 @@ A simple chat application for GNOME built with TypeScript (compiled to GJS), Gtk
 - **Smart Model Management**: Automatically detect local models, pull new ones from the registry with live progress, and monitor detailed VRAM/CPU memory footprints.
 - **Intelligent Search**: Find past conversations using semantic vector search—it understands the meaning of your queries, not just keywords. Background indexing ensures results are always up to date without slowing down your exit.
 - **Power-User Workflow**: Fast slash commands with dynamic filtering, full keyboard navigation, and `Tab` completion. Quickly fetch Hacker News headlines or compress conversations to save context.
-- **Agentic Capabilities**: Give your models the power to fetch web pages (with persistent caching), search local files, launch apps, perform complex math, take screenshots, and even programmatically control your desktop via Wayland portal automation.
+- **Agentic Capabilities**: Give your models the power to fetch web pages (with persistent caching), search local files, launch apps, perform complex math, and more.
 - **Tool Execution Permissions**: Maintain full control over model actions. Every shell command or file operation requires manual approval by default, with granular options to auto-authorize trusted tasks.
 - **Interactive HTML Canvas**: Generate and render high-quality, self-contained HTML/JS applications, games, or data visualizations directly in a native native WebKitGTK preview window via the `render_html` tool and `@canvas` skill.
 - **Local RAG (Chat with your Files)**: Index local project folders into a private vector store. Use the `@files` skill to ground model answers in your actual code and documentation without cloud uploads.
-- **Custom @ Skills**: Instantly switch personas using `@` skills (e.g., `@files`, `@coder`, `@writer`, `@automation`, `@canvas`). Manage and define your own custom system prompts natively in Preferences with alphabetical sorting for easy navigation.
-- **Rich Conversations**: Full support for multimodal image attachments, **text file attachments** (Markdown, CSV, JSON, Code), native syntax-highlighted code blocks with one-click copy, and configurable reasoning levels for "thinking" models.
+- **Custom @ Skills**: Instantly switch personas using `@` skills (e.g., `@files`, `@coder`, `@writer`, `@canvas`). Manage and define your own custom system prompts natively in Preferences with alphabetical sorting for easy navigation.
+- **Rich Conversations**: Full support for multimodal image attachments, **take screenshots directly into the input**, **text file attachments** (Markdown, CSV, JSON, Code), native syntax-highlighted code blocks with one-click copy, and configurable reasoning levels for "thinking" models.
 - **Performance Insights**: Built-in statistics to track API latency (including embeddings), tool execution times, and token usage per model.
 - **Organized by AI**: New conversations are automatically categorized with AI-generated titles and relevant emojis.
 - **Privacy by Design**: Your data never leaves your machine. Chat history, settings, and vector indexes are stored completely locally.

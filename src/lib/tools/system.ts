@@ -1,8 +1,6 @@
 import GLib from 'gi://GLib?version=2.0'
 
-import type { AppInterface } from '@/lib/app.js'
 import type { Tool } from '@/lib/providers/index.js'
-import { takeScreenshot } from '@/lib/screenshot.js'
 
 export const get_system_info: Tool = {
   type: 'function',
@@ -13,15 +11,6 @@ export const get_system_info: Tool = {
   }
 }
 
-export const take_screenshot: Tool = {
-  type: 'function',
-  function: {
-    name: 'take_screenshot',
-    parameters: {},
-    description: 'Takes a screenshot of the entire screen. The screenshot will be automatically attached to the conversation for you to analyze. Returns the file URI.'
-  }
-}
-
 export function handle_get_system_info(): string {
   let osName = GLib.get_os_info('PRETTY_NAME')
   if (!osName) {
@@ -29,17 +18,4 @@ export function handle_get_system_info(): string {
   }
   const hostname = GLib.get_host_name()
   return `OS: ${osName}\nHostname: ${hostname}`
-}
-
-export async function handle_take_screenshot(app: AppInterface): Promise<string> {
-  try {
-    const file = await takeScreenshot()
-    if (file) {
-      app.chat.input.attachments.addFile(file)
-      return `Screenshot taken and automatically attached. URI: ${file.get_uri()}`
-    }
-    return 'Screenshot failed or cancelled.'
-  } catch (e) {
-    return `Error taking screenshot: ${e instanceof Error ? e.message : String(e)}`
-  }
 }

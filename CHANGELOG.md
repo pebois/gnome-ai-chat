@@ -8,12 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Added right-click context menu to images in the chat history for quick downloading.
-- Export conversations as JSON or PDF via right-click in the sidebar.
-- Integrated WebKitGTK for high-quality PDF generation with clean styling and image attachment support.
-- Exported JSON files now automatically strip semantic embeddings for reduced file size and privacy.
+- **Automatic Tool Attachments**: Attachments in the chat input (like screenshots or dragged files) are now automatically sent to the model during tool-call sequences and cleared from the UI, enabling seamless multimodal workflows.
+- **Image Download Context Menu**: Added a right-click context menu to images in the chat history, allowing users to quickly save images to their local filesystem.
+- **Global Console Types**: Added native `console` type definitions to the ambient declarations, improving developer experience and resolving TypeScript errors in GJS.
+- **Stable File Promisification**: Introduced the `PromisifiedFile` interface to ensure robust type safety and correct API mapping for asynchronous Gio file operations.
+
+### Fixed
+- **Code Block Flickering**: Optimized code block rendering during streaming by appending new text to the existing buffer instead of replacing it entirely, resulting in a smooth, blink-free UI experience.
+- **File Tool Promisification**: Fixed a critical crash caused by an incorrect mapping in the promisification of `replace_contents_bytes_async`.
+- **Export Formatting**: Removed leading indentation from the generated HTML source when exporting conversations to PDF or JSON for cleaner file output.
 - Fixed a bug in file tool promisification where `replace_contents_bytes_async` was incorrectly mapped to `replace_contents_finish`.
 - Optimized code block rendering during streaming: the application now appends new text to the existing buffer instead of replacing it entirely, eliminating the flickering/blinking effect in the UI.
+
+### Changed
+- **Streamlined Desktop Tools**: Preserved desktop application tools (`launch_app`, etc.) and manual screenshot capabilities while removing the autonomous screenshot tool to improve user control.
+- Updated user-facing documentation (`README.md`, `GEMINI.md`, `metainfo.xml`) to reflect the removal of autonomous desktop automation while highlighting manual screenshot attachments.
+
+### Removed
+- **Automation Skill & Tools**: Removed the `@automation` skill and the `run_automation_command` tool to focus on more robust, user-initiated workflows.
+- **Autonomous Screenshots**: The assistant can no longer trigger screenshots autonomously; screenshots are now exclusively a user-initiated attachment feature.
+
+### Added
+- Added right-click context menu to images in the chat history for quick downloading.
+- Export conversations as JSON or PDF via right-click in the sidebar.
 - Improved the "Reset all built-ins" button in the skills sidebar: it is now always visible and automatically restores missing (deleted) built-in skills.
 - Fixed GtkSourceView critical warnings in Skills Editor during typing by optimizing buffer updates.
 - **Planner Skill**: Added a new `@Planner` default skill that implements a structured 4-step Plan Mode workflow (Explore & Analyze, Consult, Draft, Review & Approval) to ensure the assistant obtains user approval before executing complex changes.
