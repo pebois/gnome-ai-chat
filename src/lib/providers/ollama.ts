@@ -28,6 +28,8 @@ Gio._promisify(Soup.Session.prototype, 'send_async', 'send_finish')
 Gio._promisify(Soup.Session.prototype, 'send_and_read_async', 'send_and_read_finish')
 Gio._promisify(Gio.DataInputStream.prototype, 'read_line_async', 'read_line_finish_utf8')
 
+const DEBUG_TRUNCATE_LIMIT = 100
+
 export class OllamaProvider implements Provider {
   private _tracker: Tracker
   private _session: Soup.Session
@@ -166,7 +168,22 @@ export class OllamaProvider implements Provider {
       const url = `${this.url}/api/chat`
       this._debug(`POST ${url}`)
       const req = await this._buildChatRequest(props, messages)
-      this._debug('History', req.messages)
+      const debugMessages = req.messages?.map((m) => {
+        const copy = { ...m }
+        if (copy.content && copy.content.length > DEBUG_TRUNCATE_LIMIT) {
+          copy.content = copy.content.substring(0, DEBUG_TRUNCATE_LIMIT) + `... [truncated ${copy.content.length - DEBUG_TRUNCATE_LIMIT} chars]`
+        }
+        if (copy.thinking && copy.thinking.length > DEBUG_TRUNCATE_LIMIT) {
+          copy.thinking = copy.thinking.substring(0, DEBUG_TRUNCATE_LIMIT) + `... [truncated ${copy.thinking.length - DEBUG_TRUNCATE_LIMIT} chars]`
+        }
+        if (copy.images && copy.images.length > 0) {
+          copy.images = copy.images.map((_, i) => {
+            return `[base64 image ${i + 1}]`
+          })
+        }
+        return copy
+      })
+      this._debug('History', debugMessages)
       const body = JSON.stringify(req)
       const msg = Soup.Message.new('POST', url)
       const encoder = new TextEncoder()
@@ -256,8 +273,11 @@ export class OllamaProvider implements Provider {
     const processedMessages = messages.map((msg) => {
       let processed = { ...msg }
       if (!supportsVision && processed.images) {
+        this._debug(`Model ${props.model} does not support vision, stripping ${processed.images.length} images`)
         const { images: _, ...rest } = processed
         processed = rest
+      } else if (supportsVision && processed.images?.length) {
+        this._debug(`Model ${props.model} supports vision, sending ${processed.images.length} images`)
       }
       if (processed.files?.length) {
         const blocks = processed.files.map((f) => {
