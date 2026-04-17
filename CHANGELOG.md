@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Improved Debug Logging**: Truncated message history (content and thinking blocks) and replaced raw base64 images with placeholders in Ollama provider debug output to reduce console noise.
+- **Enhanced Vision Debugging**: Added explicit debug logs when images are included or stripped from a request based on the model's vision capabilities.
+- **Skill Usage Debugging**: Added debug logs for successful skill matching.
+
 ## [1.9.0] - 2026-04-14
 
 ### Added
