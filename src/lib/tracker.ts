@@ -11,10 +11,9 @@ export class Tracker {
   constructor() {
     this._stats = DEFAULT_STATS
     this._startTime = GLib.get_monotonic_time()
-    void this._load()
   }
 
-  private async _load(): Promise<void> {
+  public async load(): Promise<void> {
     try {
       const data = await settingsStore.getStats()
       if (data) {

@@ -52,6 +52,14 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.9.2" date="2026-06-18">
+      <description>
+        <p>This release fixes a critical database initialization race condition at startup.</p>
+        <ul>
+          <li>Deferred loading of performance stats until after database migrations are fully complete, preventing the no-such-table error.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.9.1" date="2026-06-18">
       <description>
         <p>This release updates Flatpak packaging for Flathub compliance, resolves desktop validation issues, and improves AppStream metadata standards.</p>
