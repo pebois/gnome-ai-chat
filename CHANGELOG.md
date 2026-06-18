@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Flathub Offline Dependencies**: Generated `generated-sources.json` containing npm offline cache references for sandboxed Flathub builds.
+
 ### Changed
+- **Flathub Integration**: Updated `io.github.pebois.gnome-ai-chat.json` manifest to build from remote Git repository and utilize offline npm cache.
 - **Improved Debug Logging**: Truncated message history (content and thinking blocks) and replaced raw base64 images with placeholders in Ollama provider debug output to reduce console noise.
 - **Enhanced Vision Debugging**: Added explicit debug logs when images are included or stripped from a request based on the model's vision capabilities.
 - **Skill Usage Debugging**: Added debug logs for successful skill matching.
