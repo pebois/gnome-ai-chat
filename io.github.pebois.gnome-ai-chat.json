@@ -22,7 +22,7 @@
     "append-path": "/usr/lib/sdk/node24/bin",
     "env": {
       "NPM_CONFIG_OFFLINE": "true",
-      "NPM_CONFIG_CACHE": "/run/build/gnome-ai-chat/flatpak-node/npm-cache"
+      "NPM_CONFIG_CACHE": "/run/build/gnome-ai-chat/npm-cache"
     }
   },
   "modules": [
@@ -30,7 +30,8 @@
       "name": "gnome-ai-chat",
       "buildsystem": "simple",
       "build-commands": [
-        "npm ci --offline --ignore-scripts",
+        "tar xf .npm-cache.tar.gz",
+        "npm ci --ignore-scripts",
         "npm run build",
         "glib-compile-resources resources.gresource.xml",
         "install -Dm644 resources.gresource ${FLATPAK_DEST}/share/io.github.pebois.gnome-ai-chat/resources.gresource",
@@ -47,12 +48,15 @@
       ],
       "sources": [
         {
-          "type": "git",
-          "url": "https://github.com/pebois/gnome-ai-chat.git",
-          "tag": "v1.9.0",
-          "commit": "0ffb34c2b01277521f2ba7af982483312994e39c"
+          "type": "dir",
+          "path": "."
         },
-        "generated-sources.json"
+        {
+          "type": "file",
+          "path": ".npm-cache.tar.gz",
+          "dest": ".",
+          "dest-filename": ".npm-cache.tar.gz"
+        }
       ]
     }
   ]
