@@ -165,6 +165,7 @@ export class App extends Adw.Application implements AppInterface {
     this.window.setState('loading')
     try {
       await db.initDb()
+      await this.tracker.load()
       await this._loadSettings()
 
       Adw.StyleManager.get_default().set_color_scheme(this.settings.theme)
