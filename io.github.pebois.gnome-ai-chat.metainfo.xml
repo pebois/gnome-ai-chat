@@ -3,7 +3,9 @@
   <id>io.github.pebois.gnome-ai-chat</id>
   <name>Gnome AI Chat</name>
   <summary>Chat with local AI models via Ollama</summary>
-  <developer_name>Pierre-Emmanuel Bois</developer_name>
+  <developer id="io.github.pebois">
+    <name>Pierre-Emmanuel Bois</name>
+  </developer>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
 
