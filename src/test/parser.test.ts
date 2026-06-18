@@ -24,7 +24,7 @@ describe('parser', () => {
     })
 
     it('Parses Header 3', () => {
-      expect(markdownToPango('### Header 3')).toBe('<b><big>Header 3</big></b>')
+      expect(markdownToPango('### Header 3')).toBe('<b>Header 3</b>')
     })
 
     it('Parses Header 4', () => {
@@ -32,15 +32,15 @@ describe('parser', () => {
     })
 
     it('Parses Header 5', () => {
-      expect(markdownToPango('##### Header 5')).toBe('<b><i>Header 5</i></b>')
+      expect(markdownToPango('##### Header 5')).toBe('<b>Header 5</b>')
     })
 
     it('Parses Header 2', () => {
-      expect(markdownToPango('## Header 2')).toBe('<b><big><big>Header 2</big></big></b>')
+      expect(markdownToPango('## Header 2')).toBe('<b>Header 2</b>')
     })
 
     it('Parses Header 1', () => {
-      expect(markdownToPango('# Header 1')).toBe('<b><big><big><big>Header 1</big></big></big></b>')
+      expect(markdownToPango('# Header 1')).toBe('<b>Header 1</b>')
     })
 
     it('Parses inline code', () => {

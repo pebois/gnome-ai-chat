@@ -52,6 +52,16 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.9.1" date="2026-06-18">
+      <description>
+        <p>This release updates Flatpak packaging for Flathub compliance, resolves desktop validation issues, and improves AppStream metadata standards.</p>
+        <ul>
+          <li>Adapted Flatpak manifest and generated offline npm cache registry sources for sandboxed builds.</li>
+          <li>Replaced deprecated AppStream developer tags with the modern developer name and ID format.</li>
+          <li>Fixed desktop launcher entry category and specification version validation warnings.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.9.0" date="2026-04-14">
       <description>
         <p>This release optimizes code block rendering, enhances multimodal workflows with automatic tool attachments, and streamlines desktop integration.</p>
