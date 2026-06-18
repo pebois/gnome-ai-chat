@@ -1,5 +1,5 @@
 [Desktop Entry]
-Version=1.9.0
+Version=1.5
 Name=Gnome AI Chat
 GenericName=AI Chat
 Comment=Chat with local AI models via Ollama
@@ -7,7 +7,7 @@ Exec=io.github.pebois.gnome-ai-chat %U
 Icon=io.github.pebois.gnome-ai-chat
 Terminal=false
 Type=Application
-Categories=Utility;Network;
+Categories=Network;InstantMessaging;
 Keywords=ollama;ai;chat;llm;assistant;
 StartupWMClass=io.github.pebois.gnome-ai-chat
 X-GNOME-UsesNotifications=false
