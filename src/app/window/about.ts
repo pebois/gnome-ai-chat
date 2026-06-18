@@ -12,7 +12,7 @@ export function showAboutWindow(app: AppInterface): void {
     copyright: '© 2024–2026 Pierre-Emmanuel Bois',
     version: VERSION,
     comments: 'A GNOME chat application that talks to a local LLM provider.',
-    website: 'https://github.com/pebois/gnome-ai-chat',
+    website: 'https://pebois.github.io/gnome-ai-chat',
     issue_url: 'https://github.com/pebois/gnome-ai-chat/issues',
     license_type: 8
   })
