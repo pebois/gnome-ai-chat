@@ -1,6 +1,6 @@
 {
   "name": "io.github.pebois.gnome-ai-chat",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "A simple chat application for GNOME built with JavaScript (GJS), Gtk4, and Libadwaita. It communicates with the Ollama HTTP API.",
   "type": "module",
   "scripts": {
@@ -13,6 +13,7 @@
     "flatpak-build": "flatpak-builder --force-clean --user --install-deps-from=flathub --repo=.flatpak-repo --install .flatpak-builddir io.github.pebois.gnome-ai-chat.json",
     "flatpak-run": "flatpak run io.github.pebois.gnome-ai-chat",
     "flatpak-uninstall": "flatpak uninstall io.github.pebois.gnome-ai-chat --delete-data -y",
+    "flatpak-validate": "desktop-file-validate io.github.pebois.gnome-ai-chat.desktop && appstreamcli validate io.github.pebois.gnome-ai-chat.metainfo.xml",
     "lint": "eslint . --cache",
     "lint-fix": "eslint . --cache --fix"
   },

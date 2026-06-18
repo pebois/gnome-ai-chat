@@ -7,7 +7,7 @@ export const APPLICATION_NAME = 'Gnome AI Chat'
 
 export const APPLICATION_ID = 'io.github.pebois.gnome-ai-chat'
 
-export const VERSION = '1.9.0'
+export const VERSION = '1.9.1'
 
 export const DEFAULT_OLLAMA_URL = 'http://localhost:11434'
 
