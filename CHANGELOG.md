@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-06-19
+
+### Fixed
+- **D-Bus Activation & Notification Handling**: Implemented D-Bus activation capability (`DBusActivatable=true` in desktop launcher and D-Bus service helper registration in Flatpak) and restructured GApplication initialization lifecycle to handle incoming notifications / activation actions when the app is completely closed.
+
 ## [1.9.2] - 2026-06-18
 
 ### Fixed

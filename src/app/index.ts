@@ -32,6 +32,8 @@ export class App extends Adw.Application implements AppInterface {
   private _settingsLoaded: boolean = false
   public isLoaded: boolean = false
   private _pendingNewConversation: boolean = false
+  private _initializing: boolean = false
+  private _pendingConversationId?: number
   private _filesIndexingCancellable: Gio.Cancellable | null = null
   private _generatingConversations: Set<number> = new Set()
   private _summarizingConversations: Set<number> = new Set()
@@ -104,9 +106,19 @@ export class App extends Adw.Application implements AppInterface {
     return 0
   }
 
+  public vfunc_startup(): void {
+    super.vfunc_startup()
+    this._setupActions()
+  }
+
   public vfunc_activate(): void {
+    this.ensureWindow()
+    this.window.present()
+    void this.init()
+  }
+
+  public ensureWindow(): void {
     if (this.window) {
-      this.window.present()
       return
     }
 
@@ -129,8 +141,6 @@ export class App extends Adw.Application implements AppInterface {
       return false
     })
 
-    this._setupActions()
-
     const dropTarget = new Gtk.DropTarget({
       formats: Gdk.ContentFormats.new_for_gtype(Gdk.FileList.$gtype),
       actions: Gdk.DragAction.COPY
@@ -146,10 +156,10 @@ export class App extends Adw.Application implements AppInterface {
       return false
     })
     this.window.add_controller(dropTarget)
+  }
 
-    this.window.present()
-
-    void this.init()
+  public setPendingConversationId(id: number): void {
+    this._pendingConversationId = id
   }
 
   public getShortcut(action: string): string | null {
@@ -162,6 +172,10 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   public async init(): Promise<void> {
+    if (this.isLoaded || this._initializing) {
+      return
+    }
+    this._initializing = true
     this.window.setState('loading')
     try {
       await db.initDb()
@@ -193,6 +207,8 @@ export class App extends Adw.Application implements AppInterface {
     } catch (err: unknown) {
       console.error(err)
       this.window.showError(err instanceof Error ? err.message : String(err))
+    } finally {
+      this._initializing = false
     }
   }
 
@@ -517,7 +533,11 @@ export class App extends Adw.Application implements AppInterface {
     this.conversations = await conversationsStore.getConversations()
     this.isLoaded = true
     this.sidebar.populateList()
-    if (this._pendingNewConversation || this.conversations.length === 0) {
+    if (this._pendingConversationId !== undefined) {
+      const id = this._pendingConversationId
+      this._pendingConversationId = undefined
+      await this.sidebar.selectConversationById(id)
+    } else if (this._pendingNewConversation || this.conversations.length === 0) {
       this._pendingNewConversation = false
       await this.sidebar.createNewConversation()
     } else {
