@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-06-19
+
 ### Added
 - **GNOME Shell Extension**: Introduced a native GNOME Shell extension (located under `extension/`) compatible with GNOME Shell 45+ written in TypeScript. It provides a panel status indicator and customizable global keyboard shortcut (default: `<Super>i`) to show/hide the main window, start new conversations, and quit the application via GApplication D-Bus actions.
 - **NPM Integration**: Added `npm run extension-build` to compile TypeScript to ESM JavaScript using `tsdown` (configured via `tsdown.extension.config.js`), along with `npm run extension-install` and `npm run extension-enable` scripts to ease local installation and activation.

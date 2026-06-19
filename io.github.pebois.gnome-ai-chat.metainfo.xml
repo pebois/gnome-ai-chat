@@ -52,6 +52,17 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.11.0" date="2026-06-19">
+      <description>
+        <p>This release introduces a native GNOME Shell extension for seamless desktop integration.</p>
+        <ul>
+          <li>Added a native GNOME Shell extension written in TypeScript supporting GNOME Shell 45 through 51.</li>
+          <li>Integrated a status indicator in the top panel and a global keyboard shortcut (default Super+i) to toggle the chat window.</li>
+          <li>Added new npm integration scripts for building, installing, and enabling the extension locally.</li>
+          <li>Incorporate GNOME Shell extension coding conventions and ambient type definitions.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.10.0" date="2026-06-19">
       <description>
         <p>This release adds support for D-Bus activation, allowing notification clicks to launch/open the app when closed.</p>
