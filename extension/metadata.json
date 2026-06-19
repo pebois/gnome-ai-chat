@@ -1,0 +1,16 @@
+{
+  "uuid": "gnome-ai-chat@pebois.github.io",
+  "name": "Gnome AI Chat Integration",
+  "description": "Provides a status panel indicator and global hotkey to show, hide, start new conversations, and quit Gnome AI Chat.",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51"
+  ],
+  "url": "https://github.com/pebois/gnome-ai-chat",
+  "settings-schema": "org.gnome.shell.extensions.gnome-ai-chat"
+}

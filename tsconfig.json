@@ -23,6 +23,8 @@
   },
   "include": [
     "src/lib/ambient.d.ts",
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "extension/ambient.d.ts",
+    "extension/**/*.ts"
   ]
 }

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **GNOME Shell Extension**: Introduced a native GNOME Shell extension (located under `extension/`) compatible with GNOME Shell 45+ written in TypeScript. It provides a panel status indicator and customizable global keyboard shortcut (default: `<Super>i`) to show/hide the main window, start new conversations, and quit the application via GApplication D-Bus actions.
+- **NPM Integration**: Added `npm run extension-build` to compile TypeScript to ESM JavaScript using `tsdown` (configured via `tsdown.extension.config.js`), along with `npm run extension-install` and `npm run extension-enable` scripts to ease local installation and activation.
+- **Project Rules**: Merged assistant identity guidelines and extension development conventions directly into `GEMINI.md` to centralize agent instructions.
+
+### Changed
+- **GNOME Shell Extension Compatibility**: Expanded GNOME Shell compatibility in `metadata.json` to officially support versions 48, 49, 50, and 51.
+
+### Fixed
+- **GNOME Shell Extension Actions**: Fixed the D-Bus object path in the extension (`/io/github/pebois/gnome_ai_chat` instead of using invalid dashes) to correctly activate "New Conversation" and "Quit" actions exported by GApplication.
+
 ## [1.10.0] - 2026-06-19
 
 ### Fixed

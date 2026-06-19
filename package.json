@@ -14,6 +14,9 @@
     "flatpak-run": "flatpak run io.github.pebois.gnome-ai-chat",
     "flatpak-uninstall": "flatpak uninstall io.github.pebois.gnome-ai-chat --delete-data -y",
     "flatpak-validate": "desktop-file-validate io.github.pebois.gnome-ai-chat.desktop && appstreamcli validate io.github.pebois.gnome-ai-chat.metainfo.xml",
+    "extension-build": "tsdown --config tsdown.extension.config.js && mv extension/extension.mjs extension/extension.js",
+    "extension-install": "npm run extension-build && mkdir -p ~/.local/share/gnome-shell/extensions/gnome-ai-chat@pebois.github.io/schemas && cp extension/metadata.json extension/extension.js ~/.local/share/gnome-shell/extensions/gnome-ai-chat@pebois.github.io/ && cp extension/schemas/*.xml ~/.local/share/gnome-shell/extensions/gnome-ai-chat@pebois.github.io/schemas/ && glib-compile-schemas ~/.local/share/gnome-shell/extensions/gnome-ai-chat@pebois.github.io/schemas/",
+    "extension-enable": "gnome-extensions enable gnome-ai-chat@pebois.github.io",
     "lint": "eslint . --cache",
     "lint-fix": "eslint . --cache --fix"
   },

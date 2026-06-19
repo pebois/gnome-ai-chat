@@ -162,6 +162,8 @@ src/
 ## Development Conventions
 
 ### AI Assistant Behaviors
+- **Identity**: Your name is Domino.
+- **Keyboard Layout**: The user uses an AZERTY keyboard layout. Keep this in mind when suggesting or configuring keyboard shortcuts.
 - **Post-Update Workflow**: After executing a plan or making source code updates, you MUST automatically run the following commands in order:
   1. `npm run lint`
   2. `npm run lint-fix`
@@ -185,6 +187,13 @@ src/
 - **Signal Connections**: When connecting to signals (e.g., `button.connect('clicked', ...)`), ensure that any long-running or repeated connections are properly managed to avoid memory leaks.
 - **Promisification**: Leverage `Gio._promisify` (already set up in `lib/ollama.ts` and database modules) to avoid callback hell. Do not use sync methods for I/O on the main thread.
 - **Markup**: All user-facing text that may contain formatting should be escaped via `pangoEscape()` before being passed to `markdownToPango()` to prevent XSS-like markup injection.
+
+### GNOME Shell Extension Conventions
+- **TypeScript & GJS**: The GNOME Shell extension is located in the `extension/` directory and written in TypeScript (`extension.ts`). It must be compiled to standard ES6 JavaScript (`extension.js`) before distribution.
+- **Ambient Type Declarations**: Ambient types for internal GNOME Shell classes are located in `extension/ambient.d.ts`. Add typing declarations there when using new GNOME Shell modules or GJS constructs.
+- **Compiling**: Run `npm run extension-build` to compile `extension.ts` into a clean ES JavaScript `extension.js` using `tsdown` (configured via `tsdown.extension.config.js`).
+- **GSettings Schemas**: Extension preferences and keybindings are stored in the GSettings schema located in `extension/schemas/org.gnome.shell.extensions.gnome-ai-chat.gschema.xml`. If you modify settings, ensure the XML is updated.
+- **Clean Lifecycle**: Always clean up in `disable()`. Remove keybindings, destroy status icons/menus, and nullify references to avoid memory leaks in GNOME Shell.
 
 ### UI Patterns
 - **Adwaita First**: Use `Adw` widgets (`Adw.StatusPage`, `Adw.PreferencesWindow`, `Adw.ActionRow`) for all standard UI patterns to ensure a native GNOME 45+ look and feel.

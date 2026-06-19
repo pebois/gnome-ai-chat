@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.gnome-ai-chat" path="/org/gnome/shell/extensions/gnome-ai-chat/">
+    <key name="toggle-shortcut" type="as">
+      <default>['&lt;Super&gt;i']</default>
+      <summary>Toggle show/hide shortcut</summary>
+      <description>Keybinding to toggle showing and hiding the Gnome AI Chat application window.</description>
+    </key>
+  </schema>
+</schemalist>
