@@ -36,13 +36,19 @@ export const openConversation: Command = {
   visible: false,
   parameterType: GLib.VariantType.new('s'),
   activate: (app, parameter) => {
-    if (!app.isLoaded || !parameter) {
+    if (!parameter) {
       return
     }
     const idStr = parameter.get_string()[0]
     const id = parseInt(idStr, 10)
+    app.ensureWindow()
     app.window.present()
-    return app.sidebar.selectConversationById(id)
+    if (!app.isLoaded) {
+      app.setPendingConversationId(id)
+      void app.init()
+    } else {
+      void app.sidebar.selectConversationById(id)
+    }
   }
 }
 

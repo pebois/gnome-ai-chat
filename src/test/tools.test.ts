@@ -16,7 +16,7 @@ describe('tools', () => {
     })
 
     it('roll_die handles invalid string arguments gracefully', () => {
-      const result = handle_roll_die({ sides: 'twenty' as unknown as number })
+      const result = handle_roll_die({ sides: 'twenty' })
       expect(result).toBe('NaN')
     })
 

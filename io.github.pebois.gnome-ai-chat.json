@@ -16,7 +16,8 @@
     "--filesystem=xdg-documents:ro",
     "--filesystem=xdg-download:ro",
     "--filesystem=xdg-desktop:ro",
-    "--filesystem=xdg-pictures:ro"
+    "--filesystem=xdg-pictures:ro",
+    "--own-name=io.github.pebois.gnome-ai-chat"
   ],
   "build-options": {
     "append-path": "/usr/lib/sdk/node24/bin",
@@ -38,6 +39,7 @@
         "install -Dm755 bin/io.github.pebois.gnome-ai-chat ${FLATPAK_DEST}/bin/io.github.pebois.gnome-ai-chat",
         "install -d ${FLATPAK_DEST}/share/io.github.pebois.gnome-ai-chat",
         "cp -r dist ${FLATPAK_DEST}/share/io.github.pebois.gnome-ai-chat/",
+        "install -Dm644 io.github.pebois.gnome-ai-chat.service ${FLATPAK_DEST}/share/dbus-1/services/io.github.pebois.gnome-ai-chat.service",
         "install -Dm644 io.github.pebois.gnome-ai-chat.desktop ${FLATPAK_DEST}/share/applications/io.github.pebois.gnome-ai-chat.desktop",
         "install -Dm644 io.github.pebois.gnome-ai-chat.metainfo.xml ${FLATPAK_DEST}/share/metainfo/io.github.pebois.gnome-ai-chat.metainfo.xml",
         "install -Dm644 icons/scalable/apps/io.github.pebois.gnome-ai-chat.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/io.github.pebois.gnome-ai-chat.svg",

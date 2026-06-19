@@ -37,11 +37,13 @@ export interface AppInterface {
   connect(sigName: 'syntax-changed', callback: (_: number, theme: string) => void): number
   connect(sigName: string, callback: (...args: unknown[]) => void): number
   disconnect(id: number): void
+  ensureWindow(): void
   focusInput(): void
   getShortcut(action_name: string): string | null
   handleQuit(): Promise<void>
   indexFiles(): Promise<void>
   init: () => Promise<void>
+  setPendingConversationId(id: number): void
   isGeneratingMessage(id: number): boolean
   isSummarizing(id: number): boolean
   saveSettings(): void
