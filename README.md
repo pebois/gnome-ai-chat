@@ -72,6 +72,33 @@ npm run flatpak-run     # run the installed Flatpak
 npm run flatpak-cache   # generate npm-cache.tar.gz for offline Flatpak builds
 ```
 
+### GNOME Shell Extension
+
+A native GNOME Shell extension is included to let you easily show/hide the chat window, start a new conversation, or quit the application directly from the GNOME status panel or via a global hotkey.
+
+#### Installation & Enabling
+
+To install and compile the extension schemas to your local user directory:
+
+```bash
+npm run extension-install
+```
+
+To enable the extension:
+
+```bash
+npm run extension-enable
+```
+
+*Note: After enabling the extension, you may need to restart GNOME Shell (on X11, press `Alt+F2`, type `r`, and hit `Enter`; on Wayland, log out and log back in) for the extension to load.*
+
+#### Configuration
+
+The extension registers a global shortcut to toggle the chat window visibility:
+*   **Default Shortcut**: `<Super>i`
+*   **Customization**: You can customize this shortcut using `dconf-editor` under `/org/gnome/shell/extensions/gnome-ai-chat/toggle-shortcut` or via the Extensions/Extensions-Manager app.
+
+
 ## Development Workflow
 
 The project uses TypeScript and compiles down to JavaScript (GJS) targeting GNOME 45+.
