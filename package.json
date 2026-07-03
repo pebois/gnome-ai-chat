@@ -1,6 +1,6 @@
 {
   "name": "io.github.pebois.gnome-ai-chat",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "description": "A simple chat application for GNOME built with JavaScript (GJS), Gtk4, and Libadwaita. It communicates with the Ollama HTTP API.",
   "type": "module",
   "scripts": {
