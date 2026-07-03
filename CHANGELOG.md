@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-07-03
+
 ### Added
 - **Three-Tier Tool Permissions**: Every tool permission now supports `Ask`, `Auto-accept`, and `Deny`. Denied tools are filtered out of the request entirely so models never attempt calls that would fail.
 - **Expanded Permission Coverage**: New "File Reads" (`read_file`, `list_directory`, `search_files` — defaults to Auto-accept) and "Applications" (`launch_app`, `launch_app_action` prompt on Ask; `list_installed_apps`, `get_app_details` are removed on Deny without prompting) permission categories, joining the existing Terminal and File Edits gates. All four are configurable in Preferences → Permissions.
