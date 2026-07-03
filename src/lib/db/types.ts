@@ -1,8 +1,11 @@
 export const think_types = ['none', 'low', 'medium', 'high'] as const
 export type Think = typeof think_types[number]
 
-export const permission_tiers = ['ask', 'auto-accept'] as const
+export const permission_tiers = ['ask', 'auto-accept', 'deny'] as const
 export type PermissionTier = typeof permission_tiers[number]
+
+export const permission_categories = ['terminal', 'files', 'reads', 'apps'] as const
+export type PermissionCategory = typeof permission_categories[number]
 
 export interface Skill {
   id: string
@@ -21,10 +24,7 @@ export interface Settings {
   syntax: string
   debug: boolean
   options: Record<string, number>
-  permissions: {
-    terminal: PermissionTier
-    files: PermissionTier
-  }
+  permissions: Record<PermissionCategory, PermissionTier>
 }
 
 export interface Conversation {

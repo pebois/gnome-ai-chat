@@ -1,6 +1,7 @@
 import GLib from 'gi://GLib?version=2.0'
 
 import type { Command } from '@/lib/commands/index.js'
+import { ACTION_QUIT } from '@/lib/ipc.js'
 
 export const debug: Command = {
   name: 'debug',
@@ -29,7 +30,7 @@ export const theme: Command = {
 }
 
 export const quit: Command = {
-  name: 'quit',
+  name: ACTION_QUIT,
   description: 'Exit the application',
   icon: 'application-exit-symbolic',
   accels: ['<Primary>q'],

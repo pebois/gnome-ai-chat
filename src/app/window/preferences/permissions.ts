@@ -2,7 +2,15 @@ import Adw from 'gi://Adw?version=1'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/lib/app.js'
+import type { PermissionCategory } from '@/lib/db/types.js'
 import { permission_tiers } from '@/lib/db/types.js'
+
+const PERMISSION_ROWS: { key: PermissionCategory; title: string; subtitle: string }[] = [
+  { key: 'terminal', title: 'Terminal Commands', subtitle: 'Execute shell commands' },
+  { key: 'files', title: 'File Edits', subtitle: 'Write or overwrite files' },
+  { key: 'reads', title: 'File Reads', subtitle: 'Read files and list or search directories' },
+  { key: 'apps', title: 'Applications', subtitle: 'Launch installed applications' }
+]
 
 export function createPermissionsPage(app: AppInterface): Adw.PreferencesPage {
   const page = new Adw.PreferencesPage({
@@ -16,29 +24,19 @@ export function createPermissionsPage(app: AppInterface): Adw.PreferencesPage {
   })
   page.add(permissionsGroup)
 
-  const terminalRow = new Adw.ComboRow({
-    title: 'Terminal Commands',
-    model: Gtk.StringList.new(['Ask', 'Auto-accept']),
-    selected: permission_tiers.indexOf(app.settings.permissions?.terminal ?? 'ask')
-  })
-  terminalRow.connect('notify::selected', () => {
-    const val = permission_tiers[terminalRow.selected]
-    app.settings.permissions.terminal = val
-    app.saveSettings()
-  })
-  permissionsGroup.add(terminalRow)
-
-  const filesRow = new Adw.ComboRow({
-    title: 'File Edits',
-    model: Gtk.StringList.new(['Ask', 'Auto-accept']),
-    selected: permission_tiers.indexOf(app.settings.permissions?.files ?? 'ask')
-  })
-  filesRow.connect('notify::selected', () => {
-    const val = permission_tiers[filesRow.selected]
-    app.settings.permissions.files = val
-    app.saveSettings()
-  })
-  permissionsGroup.add(filesRow)
+  for (const { key, subtitle, title } of PERMISSION_ROWS) {
+    const row = new Adw.ComboRow({
+      title,
+      subtitle,
+      model: Gtk.StringList.new(['Ask', 'Auto-accept', 'Deny']),
+      selected: permission_tiers.indexOf(app.settings.permissions?.[key] ?? 'ask')
+    })
+    row.connect('notify::selected', () => {
+      app.settings.permissions[key] = permission_tiers[row.selected]
+      app.saveSettings()
+    })
+    permissionsGroup.add(row)
+  }
 
   return page
 }

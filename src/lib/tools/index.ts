@@ -9,6 +9,8 @@ import { get_system_info, handle_get_system_info } from '@/lib/tools/system.js'
 import { get_current_datetime, get_user_timezone, handle_get_current_datetime, handle_get_user_timezone } from '@/lib/tools/time.js'
 import { fetch_rss_feed, fetch_web_page, handle_fetch_rss_feed, handle_fetch_web_page } from '@/lib/tools/web.js'
 
+export { checkToolPermission, filterToolsByPermissions, TOOL_PERMISSIONS } from '@/lib/tools/permissions.js'
+
 export const tools = [
   add_observations,
   calculate,
@@ -50,15 +52,15 @@ export async function onToolCall(app: AppInterface, name: string, args: Record<s
     case 'get_system_info':
       return handle_get_system_info()
     case 'list_installed_apps':
-      return handle_list_installed_apps()
+      return handle_list_installed_apps(app)
     case 'get_app_details':
-      return handle_get_app_details(args)
+      return handle_get_app_details(app, args)
     case 'launch_app':
-      return handle_launch_app(args)
+      return handle_launch_app(app, args)
     case 'launch_app_action':
-      return handle_launch_app_action(args)
+      return handle_launch_app_action(app, args)
     case 'search_files':
-      return handle_search_files(args)
+      return handle_search_files(app, args)
     case 'search_vector_index':
       return handle_search_vector_index(app, args)
     case 'fetch_rss_feed':
@@ -70,11 +72,11 @@ export async function onToolCall(app: AppInterface, name: string, args: Record<s
     case 'render_html':
       return handle_render_html(app, args)
     case 'read_file':
-      return handle_read_file(args)
+      return handle_read_file(app, args)
     case 'write_file':
       return handle_write_file(app, args)
     case 'list_directory':
-      return handle_list_directory(args)
+      return handle_list_directory(app, args)
     case 'run_shell_command':
       return handle_run_shell_command(app, args)
     case 'create_entities':

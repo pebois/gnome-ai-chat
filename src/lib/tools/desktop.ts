@@ -1,7 +1,9 @@
 import Gio from 'gi://Gio'
 import GioUnix from 'gi://GioUnix?version=2.0'
 
+import type { AppInterface } from '@/lib/app.js'
 import type { Tool } from '@/lib/providers/index.js'
+import { checkToolPermission } from '@/lib/tools/permissions.js'
 
 interface DesktopAppInfoProxy {
   get_display_name(): string
@@ -83,14 +85,19 @@ export const launch_app_action: Tool = {
   }
 }
 
-export function handle_list_installed_apps(): string {
+export async function handle_list_installed_apps(appInterface: AppInterface): Promise<string> {
+  const denied = await checkToolPermission(appInterface, 'list_installed_apps')
+  if (denied) {
+    return denied
+  }
+
   const apps = Gio.AppInfo.get_all()
   return apps.map((app) => {
     return `${app.get_display_name()} (${app.get_id()})`
   }).join('\n')
 }
 
-export function handle_launch_app(args: Record<string, unknown>): string {
+export async function handle_launch_app(appInterface: AppInterface, args: Record<string, unknown>): Promise<string> {
   const app_id = typeof args.app_id === 'string' ? args.app_id : ''
   const launchArgs = Array.isArray(args.args)
     ? args.args.filter((a) => {
@@ -100,6 +107,16 @@ export function handle_launch_app(args: Record<string, unknown>): string {
 
   if (!app_id) {
     return 'Error: app_id is required and must be a string.'
+  }
+
+  const denied = await checkToolPermission(
+    appInterface,
+    'launch_app',
+    'Allow App Launch?',
+    `The model wants to launch the following application:\n\n${app_id}${launchArgs.length > 0 ? `\n\nwith arguments:\n${launchArgs.join('\n')}` : ''}`
+  )
+  if (denied) {
+    return denied
   }
 
   const apps = Gio.AppInfo.get_all()
@@ -133,10 +150,15 @@ export function handle_launch_app(args: Record<string, unknown>): string {
   return `Application with ID '${app_id}' not found.`
 }
 
-export function handle_get_app_details(args: Record<string, unknown>): string {
+export async function handle_get_app_details(appInterface: AppInterface, args: Record<string, unknown>): Promise<string> {
   const app_id = typeof args.app_id === 'string' ? args.app_id : ''
   if (!app_id) {
     return 'Error: app_id is required and must be a string.'
+  }
+
+  const denied = await checkToolPermission(appInterface, 'get_app_details')
+  if (denied) {
+    return denied
   }
 
   const appRaw = GioUnix.DesktopAppInfo.new(app_id)
@@ -166,12 +188,22 @@ export function handle_get_app_details(args: Record<string, unknown>): string {
   return details.join('\n')
 }
 
-export function handle_launch_app_action(args: Record<string, unknown>): string {
+export async function handle_launch_app_action(appInterface: AppInterface, args: Record<string, unknown>): Promise<string> {
   const app_id = typeof args.app_id === 'string' ? args.app_id : ''
   const action_name = typeof args.action_name === 'string' ? args.action_name : ''
 
   if (!app_id || !action_name) {
     return 'Error: app_id and action_name are required and must be strings.'
+  }
+
+  const denied = await checkToolPermission(
+    appInterface,
+    'launch_app_action',
+    'Allow App Launch?',
+    `The model wants to launch the action '${action_name}' of the following application:\n\n${app_id}`
+  )
+  if (denied) {
+    return denied
   }
 
   const appRaw = GioUnix.DesktopAppInfo.new(app_id)

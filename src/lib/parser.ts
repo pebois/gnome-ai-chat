@@ -191,15 +191,17 @@ export function pangoEscape(text: string): string {
     .replace(/'/g, '&#39;')
 }
 
-export function markdownToPango(text: string): string {
-  if (!text) {
-    return ''
-  }
+interface InlineStyle {
+  bold: [string, string]
+  italic: [string, string]
+  codeSpan: (code: string) => string
+  codeBlock?: (code: string) => string
+  lineBreaks: boolean
+}
 
-  // Escape special characters for Pango markup
+function renderInline(text: string, style: InlineStyle): string {
   let escaped = pangoEscape(text)
 
-  // Handle escaped markdown characters
   const escapedChars: string[] = []
   const charPh = (i: number) => {
     return `\x01${i}\x01`
@@ -209,62 +211,82 @@ export function markdownToPango(text: string): string {
     return charPh(escapedChars.length - 1)
   })
 
-  // Strip horizontal rules
   escaped = escaped.replace(/\n?^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$\n?/gm, '')
 
-  // Extract code spans as placeholders so inline formatting can't match inside them
   const codeSpans: string[] = []
   const ph = (i: number) => {
     return `\x02${i}\x02`
   }
 
-  escaped = escaped.replace(/```([\s\S]*?)```/g, (_match, code: string) => {
-    codeSpans.push(`<span font_family="monospace" size="small">${code}</span>`)
-    return ph(codeSpans.length - 1)
-  })
+  if (style.codeBlock) {
+    escaped = escaped.replace(/```([\s\S]*?)```/g, (_match, code: string) => {
+      codeSpans.push(style.codeBlock!(code))
+      return ph(codeSpans.length - 1)
+    })
+  }
   escaped = escaped.replace(/`([^`]+)`/g, (_match, code: string) => {
-    codeSpans.push(`<span font_family="monospace">${code}</span>`)
+    codeSpans.push(style.codeSpan(code))
     return ph(codeSpans.length - 1)
   })
 
-  // Handle headings
-  escaped = escaped.replace(/^####### (.*)$/gm, '<b>$1</b>')
-  escaped = escaped.replace(/^###### (.*)$/gm, '<b>$1</b>')
-  escaped = escaped.replace(/^##### (.*)$/gm, '<b>$1</b>')
-  escaped = escaped.replace(/^#### (.*)$/gm, '<b>$1</b>')
-  escaped = escaped.replace(/^### (.*)$/gm, '<b>$1</b>')
-  escaped = escaped.replace(/^## (.*)$/gm, '<b>$1</b>')
-  escaped = escaped.replace(/^# (.*)$/gm, '<b>$1</b>')
+  const [bold, boldEnd] = style.bold
+  const [italic, italicEnd] = style.italic
 
-  // Handle blockquotes
-  escaped = escaped.replace(/^\s*&gt;\s?(.*)$/gm, '<i>$1</i>')
+  escaped = escaped.replace(/^#{1,7} (.*)$/gm, `${bold}$1${boldEnd}`)
 
-  // Handle links
+  escaped = escaped.replace(/^\s*&gt;\s?(.*)$/gm, `${italic}$1${italicEnd}`)
+
   escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
 
-  // Handle strikethrough text
   escaped = escaped.replace(/~~([^~]+)~~/g, '<s>$1</s>')
 
-  // Handle bold and italic together (triple asterisks)
-  escaped = escaped.replace(/\*\*\*(.+?)\*\*\*/g, '<b><i>$1</i></b>')
+  escaped = escaped.replace(/\*\*\*(.+?)\*\*\*/g, `${bold}${italic}$1${italicEnd}${boldEnd}`)
 
-  // Handle bold text
-  escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+  escaped = escaped.replace(/\*\*(.+?)\*\*/g, `${bold}$1${boldEnd}`)
 
-  // Handle italic text
-  escaped = escaped.replace(/(^|[^*\w])\*([^*\n]+?)\*(?![*\w])/gm, '$1<i>$2</i>')
+  escaped = escaped.replace(/(^|[^*\w])\*([^*\n]+?)\*(?![*\w])/gm, `$1${italic}$2${italicEnd}`)
 
-  // Restore code spans
   escaped = escaped.replace(/\x02(\d+)\x02/g, (_match: string, i: string) => {
     return codeSpans[parseInt(i)]
   })
 
-  // Restore escaped characters
   escaped = escaped.replace(/\x01(\d+)\x01/g, (_match: string, i: string) => {
     return escapedChars[parseInt(i)]
   })
 
+  if (style.lineBreaks) {
+    escaped = escaped.replace(/\n/g, '<br/>')
+  }
+
   return escaped
+}
+
+const PANGO_STYLE: InlineStyle = {
+  bold: ['<b>', '</b>'],
+  italic: ['<i>', '</i>'],
+  codeSpan: (code) => {
+    return `<span font_family="monospace">${code}</span>`
+  },
+  codeBlock: (code) => {
+    return `<span font_family="monospace" size="small">${code}</span>`
+  },
+  lineBreaks: false
+}
+
+const HTML_STYLE: InlineStyle = {
+  bold: ['<strong>', '</strong>'],
+  italic: ['<em>', '</em>'],
+  codeSpan: (code) => {
+    return `<code>${code}</code>`
+  },
+  lineBreaks: true
+}
+
+export function markdownToPango(text: string): string {
+  if (!text) {
+    return ''
+  }
+  return renderInline(text, PANGO_STYLE)
 }
 
 export function markdownToHtml(text: string): string {
@@ -298,73 +320,7 @@ export function markdownToHtml(text: string): string {
       }
       html += '</tbody></table>'
     } else {
-      // Escape special characters for HTML (using pangoEscape as it handles the common ones)
-      let escaped = pangoEscape(chunk.content)
-
-      // Handle escaped markdown characters
-      const escapedChars: string[] = []
-      const charPh = (i: number) => {
-        return `\x01${i}\x01`
-      }
-      escaped = escaped.replace(/\\([*~_`\\])/g, (_match, char: string) => {
-        escapedChars.push(char)
-        return charPh(escapedChars.length - 1)
-      })
-
-      // Strip horizontal rules
-      escaped = escaped.replace(/\n?^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$\n?/gm, '')
-
-      // Extract code spans as placeholders
-      const codeSpans: string[] = []
-      const ph = (i: number) => {
-        return `\x02${i}\x02`
-      }
-      escaped = escaped.replace(/`([^`]+)`/g, (_match, code: string) => {
-        codeSpans.push(`<code>${code}</code>`)
-        return ph(codeSpans.length - 1)
-      })
-
-      // Handle headings
-      escaped = escaped.replace(/^####### (.*)$/gm, '<strong>$1</strong>')
-      escaped = escaped.replace(/^###### (.*)$/gm, '<strong>$1</strong>')
-      escaped = escaped.replace(/^##### (.*)$/gm, '<strong>$1</strong>')
-      escaped = escaped.replace(/^#### (.*)$/gm, '<strong>$1</strong>')
-      escaped = escaped.replace(/^### (.*)$/gm, '<strong>$1</strong>')
-      escaped = escaped.replace(/^## (.*)$/gm, '<strong>$1</strong>')
-      escaped = escaped.replace(/^# (.*)$/gm, '<strong>$1</strong>')
-
-      // Handle blockquotes
-      escaped = escaped.replace(/^\s*&gt;\s?(.*)$/gm, '<em>$1</em>')
-
-      // Handle links
-      escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-
-      // Handle strikethrough text
-      escaped = escaped.replace(/~~([^~]+)~~/g, '<s>$1</s>')
-
-      // Handle bold and italic together
-      escaped = escaped.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-
-      // Handle bold text
-      escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-
-      // Handle italic text
-      escaped = escaped.replace(/(^|[^*\w])\*([^*\n]+?)\*(?![*\w])/gm, '$1<em>$2</em>')
-
-      // Restore code spans
-      escaped = escaped.replace(/\x02(\d+)\x02/g, (_match: string, i: string) => {
-        return codeSpans[parseInt(i)]
-      })
-
-      // Restore escaped characters
-      escaped = escaped.replace(/\x01(\d+)\x01/g, (_match: string, i: string) => {
-        return escapedChars[parseInt(i)]
-      })
-
-      // Convert line breaks to <br/>
-      escaped = escaped.replace(/\n/g, '<br/>')
-
-      html += `<p>${escaped}</p>`
+      html += `<p>${renderInline(chunk.content, HTML_STYLE)}</p>`
     }
   }
 

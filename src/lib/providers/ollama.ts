@@ -34,7 +34,19 @@ export class OllamaProvider implements Provider {
   private _tracker: Tracker
   private _session: Soup.Session
   private _settings: Settings
-  public url: string
+  private _modelCache: Map<string, ModelDetails> = new Map()
+  private _url!: string
+
+  public get url(): string {
+    return this._url
+  }
+
+  public set url(value: string) {
+    if (value !== this._url) {
+      this._modelCache.clear()
+    }
+    this._url = value
+  }
 
   constructor(settings: Settings, tracker: Tracker) {
     this.url = settings.url
@@ -68,6 +80,11 @@ export class OllamaProvider implements Provider {
   }
 
   public async model(model: string): Promise<ModelDetails | null> {
+    const cached = this._modelCache.get(model)
+    if (cached) {
+      return cached
+    }
+
     const url = `${this.url}/api/show`
     this._debug(`POST ${url}`)
     const body = JSON.stringify({ model })
@@ -80,10 +97,16 @@ export class OllamaProvider implements Provider {
       const decoder = new TextDecoder()
       const data = bytes.toArray()
       if (data) {
-        return JSON.parse(decoder.decode(data)) as ModelDetails
+        const details = JSON.parse(decoder.decode(data)) as ModelDetails
+        this._modelCache.set(model, details)
+        return details
       }
     }
     return null
+  }
+
+  public clearModelCache(): void {
+    this._modelCache.clear()
   }
 
   public async models(): Promise<string[]> {
@@ -325,7 +348,8 @@ export class OllamaProvider implements Provider {
       req.options = props.options
     }
     if (supportsThink && props.think !== undefined) {
-      if (req.model === 'gpt-oss') {
+      const baseModel = req.model.split(':')[0].split('/').pop()
+      if (baseModel === 'gpt-oss') {
         req.think = props.think === 'none' ? undefined : props.think
       } else {
         req.think = props.think === 'none' ? undefined : true
@@ -391,7 +415,11 @@ export class OllamaProvider implements Provider {
 
       if (!props.stream) {
         await this._session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, props.cancellable || null)
-        return msg.get_status() === Soup.Status.OK
+        if (msg.get_status() === Soup.Status.OK) {
+          this._modelCache.delete(props.model)
+          return true
+        }
+        return false
       }
 
       const inputStream = await this._session.send_async(msg, GLib.PRIORITY_DEFAULT, props.cancellable || null)
@@ -435,6 +463,7 @@ export class OllamaProvider implements Provider {
           console.error('Failed to parse pull progress line', e)
         }
       }
+      this._modelCache.delete(props.model)
       return true
     } catch (err) {
       if (err instanceof GLib.Error && err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED)) {
@@ -453,6 +482,7 @@ export class OllamaProvider implements Provider {
     msg.set_request_body_from_bytes('application/json', new GLib.Bytes(encoder.encode(body)))
 
     await this._session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null)
+    this._modelCache.delete(model)
     return msg.get_status() === Soup.Status.OK
   }
 
@@ -465,6 +495,7 @@ export class OllamaProvider implements Provider {
     msg.set_request_body_from_bytes('application/json', new GLib.Bytes(encoder.encode(body)))
 
     await this._session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null)
+    this._modelCache.delete(destination)
     return msg.get_status() === Soup.Status.OK
   }
 

@@ -2,6 +2,7 @@ import GLib from 'gi://GLib?version=2.0'
 
 import type { Command } from '@/lib/commands/index.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
+import { ACTION_NEW_CONVERSATION } from '@/lib/ipc.js'
 
 export const clear: Command = {
   name: 'clear',
@@ -16,7 +17,7 @@ export const clear: Command = {
 }
 
 export const newConversation: Command = {
-  name: 'new-conversation',
+  name: ACTION_NEW_CONVERSATION,
   description: 'Start a new conversation',
   icon: 'list-add-symbolic',
   visible: false,

@@ -1,4 +1,4 @@
-import { markdownToPango, pangoEscape, parseCodeBlock, parseMarkdownChunks, parseTable } from '@/lib/parser.js'
+import { markdownToHtml, markdownToPango, pangoEscape, parseCodeBlock, parseMarkdownChunks, parseTable } from '@/lib/parser.js'
 
 describe('parser', () => {
   describe('pangoEscape', () => {
@@ -205,6 +205,49 @@ describe('parser', () => {
       expect(chunks).toHaveLength(1)
       expect(chunks[0].type).toBe('code')
       expect(chunks[0].content).toBe(input)
+    })
+  })
+
+  describe('markdownToHtml', () => {
+    it('renders inline formatting with HTML tags', () => {
+      expect(markdownToHtml('**Bold** and *italic* and ~~gone~~')).toBe('<p><strong>Bold</strong> and <em>italic</em> and <s>gone</s></p>')
+    })
+
+    it('renders bold italic combined', () => {
+      expect(markdownToHtml('***both***')).toBe('<p><strong><em>both</em></strong></p>')
+    })
+
+    it('renders headings as strong', () => {
+      expect(markdownToHtml('## Title')).toBe('<p><strong>Title</strong></p>')
+    })
+
+    it('renders blockquotes as em', () => {
+      expect(markdownToHtml('> quoted')).toBe('<p><em>quoted</em></p>')
+    })
+
+    it('renders links', () => {
+      expect(markdownToHtml('[text](https://example.com)')).toBe('<p><a href="https://example.com">text</a></p>')
+    })
+
+    it('renders inline code and protects it from formatting', () => {
+      expect(markdownToHtml('use `**not bold**` here')).toBe('<p>use <code>**not bold**</code> here</p>')
+    })
+
+    it('converts line breaks to <br/>', () => {
+      expect(markdownToHtml('line one\nline two')).toBe('<p>line one<br/>line two</p>')
+    })
+
+    it('renders fenced code blocks as pre/code with language class', () => {
+      expect(markdownToHtml('```js\nconst x = 1;\n```')).toBe('<pre><code class="language-js">const x = 1;</code></pre>')
+    })
+
+    it('renders tables', () => {
+      const html = markdownToHtml('| A | B |\n|---|---|\n| 1 | 2 |')
+      expect(html).toBe('<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>')
+    })
+
+    it('escapes HTML in text', () => {
+      expect(markdownToHtml('a < b & c')).toBe('<p>a &lt; b &amp; c</p>')
     })
   })
 })

@@ -1,11 +1,12 @@
 import type { PerformanceStats, Settings } from '@/lib/db/types.js'
+import { DBUS_BUS_NAME } from '@/lib/ipc.js'
 import { DEFAULT_SKILLS } from '@/lib/skills/index.js'
 
 export { DEFAULT_SKILLS }
 
 export const APPLICATION_NAME = 'Gnome AI Chat'
 
-export const APPLICATION_ID = 'io.github.pebois.gnome-ai-chat'
+export const APPLICATION_ID = DBUS_BUS_NAME
 
 export const VERSION = '1.11.0'
 
@@ -13,7 +14,7 @@ export const DEFAULT_OLLAMA_URL = 'http://localhost:11434'
 
 export const DEFAULT_CHAT_MODEL = 'gpt-oss:latest'
 
-export const DEFAULT_GENRATE_MODEL = 'qwen3:latest'
+export const DEFAULT_GENERATE_MODEL = 'qwen3:latest'
 
 export const DEFAULT_EMBEDDING_MODEL = 'nomic-embed-text:latest'
 
@@ -79,7 +80,9 @@ export const DEFAULT_SETTINGS = {
   debug: DEFAULT_DEBUG,
   permissions: {
     terminal: 'ask',
-    files: 'ask'
+    files: 'ask',
+    reads: 'auto-accept',
+    apps: 'ask'
   }
 } as Settings
 

@@ -5,6 +5,7 @@ import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import { filesStore } from '@/lib/db/files.js'
 import type { Tool } from '@/lib/providers/index.js'
+import { checkToolPermission } from '@/lib/tools/permissions.js'
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish')
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish')
@@ -122,11 +123,21 @@ async function recursiveSearch(dir: Gio.File, query: string, depth: number, maxR
   }
 }
 
-export async function handle_search_files(args: Record<string, unknown>): Promise<string> {
+export async function handle_search_files(app: AppInterface, args: Record<string, unknown>): Promise<string> {
   const { directory = 'home', query } = args as { query: string; directory: string }
 
   if (typeof query !== 'string' || !query.trim()) {
     return 'Error: A valid query string is required.'
+  }
+
+  const denied = await checkToolPermission(
+    app,
+    'search_files',
+    'Allow File Search?',
+    `The model wants to search for files matching:\n\n${query}\n\nin the '${directory}' directory.`
+  )
+  if (denied) {
+    return denied
   }
 
   const sanitizedQuery = query.replace(/\\/g, '').replace(/\//g, '')

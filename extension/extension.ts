@@ -7,6 +7,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js'
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js'
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js'
 
+import { ACTION_NEW_CONVERSATION, ACTION_QUIT, DBUS_BUS_NAME, DBUS_OBJECT_PATH, DESKTOP_ID } from '@/lib/ipc.js'
+
 export default class GnomeAiChatExtension extends Extension {
   private _settings: Gio.Settings | null = null
   private _indicator: PanelMenu.Button | null = null
@@ -75,7 +77,7 @@ export default class GnomeAiChatExtension extends Extension {
   }
 
   private _getApp(): Shell.ShellApp | null {
-    return Shell.AppSystem.get_default().lookup_app('io.github.pebois.gnome-ai-chat.desktop')
+    return Shell.AppSystem.get_default().lookup_app(DESKTOP_ID)
   }
 
   private _getAppWindows(): Meta.Window[] {
@@ -126,10 +128,10 @@ export default class GnomeAiChatExtension extends Extension {
   private _newConversation(): void {
     const actionGroup = Gio.DBusActionGroup.get(
       Gio.DBus.session,
-      'io.github.pebois.gnome-ai-chat',
-      '/io/github/pebois/gnome_ai_chat'
+      DBUS_BUS_NAME,
+      DBUS_OBJECT_PATH
     )
-    actionGroup.activate_action('new-conversation', null)
+    actionGroup.activate_action(ACTION_NEW_CONVERSATION, null)
 
     const app = this._getApp()
     if (app && app.get_windows().length > 0) {
@@ -140,10 +142,10 @@ export default class GnomeAiChatExtension extends Extension {
   private _quitApp(): void {
     const actionGroup = Gio.DBusActionGroup.get(
       Gio.DBus.session,
-      'io.github.pebois.gnome-ai-chat',
-      '/io/github/pebois/gnome_ai_chat'
+      DBUS_BUS_NAME,
+      DBUS_OBJECT_PATH
     )
-    actionGroup.activate_action('quit', null)
+    actionGroup.activate_action(ACTION_QUIT, null)
   }
 
   private _bindShortcut(): void {
