@@ -1,4 +1,4 @@
-import { DEFAULT_GENRATE_MODEL } from '@/lib/constants.js'
+import { DEFAULT_GENERATE_MODEL } from '@/lib/constants.js'
 import type { ChatMessage, Provider } from '@/lib/providers/index.js'
 
 export interface SummaryResponse {
@@ -29,7 +29,7 @@ export async function summarizeConversation({ messages, model, provider }: Summa
   const prompt = `Summarize this conversation in exactly 3 to 5 words and provide one relevant emoji.\n\nConversation:\n${conversationText}`
 
   const response = await provider.generate({
-    model: model ?? DEFAULT_GENRATE_MODEL,
+    model: model ?? DEFAULT_GENERATE_MODEL,
     prompt,
     system: 'You are a summarization agent. You must output valid JSON containing a "title" (3-5 words) and an "emoji".',
     stream: false,

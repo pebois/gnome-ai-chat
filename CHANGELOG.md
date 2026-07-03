@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Three-Tier Tool Permissions**: Every tool permission now supports `Ask`, `Auto-accept`, and `Deny`. Denied tools are filtered out of the request entirely so models never attempt calls that would fail.
+- **Expanded Permission Coverage**: New "File Reads" (`read_file`, `list_directory`, `search_files` — defaults to Auto-accept) and "Applications" (`launch_app`, `launch_app_action` prompt on Ask; `list_installed_apps`, `get_app_details` are removed on Deny without prompting) permission categories, joining the existing Terminal and File Edits gates. All four are configurable in Preferences → Permissions.
+- **Centralized Permission Layer**: New `src/lib/tools/permissions.ts` with a single tool-to-category mapping, a shared `checkToolPermission` helper used by all gated handlers, and `filterToolsByPermissions` applied before each chat request.
+- **Shared D-Bus Contract**: New `src/lib/ipc.ts` as the single source of truth for the D-Bus bus name, derived object path, desktop id, and action names, consumed by the application (`constants.ts`, command definitions) and the GNOME Shell extension to prevent silent contract drift.
+
+### Changed
+- **Model Capability Caching**: `/api/show` lookups are now cached per model in the Ollama provider instead of being fetched on every chat turn. The cache is invalidated on model pull, delete, copy, model list reloads, and Ollama URL changes.
+- **Unified Markdown Rendering**: Replaced the two near-duplicate inline markdown renderers with a single style-parameterized `renderInline` in `parser.ts` producing identical Pango and HTML output, with new unit tests locking the HTML export path.
+- **Internal Cleanups**: Tool timing now uses the app tracker directly instead of reaching into the provider's private field; renamed `DEFAULT_GENRATE_MODEL` to `DEFAULT_GENERATE_MODEL`; deduplicated the streaming callback wiring between send and regenerate flows into a shared `_startGeneration` helper.
+
+### Fixed
+- **Reasoning Levels for gpt-oss**: Think levels (low/medium/high) were silently downgraded to a boolean for tagged model ids like `gpt-oss:latest` because of an exact-match comparison; the provider now matches on the base model name, so configured reasoning depth reaches the model.
+
 ## [1.11.0] - 2026-06-19
 
 ### Added

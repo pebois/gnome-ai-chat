@@ -155,6 +155,7 @@ export interface Provider {
   version(): Promise<string>
   models(): Promise<string[]>
   model(name: string): Promise<ModelDetails | null>
+  clearModelCache(): void
   chat(props: ChatProps): Promise<ChatMessage | undefined>
   generate(req: GenerateRequest): Promise<GenerateResponse | null>
   embed(req: EmbedRequest): Promise<EmbedResponse | null>

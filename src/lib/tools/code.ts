@@ -3,6 +3,7 @@ import GLib from 'gi://GLib?version=2.0'
 
 import type { AppInterface } from '@/lib/app.js'
 import type { Tool } from '@/lib/providers/index.js'
+import { checkToolPermission } from '@/lib/tools/permissions.js'
 
 Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish')
 Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish')
@@ -86,21 +87,31 @@ export const run_shell_command: Tool = {
   }
 }
 
-export function handle_read_file(args: Record<string, unknown>): Promise<string> {
+export async function handle_read_file(app: AppInterface, args: Record<string, unknown>): Promise<string> {
   const filePath = args.file_path as string
   if (!filePath) {
-    return Promise.resolve('Error: file_path is required.')
+    return 'Error: file_path is required.'
+  }
+
+  const denied = await checkToolPermission(
+    app,
+    'read_file',
+    'Allow File Read?',
+    `The model wants to read the following file:\n\n${filePath}`
+  )
+  if (denied) {
+    return denied
   }
 
   try {
     const file = Gio.File.new_for_path(filePath) as PromisifiedFile
     const [success, contents] = GLib.file_get_contents(file.get_path() || filePath)
     if (success) {
-      return Promise.resolve(new TextDecoder().decode(contents))
+      return new TextDecoder().decode(contents)
     }
-    return Promise.resolve('Error: Could not read file.')
+    return 'Error: Could not read file.'
   } catch (err) {
-    return Promise.resolve(`Error reading file: ${err instanceof Error ? err.message : String(err)}`)
+    return `Error reading file: ${err instanceof Error ? err.message : String(err)}`
   }
 }
 
@@ -111,14 +122,14 @@ export async function handle_write_file(app: AppInterface, args: Record<string, 
     return 'Error: file_path is required.'
   }
 
-  if (app.settings.permissions?.files !== 'auto-accept') {
-    const allowed = await app.requestToolPermission(
-      'Allow File Edit?',
-      `The model wants to write to the following file:\n\n${filePath}`
-    )
-    if (!allowed) {
-      return 'Error: User denied permission to write file.'
-    }
+  const denied = await checkToolPermission(
+    app,
+    'write_file',
+    'Allow File Edit?',
+    `The model wants to write to the following file:\n\n${filePath}`
+  )
+  if (denied) {
+    return denied
   }
 
   try {
@@ -139,10 +150,20 @@ export async function handle_write_file(app: AppInterface, args: Record<string, 
   }
 }
 
-export async function handle_list_directory(args: Record<string, unknown>): Promise<string> {
+export async function handle_list_directory(app: AppInterface, args: Record<string, unknown>): Promise<string> {
   const dirPath = args.dir_path as string
   if (!dirPath) {
     return 'Error: dir_path is required.'
+  }
+
+  const denied = await checkToolPermission(
+    app,
+    'list_directory',
+    'Allow Directory Listing?',
+    `The model wants to list the contents of the following directory:\n\n${dirPath}`
+  )
+  if (denied) {
+    return denied
   }
 
   try {
@@ -182,14 +203,14 @@ export async function handle_run_shell_command(app: AppInterface, args: Record<s
     return 'Error: command is required.'
   }
 
-  if (app.settings.permissions?.terminal !== 'auto-accept') {
-    const allowed = await app.requestToolPermission(
-      'Allow Terminal Command?',
-      `The model wants to execute the following terminal command:\n\n${command}`
-    )
-    if (!allowed) {
-      return 'Error: User denied permission to run command.'
-    }
+  const denied = await checkToolPermission(
+    app,
+    'run_shell_command',
+    'Allow Terminal Command?',
+    `The model wants to execute the following terminal command:\n\n${command}`
+  )
+  if (denied) {
+    return denied
   }
 
   try {

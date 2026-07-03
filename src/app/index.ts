@@ -515,6 +515,7 @@ export class App extends Adw.Application implements AppInterface {
   }
 
   private async _loadModels(): Promise<void> {
+    this.provider.clearModelCache()
     this.models = await this.provider.models()
 
     const toolModels: string[] = []

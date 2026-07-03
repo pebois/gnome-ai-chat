@@ -6,7 +6,7 @@ import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
-import { onToolCall, tools } from '@/lib/tools/index.js'
+import { filterToolsByPermissions, onToolCall, tools } from '@/lib/tools/index.js'
 import { convertSummaryToTitle } from '@/lib/utils.js'
 
 export interface ChatSessionCallbacks {
@@ -88,7 +88,7 @@ export class ChatService {
           options: this._app.settings.options,
           messages,
           skills: this._app.skills,
-          tools,
+          tools: filterToolsByPermissions(this._app, tools),
           onMessageChunk: (chunk) => {
             if (chunk.message?.thinking) {
               fullThinking += chunk.message.thinking
@@ -140,7 +140,7 @@ export class ChatService {
 
           const endToolTime = GLib.get_monotonic_time()
           const toolDurationMs = (endToolTime - startToolTime) / 1000
-          this._app.provider['_tracker'].recordToolCall(toolDurationMs)
+          this._app.tracker.recordToolCall(toolDurationMs)
 
           generatedMessages.push(...toolMessages)
           chatConversation.messages.push(...toolMessages)

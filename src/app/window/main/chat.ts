@@ -307,8 +307,12 @@ export class Chat {
     this._input.setSensitive(false)
     this._input.setSendMode('stop')
 
+    await this._startGeneration(conversation, conversation.messages.length === 1)
+  }
+
+  private _startGeneration(conversation: ChatConversation, isFirstMessage: boolean): Promise<void> {
     let currentMessageComponent: Message | undefined
-    await this._chatService.generateResponse(conversation.id, conversation.messages.length === 1, {
+    return this._chatService.generateResponse(conversation.id, isFirstMessage, {
       onNewResponse: () => {
         if (this._app.conversation?.id !== conversation.id) {
           return
@@ -410,36 +414,7 @@ export class Chat {
 
     this._history.scrollToBottom()
 
-    let currentMessageComponent: Message | undefined
-    await this._chatService.generateResponse(conversation.id, isFirstMessage, {
-      onNewResponse: () => {
-        if (this._app.conversation?.id !== conversation.id) {
-          return
-        }
-        currentMessageComponent = this._renderMessage({ role: 'assistant', content: '•••' })
-        this._history.scrollToBottom()
-      },
-      onMessageChunk: (chunk) => {
-        if (this._app.conversation?.id === conversation.id) {
-          const shouldScroll = this._history.stickToBottom
-          currentMessageComponent?.update(chunk)
-          if (shouldScroll) {
-            this._history.scrollToBottom()
-          }
-        }
-      },
-      onError: (error) => {
-        this._app.showToast(error, true)
-      },
-      onFinish: () => {
-        if (this._app.conversation?.id === conversation.id) {
-          this._input.setSensitive(true)
-          this._input.grabFocus()
-          this._input.setSendMode('send')
-          this._history.scrollToBottom()
-        }
-      }
-    })
+    await this._startGeneration(conversation, isFirstMessage)
   }
 
   public clearAllMessages(): void {
