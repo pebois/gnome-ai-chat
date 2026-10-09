@@ -115,6 +115,7 @@ export class Chat {
       revealed: false
     })
     this._updateBanner.connect('button-clicked', () => {
+      this._updateBanner.revealed = false
       showPullDialog(this._app, this._app.model)
     })
     chatBox.append(this._updateBanner)

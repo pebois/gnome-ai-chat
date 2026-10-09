@@ -67,19 +67,28 @@ export class Models {
   }
 
   public load(): void {
+    const model = this._resolveModel()
     if (this._app.models.length > 0) {
       const stringList = Gtk.StringList.new(this._app.models)
       this._modelsDropDown.set_model(stringList)
-    }
-    let model = selectDefaultModel(this._app.models)
-    if (!this._app.toolModels.includes(model) && this._app.toolModels.length > 0) {
-      model = this._app.toolModels[0]
     }
     this._app.setModel(model)
     const index = this._app.models.indexOf(model)
     if (index !== -1) {
       this._modelsDropDown.set_selected(index)
     }
+  }
+
+  private _resolveModel(): string {
+    const current = this._app.model
+    if (this._app.models.includes(current) && this._app.toolModels.includes(current)) {
+      return current
+    }
+    const model = selectDefaultModel(this._app.models)
+    if (!this._app.toolModels.includes(model) && this._app.toolModels.length > 0) {
+      return this._app.toolModels[0]
+    }
+    return model
   }
 
   public select(model: string): void {

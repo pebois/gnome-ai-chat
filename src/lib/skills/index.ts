@@ -17,11 +17,24 @@ export const DEFAULT_SKILLS: Skill[] = [
   writer
 ]
 
+export const matchSkill = <T extends { name: string }>(content: string, skills: T[]): T | undefined => {
+  const mention = content.match(/^@(\S+)/)?.[1]?.toLowerCase()
+  if (!mention) {
+    return undefined
+  }
+  return skills.find((s) => {
+    return s.name.toLowerCase() === mention
+  })
+}
+
+export const stripSkillMention = (content: string): string => {
+  return content.replace(/^@\S+\s*/, '')
+}
+
 export const buildSkillPrompt = (skill: { name: string; description?: string; prompt: string }): string => {
   return [
     `## Active Skill: ${skill.name}`,
     skill.description ? `*${skill.description}*` : '',
-    skill.prompt,
-    `**Note**: You were activated because the user mentioned \`@${skill.name}\` at the beginning of their message. Please address their request natively without getting confused by the trigger text.`
+    skill.prompt
   ].filter(Boolean).join('\n\n')
 }
