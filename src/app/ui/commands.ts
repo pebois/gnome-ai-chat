@@ -4,6 +4,7 @@ import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/lib/app.js'
 import { type Command, COMMANDS, type SubCommand } from '@/lib/commands/index.js'
+import { pangoEscape } from '@/lib/parser.js'
 
 export class Commands {
   private _app: AppInterface
@@ -491,10 +492,10 @@ export class Commands {
         const titleLabel = box.get_first_child()?.get_next_sibling() as Gtk.Label
         if (titleLabel) {
           const displayStr = cmd.title
-          let highlighted = displayStr
+          let highlighted = pangoEscape(displayStr)
           if (filterText.length > 0 && !this._currentSubCommand) {
             if (displayStr.toLowerCase().startsWith(filterText.toLowerCase())) {
-              highlighted = `<b>${displayStr.slice(0, filterText.length)}</b>${displayStr.slice(filterText.length)}`
+              highlighted = `<b>${pangoEscape(displayStr.slice(0, filterText.length))}</b>${pangoEscape(displayStr.slice(filterText.length))}`
             }
           }
 

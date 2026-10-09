@@ -21,6 +21,7 @@ import type {
   PullProps,
   ToolCall
 } from '@/lib/providers/index.js'
+import { isModelOutdated, registryManifestUrl } from '@/lib/registry.js'
 import { buildSkillPrompt } from '@/lib/skills/index.js'
 import type { Tracker } from '@/lib/tracker.js'
 
@@ -131,54 +132,48 @@ export class OllamaProvider implements Provider {
 
   public async checkUpdate(model: string): Promise<boolean> {
     try {
-      const url = `${this.url}/api/tags`
-      const msg = Soup.Message.new('GET', url)
-      const bytes = await this._session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null)
-      if (msg.get_status() !== Soup.Status.OK || !bytes) {
+      const localDigest = await this._localDigest(model)
+      if (!localDigest) {
         return false
       }
-
-      const decoder = new TextDecoder()
-      const data = bytes.toArray()
-      if (!data) {
-        return false
-      }
-
-      const response = JSON.parse(decoder.decode(data)) as { models?: { name: string; digest: string }[] }
-      const localModel = response.models?.find((m) => {
-        return m.name === model
-      })
-      if (!localModel || !localModel.digest) {
-        return false
-      }
-
-      let name = model
-      let tag = 'latest'
-      if (name.includes(':')) {
-        const parts = name.split(':')
-        name = parts[0]
-        tag = parts[1]
-      }
-
-      let registryUrl = `https://registry.ollama.ai/v2/library/${name}/manifests/${tag}`
-      if (name.includes('/')) {
-        registryUrl = `https://registry.ollama.ai/v2/${name}/manifests/${tag}`
-      }
-
-      const remoteMsg = Soup.Message.new('HEAD', registryUrl)
-      remoteMsg.request_headers.append('Accept', 'application/vnd.docker.distribution.manifest.v2+json')
-      await this._session.send_and_read_async(remoteMsg, GLib.PRIORITY_DEFAULT, null)
-
-      if (remoteMsg.get_status() === Soup.Status.OK) {
-        const remoteDigest = remoteMsg.response_headers.get_one('Docker-Content-Digest')
-        if (remoteDigest && remoteDigest !== localModel.digest) {
-          return true
-        }
-      }
+      const remoteDigest = await this._remoteDigest(model)
+      return isModelOutdated(localDigest, remoteDigest)
     } catch (err) {
       console.error('Error checking update:', err)
     }
     return false
+  }
+
+  private async _localDigest(model: string): Promise<string | null> {
+    const url = `${this.url}/api/tags`
+    this._debug(`GET ${url}`)
+    const msg = Soup.Message.new('GET', url)
+    const bytes = await this._session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null)
+    if (msg.get_status() !== Soup.Status.OK || !bytes) {
+      return null
+    }
+    const data = bytes.toArray()
+    if (!data) {
+      return null
+    }
+    const decoder = new TextDecoder()
+    const response = JSON.parse(decoder.decode(data)) as { models?: { name: string; digest: string }[] }
+    const localModel = response.models?.find((m) => {
+      return m.name === model
+    })
+    return localModel?.digest ?? null
+  }
+
+  private async _remoteDigest(model: string): Promise<string | null> {
+    const url = registryManifestUrl(model)
+    this._debug(`HEAD ${url}`)
+    const msg = Soup.Message.new('HEAD', url)
+    msg.request_headers.append('Accept', 'application/vnd.docker.distribution.manifest.v2+json')
+    await this._session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null)
+    if (msg.get_status() !== Soup.Status.OK) {
+      return null
+    }
+    return msg.response_headers.get_one('ollama-content-digest') ?? msg.response_headers.get_one('Docker-Content-Digest')
   }
 
   public async chat(props: ChatProps): Promise<ChatMessage | undefined> {
@@ -313,20 +308,9 @@ export class OllamaProvider implements Provider {
     })
 
     let skillPrompt = ''
-    if (props.skills) {
-      const lastUserMsg = [...processedMessages].reverse().find((m) => {
-        return m.role === 'user'
-      })
-      if (lastUserMsg && lastUserMsg.content.startsWith('@')) {
-        const textLower = lastUserMsg.content.toLowerCase()
-        const skill = props.skills.find((s) => {
-          return textLower.startsWith(`@${s.name.toLowerCase()}`)
-        })
-        if (skill) {
-          this._debug(`Using skill: ${skill.name}`)
-          skillPrompt = buildSkillPrompt(skill)
-        }
-      }
+    if (props.skill) {
+      this._debug(`Using skill: ${props.skill.name}`)
+      skillPrompt = buildSkillPrompt(props.skill)
     }
 
     const finalMessages = processedMessages.filter((m) => {

@@ -514,6 +514,11 @@ export class App extends Adw.Application implements AppInterface {
     this._settingsLoaded = true
   }
 
+  public async reloadModels(): Promise<void> {
+    await this._loadModels()
+    this.setModel(this.model)
+  }
+
   private async _loadModels(): Promise<void> {
     this.provider.clearModelCache()
     this.models = await this.provider.models()

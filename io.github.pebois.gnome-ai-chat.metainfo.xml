@@ -52,6 +52,17 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.12.1" date="2026-10-09">
+      <description>
+        <p>This release restores model update notifications and makes skill activation more visible and reliable.</p>
+        <ul>
+          <li>Fixed the model update banner never appearing because the Ollama registry changed its digest header.</li>
+          <li>Fixed the model list not refreshing after pulling a model while the app was already running; newly pulled models are now selected automatically.</li>
+          <li>Added an active skill indicator in the input toolbar and validation of skill names in the Skills editor.</li>
+          <li>Fixed skill mentions being ignored when files were attached and prefix collisions between similarly named skills.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.12.0" date="2026-07-03">
       <description>
         <p>This release strengthens control over model tool usage with a richer permission system and fixes reasoning levels for gpt-oss models.</p>
