@@ -14,6 +14,7 @@ export class SkillsWindow {
   private _win: Adw.Window
   private _selectedId: string | null = null
   private _isSaving = false
+  private _lastNameError: string | null = null
   private _sidebar: SkillsSidebar
   private _editor: SkillEditor
   private _splitView: Adw.OverlaySplitView
@@ -132,9 +133,18 @@ export class SkillsWindow {
   }
 
   private _createNewSkill(): void {
+    let name = 'new-skill'
+    let suffix = 2
+    while (this._app.skills.some((s) => {
+      return s.name.toLowerCase() === name
+    })) {
+      name = `new-skill-${suffix}`
+      suffix++
+    }
+
     const placeholder: Skill = {
       id: `skill-${Date.now()}`,
-      name: 'New Skill',
+      name,
       description: '',
       prompt: ''
     }
@@ -263,6 +273,19 @@ export class SkillsWindow {
       || skill.prompt !== def.prompt
   }
 
+  private _validateSkillName(name: string, id: string): string | null {
+    if (!/^[a-z0-9][a-z0-9_-]*$/i.test(name)) {
+      return 'Skill names can only contain letters, digits, hyphens and underscores'
+    }
+    const duplicate = this._app.skills.some((s) => {
+      return s.id !== id && s.name.toLowerCase() === name.toLowerCase()
+    })
+    if (duplicate) {
+      return `A skill named "${name}" already exists`
+    }
+    return null
+  }
+
   private _saveCurrentSkill(): void {
     if (this._isSaving || this._selectedId === null) {
       return
@@ -278,6 +301,16 @@ export class SkillsWindow {
     if (!newName) {
       return
     }
+
+    const nameError = this._validateSkillName(newName, skill.id)
+    if (nameError) {
+      if (nameError !== this._lastNameError) {
+        this._lastNameError = nameError
+        this._app.showToast(nameError, true)
+      }
+      return
+    }
+    this._lastNameError = null
 
     skill.name = newName
     skill.description = this._editor.description

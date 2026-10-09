@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-10-09
+
+### Added
+- **Active Skill Chip**: The input toolbar now shows a pill-shaped indicator with the matched skill name whenever the message starts with a valid `@skill` mention, making per-message skill activation visible before sending.
+- **Skill Name Validation**: The Skills editor now rejects names containing whitespace or special characters (letters, digits, hyphens and underscores only) and case-insensitive duplicates, surfacing errors via toast instead of silently saving. New skills are created with a conforming unique `new-skill` placeholder name.
+- **Skill Matching Tests**: New `src/test/skills.test.ts` covering `matchSkill`, `stripSkillMention`, and `buildSkillPrompt`.
+- **Registry Helpers**: New `src/lib/registry.ts` with pure `parseModelReference`, `registryManifestUrl`, `normalizeDigest`, and `isModelOutdated` helpers (registry host now lives in `OLLAMA_REGISTRY_URL`), covered by `src/test/registry.test.ts`.
+- **Live Model Reload**: New `app.reloadModels()` refreshes the model list and tool capabilities without restarting the app. After a successful pull the dropdown is rebuilt, a newly pulled tool-capable model is selected automatically, and a confirmation toast is shown.
+
+### Changed
+- **Provider-Agnostic Skill Resolution**: Skill matching moved out of the Ollama provider into pure `matchSkill`/`stripSkillMention` helpers in `src/lib/skills/index.ts`, resolved once per generation in `ChatService`. `ChatProps` now receives the single resolved `skill` instead of the full skills list.
+- **Cleaner Skill Prompts**: The `@skill` mention is stripped from the outgoing message (stored history keeps it), so `buildSkillPrompt` no longer needs the "don't get confused by the trigger text" note.
+- **Aligned Autocomplete Semantics**: The `@` skill autocomplete now only triggers at the very start of the message, matching exactly what the backend honors, instead of offering completions mid-message that silently did nothing.
+
+### Fixed
+- **Skills Ignored with Attachments**: Skill mentions were matched after file blocks were prepended to the message content, so any message with an attached file silently skipped skill activation.
+- **Skill Name Prefix Collisions**: Matching used `startsWith`, so with skills named `code` and `coder`, typing `@coder` could activate `code` depending on list order; matching is now exact on the full mention token.
+- **Pango Markup Injection in Popovers**: Skill and command names are now escaped with `pangoEscape` before being rendered as markup in the autocomplete popovers, preventing broken rendering for names containing `&` or `<`.
+- **Model Update Banner Never Shown**: The Ollama registry now returns the manifest digest in an `ollama-content-digest` header instead of `Docker-Content-Digest`, so the update check always reported "up to date". The provider reads the new header (with the old one as fallback) and compares digests with the `sha256:` prefix and case normalized.
+- **Stale Model List After Pull**: Pulling a model while the app was already loaded called `app.init()`, which returns early once loaded, so the new model never appeared in the dropdown and the update banner stayed visible. The pull dialog now reloads models in place, keeps the current selection, and the banner is hidden as soon as the update is started and re-checked after the reload.
+
 ## [1.12.0] - 2026-07-03
 
 ### Added

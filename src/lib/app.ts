@@ -43,6 +43,7 @@ export interface AppInterface {
   handleQuit(): Promise<void>
   indexFiles(): Promise<void>
   init: () => Promise<void>
+  reloadModels(): Promise<void>
   setPendingConversationId(id: number): void
   isGeneratingMessage(id: number): boolean
   isSummarizing(id: number): boolean

@@ -4,6 +4,7 @@ import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/lib/app.js'
+import { parseModelReference } from '@/lib/registry.js'
 import { formatRemainingTime, formatSize } from '@/lib/utils.js'
 
 export function showPullDialog(app: AppInterface, defaultModel?: string): void {
@@ -175,6 +176,20 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
     cancelButton.add_css_class('flat')
   }
 
+  const refreshModels = async (modelName: string, knownModels: string[]) => {
+    if (!app.isLoaded) {
+      void app.init()
+      return
+    }
+    await app.reloadModels()
+    const { name, tag } = parseModelReference(modelName)
+    const pulledModel = `${name}:${tag}`
+    if (!knownModels.includes(pulledModel) && app.toolModels.includes(pulledModel)) {
+      app.chat.input.selectModel(pulledModel)
+    }
+    app.showToast(`Pulled ${pulledModel}`)
+  }
+
   const startPull = () => {
     const modelName = modelEntry.text.trim()
     if (!modelName || isPulling) {
@@ -190,6 +205,7 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
     startTime = GLib.get_monotonic_time()
 
     cancellable = new Gio.Cancellable()
+    const knownModels = [...app.models]
 
     app.provider.pull({
       model: modelName,
@@ -234,7 +250,7 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
     }).then(() => {
       GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
         try {
-          void app.init()
+          void refreshModels(modelName, knownModels)
           window.close()
         } catch (e) {
           console.error('Error on pull success UI update:', e)

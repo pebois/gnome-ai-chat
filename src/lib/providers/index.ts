@@ -140,7 +140,7 @@ export interface PsResponse {
 export interface ChatProps extends ChatRequest {
   onMessageChunk?: (response: ChatResponse) => void
   cancellable: Gio.Cancellable
-  skills?: { name: string; description?: string; prompt: string }[]
+  skill?: { name: string; description?: string; prompt: string }
 }
 
 export interface PullProps {

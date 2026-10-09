@@ -3,6 +3,7 @@ import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/lib/app.js'
 import type { Skill } from '@/lib/db/types.js'
+import { pangoEscape } from '@/lib/parser.js'
 
 export class Skills {
   private _app: AppInterface
@@ -85,13 +86,11 @@ export class Skills {
     const buffer = this._textView.get_buffer()
     buffer.connect('changed', () => {
       const cursor = buffer.get_iter_at_mark(buffer.get_insert())
-      const start = cursor.copy()
-      start.set_line_offset(0)
-      const lineText = buffer.get_text(start, cursor, false)
+      const textToCursor = buffer.get_text(buffer.get_start_iter(), cursor, false)
 
-      const lastWordMatch = lineText.match(/(?:^|\s)(@[^\s]*)$/)
-      if (lastWordMatch) {
-        this._updateList(lastWordMatch[1].slice(1).toLowerCase())
+      const mentionMatch = textToCursor.match(/^@(\S*)$/)
+      if (mentionMatch) {
+        this._updateList(mentionMatch[1].toLowerCase())
       } else if (this._popover.get_visible()) {
         this._popover.popdown()
       }
@@ -174,20 +173,11 @@ export class Skills {
   private _complete(skillName: string): void {
     const buffer = this._textView.get_buffer()
     const cursor = buffer.get_iter_at_mark(buffer.get_insert())
-    const start = cursor.copy()
-    start.set_line_offset(0)
-    const lineText = buffer.get_text(start, cursor, false)
+    const textToCursor = buffer.get_text(buffer.get_start_iter(), cursor, false)
 
-    const lastMatch = lineText.match(/(?:^|\s)(@[^\s]*)$/)
-    if (lastMatch) {
-      const matchText = lastMatch[1]
-      const matchIndex = lineText.lastIndexOf(matchText)
-
-      const replaceStart = start.copy()
-      replaceStart.forward_chars(matchIndex)
-
-      buffer.delete(replaceStart, cursor)
-      buffer.insert(replaceStart, `@${skillName} `, -1)
+    if (/^@\S*$/.test(textToCursor)) {
+      buffer.delete(buffer.get_start_iter(), cursor)
+      buffer.insert(buffer.get_start_iter(), `@${skillName} `, -1)
     }
   }
 
@@ -267,8 +257,8 @@ export class Skills {
           const name = skill.name
           const filterLower = filterText.toLowerCase()
           const highlighted = filterLower.length > 0
-            ? `<b>${name.slice(0, filterLower.length)}</b>${name.slice(filterLower.length)}`
-            : name
+            ? `<b>${pangoEscape(name.slice(0, filterLower.length))}</b>${pangoEscape(name.slice(filterLower.length))}`
+            : pangoEscape(name)
           titleLabel.set_markup(highlighted)
         }
       }

@@ -8,9 +8,11 @@ export const APPLICATION_NAME = 'Gnome AI Chat'
 
 export const APPLICATION_ID = DBUS_BUS_NAME
 
-export const VERSION = '1.12.0'
+export const VERSION = '1.12.1'
 
 export const DEFAULT_OLLAMA_URL = 'http://localhost:11434'
+
+export const OLLAMA_REGISTRY_URL = 'https://registry.ollama.ai'
 
 export const DEFAULT_CHAT_MODEL = 'gpt-oss:latest'
 

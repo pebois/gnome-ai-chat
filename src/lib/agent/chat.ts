@@ -6,6 +6,7 @@ import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
+import { matchSkill, stripSkillMention } from '@/lib/skills/index.js'
 import { filterToolsByPermissions, onToolCall, tools } from '@/lib/tools/index.js'
 import { convertSummaryToTitle } from '@/lib/utils.js'
 
@@ -69,6 +70,11 @@ export class ChatService {
     let fullToolCalls: ToolCall[] = []
     const generatedMessages: ChatMessage[] = []
 
+    const lastUserMessage = [...chatConversation.messages].reverse().find((m) => {
+      return m.role === 'user'
+    })
+    const skill = lastUserMessage ? matchSkill(lastUserMessage.content, this._app.skills ?? []) : undefined
+
     try {
       const recursiveChat = async (messages: ChatMessage[]): Promise<void> => {
         if (cancellable.is_cancelled()) {
@@ -80,14 +86,20 @@ export class ChatService {
         fullThinking = ''
         fullToolCalls = []
 
+        const outgoingMessages = skill
+          ? messages.map((m) => {
+              return m === lastUserMessage ? { ...m, content: stripSkillMention(m.content) } : m
+            })
+          : messages
+
         const response = await this._app.provider.chat({
           model: this._app.model ?? DEFAULT_CHAT_MODEL,
           system: this._app.settings.system,
           stream: this._app.settings.stream,
           think: this._app.settings.think,
           options: this._app.settings.options,
-          messages,
-          skills: this._app.skills,
+          messages: outgoingMessages,
+          skill,
           tools: filterToolsByPermissions(this._app, tools),
           onMessageChunk: (chunk) => {
             if (chunk.message?.thinking) {
