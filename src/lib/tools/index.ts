@@ -46,6 +46,28 @@ export const tools = [
   write_file
 ]
 
+const PARALLEL_SAFE_TOOLS = new Set([
+  'calculate',
+  'fetch_rss_feed',
+  'fetch_web_page',
+  'get_app_details',
+  'get_current_datetime',
+  'get_system_info',
+  'get_user_timezone',
+  'list_installed_apps',
+  'open_nodes',
+  'read_graph',
+  'roll_die',
+  'search_nodes',
+  'search_vector_index'
+])
+
+export function canRunInParallel(names: string[]): boolean {
+  return names.every((name) => {
+    return PARALLEL_SAFE_TOOLS.has(name)
+  })
+}
+
 export function getAvailableTools(app: AppInterface): Tool[] {
   return [...filterToolsByPermissions(app, tools), ...app.mcp.getTools()]
 }
