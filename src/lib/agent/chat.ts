@@ -1,13 +1,15 @@
 import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
+import { buildContext } from '@/lib/agent/context.js'
 import { summarizeConversation } from '@/lib/agent/summarize.js'
 import type { AppInterface } from '@/lib/app.js'
-import { DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
+import { DEFAULT_CHAT_MODEL, DEFAULT_OPTIONS, MAX_TOOL_ROUNDS } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
+import { debug } from '@/lib/debug.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
-import { matchSkill, stripSkillMention } from '@/lib/skills/index.js'
-import { getAvailableTools, onToolCall } from '@/lib/tools/index.js'
+import { buildSkillPrompt, matchSkill, stripSkillMention } from '@/lib/skills/index.js'
+import { canRunInParallel, getAvailableTools, onToolCall } from '@/lib/tools/index.js'
 import { convertSummaryToTitle } from '@/lib/utils.js'
 
 export interface ChatSessionCallbacks {
@@ -20,6 +22,8 @@ export interface ChatSessionCallbacks {
 export class ChatService {
   private _app: AppInterface
   private _cancellables: Map<number, Gio.Cancellable> = new Map()
+  private _capabilityWarnings: Set<string> = new Set()
+  private _trimWarnings: Set<number> = new Set()
 
   constructor(app: AppInterface) {
     this._app = app
@@ -74,9 +78,14 @@ export class ChatService {
       return m.role === 'user'
     })
     const skill = lastUserMessage ? matchSkill(lastUserMessage.content, this._app.skills ?? []) : undefined
+    const model = this._app.model ?? DEFAULT_CHAT_MODEL
+    const system = [this._app.settings.system, skill ? buildSkillPrompt(skill) : ''].filter(Boolean).join('\n\n')
+    const numCtx = this._app.settings.options.num_ctx ?? DEFAULT_OPTIONS.num_ctx
 
     try {
-      const recursiveChat = async (messages: ChatMessage[]): Promise<void> => {
+      await this._warnMissingCapabilities(model, chatConversation.messages)
+
+      const recursiveChat = async (messages: ChatMessage[], round: number): Promise<void> => {
         if (cancellable.is_cancelled()) {
           return
         }
@@ -92,15 +101,19 @@ export class ChatService {
             })
           : messages
 
+        const tools = round < MAX_TOOL_ROUNDS ? getAvailableTools(this._app) : undefined
+        const context = buildContext({ system, messages: outgoingMessages, tools: tools ?? [], numCtx })
+        this._reportContext(conversationId, context.droppedMessages, context.truncatedResults, context.estimatedTokens, numCtx)
+
         const response = await this._app.provider.chat({
-          model: this._app.model ?? DEFAULT_CHAT_MODEL,
+          model,
           system: this._app.settings.system,
           stream: this._app.settings.stream,
           think: this._app.settings.think,
           options: this._app.settings.options,
-          messages: outgoingMessages,
+          messages: context.messages,
           skill,
-          tools: getAvailableTools(this._app),
+          tools,
           onMessageChunk: (chunk) => {
             if (chunk.message?.thinking) {
               fullThinking += chunk.message.thinking
@@ -142,13 +155,7 @@ export class ChatService {
         if (response.tool_calls?.length) {
           const startToolTime = GLib.get_monotonic_time()
 
-          const toolMessages: ChatMessage[] = await Promise.all(response.tool_calls.map(async (tc) => {
-            return {
-              role: 'tool' as const,
-              tool_name: tc.function.name,
-              content: await onToolCall(this._app, tc.function.name, tc.function.arguments, cancellable) || ''
-            }
-          }))
+          const toolMessages = await this._runToolCalls(response.tool_calls, cancellable)
 
           const endToolTime = GLib.get_monotonic_time()
           const toolDurationMs = (endToolTime - startToolTime) / 1000
@@ -157,11 +164,11 @@ export class ChatService {
           generatedMessages.push(...toolMessages)
           chatConversation.messages.push(...toolMessages)
 
-          await recursiveChat([...messages, response, ...toolMessages])
+          await recursiveChat([...messages, response, ...toolMessages], round + 1)
         }
       }
 
-      await recursiveChat(chatConversation.messages)
+      await recursiveChat(chatConversation.messages, 0)
 
       await conversationsStore.saveMessages(chatConversation.id, chatConversation.messages)
       chatConversation.updated_at = new Date().toISOString()
@@ -210,6 +217,76 @@ export class ChatService {
     } finally {
       this._app.setGeneratingMessage(conversationId, false)
       this._cancellables.delete(conversationId)
+    }
+  }
+
+  private async _runToolCalls(toolCalls: ToolCall[], cancellable: Gio.Cancellable): Promise<ChatMessage[]> {
+    const run = async (tc: ToolCall): Promise<ChatMessage> => {
+      return {
+        role: 'tool',
+        tool_name: tc.function.name,
+        content: await onToolCall(this._app, tc.function.name, tc.function.arguments, cancellable) || ''
+      }
+    }
+
+    const names = toolCalls.map((tc) => {
+      return tc.function.name
+    })
+    if (canRunInParallel(names)) {
+      return Promise.all(toolCalls.map(run))
+    }
+
+    const results: ChatMessage[] = []
+    for (const tc of toolCalls) {
+      if (cancellable.is_cancelled()) {
+        results.push({ role: 'tool', tool_name: tc.function.name, content: 'Error: Cancelled by user.' })
+        continue
+      }
+      results.push(await run(tc))
+    }
+    return results
+  }
+
+  private async _warnMissingCapabilities(model: string, messages: ChatMessage[]): Promise<void> {
+    const details = await this._app.provider.model(model).catch(() => {
+      return null
+    })
+    if (!details) {
+      return
+    }
+    const capabilities = details.capabilities ?? []
+    const tools = getAvailableTools(this._app)
+    const hasImages = messages.some((m) => {
+      return (m.images?.length ?? 0) > 0
+    })
+
+    const missing: string[] = []
+    if (tools.length > 0 && !capabilities.includes('tools')) {
+      missing.push('tools')
+    }
+    if (hasImages && !capabilities.includes('vision')) {
+      missing.push('vision')
+    }
+
+    for (const capability of missing) {
+      const key = `${model}:${capability}`
+      if (this._capabilityWarnings.has(key)) {
+        continue
+      }
+      this._capabilityWarnings.add(key)
+      this._app.showToast(capability === 'tools'
+        ? `${model} does not support tools, they will not be used`
+        : `${model} does not support images, they will be ignored`)
+    }
+  }
+
+  private _reportContext(conversationId: number, dropped: number, truncated: number, tokens: number, numCtx: number): void {
+    if (this._app.settings.debug) {
+      debug('Context', `~${tokens}/${numCtx} tokens, ${dropped} messages dropped, ${truncated} tool results truncated`)
+    }
+    if (dropped > 0 && !this._trimWarnings.has(conversationId)) {
+      this._trimWarnings.add(conversationId)
+      this._app.showToast('Older messages were left out to fit the context window')
     }
   }
 }
