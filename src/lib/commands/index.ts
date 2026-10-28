@@ -4,6 +4,7 @@ import type { AppInterface } from '@/lib/app.js'
 import * as chat from '@/lib/commands/chat.js'
 import * as dialogs from '@/lib/commands/dialogs.js'
 import * as files from '@/lib/commands/files.js'
+import * as mcp from '@/lib/commands/mcp.js'
 import * as memory from '@/lib/commands/memory.js'
 import * as system from '@/lib/commands/system.js'
 import * as ui from '@/lib/commands/ui.js'
@@ -48,5 +49,6 @@ export const COMMANDS: Command[] = [
   system.theme,
   system.quit,
   memory.memory,
-  files.files
+  files.files,
+  mcp.mcp
 ]

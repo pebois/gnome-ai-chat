@@ -7,7 +7,7 @@ import { DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
 import { matchSkill, stripSkillMention } from '@/lib/skills/index.js'
-import { filterToolsByPermissions, onToolCall, tools } from '@/lib/tools/index.js'
+import { getAvailableTools, onToolCall } from '@/lib/tools/index.js'
 import { convertSummaryToTitle } from '@/lib/utils.js'
 
 export interface ChatSessionCallbacks {
@@ -100,7 +100,7 @@ export class ChatService {
           options: this._app.settings.options,
           messages: outgoingMessages,
           skill,
-          tools: filterToolsByPermissions(this._app, tools),
+          tools: getAvailableTools(this._app),
           onMessageChunk: (chunk) => {
             if (chunk.message?.thinking) {
               fullThinking += chunk.message.thinking
@@ -146,7 +146,7 @@ export class ChatService {
             return {
               role: 'tool' as const,
               tool_name: tc.function.name,
-              content: await onToolCall(this._app, tc.function.name, tc.function.arguments) || ''
+              content: await onToolCall(this._app, tc.function.name, tc.function.arguments, cancellable) || ''
             }
           }))
 

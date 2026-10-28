@@ -9,7 +9,8 @@ const PERMISSION_ROWS: { key: PermissionCategory; title: string; subtitle: strin
   { key: 'terminal', title: 'Terminal Commands', subtitle: 'Execute shell commands' },
   { key: 'files', title: 'File Edits', subtitle: 'Write or overwrite files' },
   { key: 'reads', title: 'File Reads', subtitle: 'Read files and list or search directories' },
-  { key: 'apps', title: 'Applications', subtitle: 'Launch installed applications' }
+  { key: 'apps', title: 'Applications', subtitle: 'Launch installed applications' },
+  { key: 'mcp', title: 'MCP Servers', subtitle: 'Call tools exposed by external MCP servers (override per server)' }
 ]
 
 export function createPermissionsPage(app: AppInterface): Adw.PreferencesPage {

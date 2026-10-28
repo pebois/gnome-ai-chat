@@ -11,6 +11,7 @@ This is a GNOME desktop application built with TypeScript, GJS, GTK4, and Libadw
 - **Smart Chat Organization**: Automatically categorizes conversations with concise AI-generated titles and relevant emojis for effortless navigation.
 - **Rich Text Rendering**: Full Markdown support including code blocks, tables, headers, and text formatting, cleanly rendered natively using Pango markup and GTK widgets.
 - **Integrated System Tools**: Expand model capabilities with built-in function calling for time, math calculations, web fetching, HTML parsing, system info, file searching, app launching, code execution, and persistent memory.
+- **MCP Servers**: Register Model Context Protocol servers (stdio or Streamable HTTP) in a dedicated window; their tools are advertised to the model next to the built-in ones under the MCP permission tier with per-server overrides, and managed with the `/mcp` command.
 - **Comprehensive Analytics**: Monitor performance with detailed statistics on API latency, tool execution times, and per-model token consumption.
 - **Advanced Chat Controls**: Full-featured chat management including search, message copying, session restarting, keyboard shortcuts, and smart bottom-scrolling.
 - **Quick Slash Commands**: Execute powerful inline actions (e.g., `/hn` for Hacker News, `/compress` to optimize context) with a dynamic, filterable autocomplete interface.
@@ -104,7 +105,13 @@ src/
     window/
       about.ts          # about dialog
       main.ts           # AppWindow class — main window orchestrator
-      preferences.ts    # preferences dialog (General, Prompt, Data, Advanced, Vector Indexing)
+      preferences/      # preferences window pages (General, Appearance, Prompt, Permissions, Advanced, Data)
+      mcp/
+        index.ts        # MCP Servers window orchestrator (load, select, save, delete, test)
+        sidebar.ts      # server list with live status icons and tool counts
+        editor.ts       # server pane: header view switcher between the Overview and Settings tabs
+        overview.ts     # Overview tab: live status, connection test, tool list
+        settings.ts     # Settings tab: transport fields, environment/headers, permission override, timeout
       skills.ts         # Skills Editor window orchestrator
   lib/
     agent/
@@ -113,6 +120,7 @@ src/
       chat.ts           # chat-related commands (/clear, /compress, /hn)
       dialogs.ts        # commands to open dialogs (/settings, /shortcuts, /ps, /pull, /stats, /skills, /about)
       files.ts          # local RAG files management commands (/files)
+      mcp.ts            # MCP server commands (/mcp manage, reload, status)
       index.ts          # command/subcommand definitions (required: name, description, icon)
       memory.ts         # knowledge graph commands (/memory)
       system.ts         # system and app state commands (/debug, /quit)
@@ -121,10 +129,20 @@ src/
       conversations.ts  # conversation data store
       files.ts          # local file RAG vector store
       index.ts          # SQLite database connection and migration logic
+      mcp.ts            # MCP server definitions store (mcp_servers table)
       memory.ts         # knowledge graph data store
       settings.ts       # user preferences store
       skills.ts         # custom skills store
       types.ts          # database schemas
+    mcp/
+      config.ts         # pure helpers: server validation, arg/env parsing, tool-name namespacing, tier resolution
+      jsonrpc.ts        # pure JSON-RPC / MCP types, SSE parser, tool schema and result conversion
+      permissions.ts    # MCP permission check (global tier with per-server override)
+      transport.ts      # transport interface and error helpers
+      stdio.ts          # stdio transport (child process, newline-delimited JSON)
+      http.ts           # Streamable HTTP transport (Soup, JSON or SSE responses)
+      client.ts         # per-server client: initialize, tools/list, tools/call, timeouts, cancellation
+      manager.ts        # McpManager (app.mcp): lifecycle, reconnect, tool index, permission-filtered tools
     skills/
       canvas.ts         # default instructions for canvas rendering
       coder.ts          # default instructions for coding

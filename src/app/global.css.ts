@@ -1,4 +1,19 @@
 export const css = /* css */`
+.mcp-status-dot {
+  min-width: 14px;
+  min-height: 14px;
+  border-radius: 50%;
+  background-color: alpha(@window_fg_color, 0.25);
+}
+
+.mcp-status-dot.success {
+  background-color: @success_color;
+}
+
+.mcp-status-dot.error {
+  background-color: @error_color;
+}
+
 .searchbar {
   background-color: transparent;
 }

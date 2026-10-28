@@ -70,6 +70,7 @@ export class Database {
       CREATE TABLE IF NOT EXISTS memory_observations (id INTEGER PRIMARY KEY AUTOINCREMENT, entityName TEXT, content TEXT, FOREIGN KEY(entityName) REFERENCES memory_entities(name) ON DELETE CASCADE);
       CREATE TABLE IF NOT EXISTS vector_paths (path TEXT PRIMARY KEY, status TEXT);
       CREATE TABLE IF NOT EXISTS vector_chunks (id INTEGER PRIMARY KEY AUTOINCREMENT, file_path TEXT, content TEXT, embedding TEXT);
+      CREATE TABLE IF NOT EXISTS mcp_servers (id TEXT PRIMARY KEY, config TEXT);
     `
     await this.execSql(sql)
     await this._cleanupOldFiles()

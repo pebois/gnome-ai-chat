@@ -14,6 +14,7 @@ A simple chat application for GNOME built with TypeScript (compiled to GJS), Gtk
 - **Local RAG (Chat with your Files)**: Index local project folders into a private vector store. Use the `@files` skill to ground model answers in your actual code and documentation without cloud uploads.
 - **Custom @ Skills**: Instantly switch personas using `@` skills (e.g., `@files`, `@coder`, `@writer`, `@canvas`). Manage and define your own custom system prompts natively in Preferences with alphabetical sorting for easy navigation.
 - **Rich Conversations**: Full support for multimodal image attachments, **take screenshots directly into the input**, **text file attachments** (Markdown, CSV, JSON, Code), native syntax-highlighted code blocks with one-click copy, and configurable reasoning levels for "thinking" models.
+- **MCP Servers**: Connect external Model Context Protocol servers (stdio or Streamable HTTP) from the dedicated MCP Servers window (`/mcp`), and let models call their tools under the same Ask / Auto-accept / Deny permission controls, with per-server overrides and a `/mcp` command. In the Flatpak build, stdio servers run on the host through `flatpak-spawn`.
 - **Performance Insights**: Built-in statistics to track API latency (including embeddings), tool execution times, and token usage per model.
 - **Organized by AI**: New conversations are automatically categorized with AI-generated titles and relevant emojis.
 - **Privacy by Design**: Your data never leaves your machine. Chat history, settings, and vector indexes are stored completely locally.

@@ -1,10 +1,15 @@
+import type Gio from 'gi://Gio'
+
 import type { AppInterface } from '@/lib/app.js'
+import { isMcpToolName } from '@/lib/mcp/config.js'
+import type { Tool } from '@/lib/providers/index.js'
 import { handle_list_directory, handle_read_file, handle_run_shell_command, handle_write_file, list_directory, read_file, run_shell_command, write_file } from '@/lib/tools/code.js'
 import { get_app_details, handle_get_app_details, handle_launch_app, handle_launch_app_action, handle_list_installed_apps, launch_app, launch_app_action, list_installed_apps } from '@/lib/tools/desktop.js'
 import { handle_search_files, handle_search_vector_index, search_files, search_vector_index } from '@/lib/tools/files.js'
 import { handle_render_html, render_html } from '@/lib/tools/html.js'
 import { calculate, handle_calculate, handle_roll_die, roll_die } from '@/lib/tools/math.js'
 import { add_observations, create_entities, create_relations, delete_entities, delete_observations, delete_relations, handle_add_observations, handle_create_entities, handle_create_relations, handle_delete_entities, handle_delete_observations, handle_delete_relations, handle_open_nodes, handle_read_graph, handle_search_nodes, open_nodes, read_graph, search_nodes } from '@/lib/tools/memory.js'
+import { filterToolsByPermissions } from '@/lib/tools/permissions.js'
 import { get_system_info, handle_get_system_info } from '@/lib/tools/system.js'
 import { get_current_datetime, get_user_timezone, handle_get_current_datetime, handle_get_user_timezone } from '@/lib/tools/time.js'
 import { fetch_rss_feed, fetch_web_page, handle_fetch_rss_feed, handle_fetch_web_page } from '@/lib/tools/web.js'
@@ -41,7 +46,14 @@ export const tools = [
   write_file
 ]
 
-export async function onToolCall(app: AppInterface, name: string, args: Record<string, unknown>): Promise<string> {
+export function getAvailableTools(app: AppInterface): Tool[] {
+  return [...filterToolsByPermissions(app, tools), ...app.mcp.getTools()]
+}
+
+export async function onToolCall(app: AppInterface, name: string, args: Record<string, unknown>, cancellable?: Gio.Cancellable): Promise<string> {
+  if (isMcpToolName(name)) {
+    return app.mcp.callTool(name, args, cancellable)
+  }
   switch (name) {
     case 'get_user_timezone':
       return handle_get_user_timezone()

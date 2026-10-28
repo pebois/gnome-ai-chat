@@ -4,8 +4,36 @@ export type Think = typeof think_types[number]
 export const permission_tiers = ['ask', 'auto-accept', 'deny'] as const
 export type PermissionTier = typeof permission_tiers[number]
 
-export const permission_categories = ['terminal', 'files', 'reads', 'apps'] as const
+export const permission_categories = ['terminal', 'files', 'reads', 'apps', 'mcp'] as const
 export type PermissionCategory = typeof permission_categories[number]
+
+export const mcp_transports = ['stdio', 'http'] as const
+export type McpTransportKind = typeof mcp_transports[number]
+
+export const mcp_permissions = ['inherit', ...permission_tiers] as const
+export type McpPermission = typeof mcp_permissions[number]
+
+export interface McpServer {
+  id: string
+  name: string
+  enabled: boolean
+  transport: McpTransportKind
+  command: string
+  args: string[]
+  env: Record<string, string>
+  url: string
+  headers: Record<string, string>
+  permission: McpPermission
+  timeoutSec: number
+}
+
+export type McpServerState = 'connecting' | 'connected' | 'error'
+
+export interface McpServerStatus {
+  state: McpServerState
+  error?: string
+  toolCount: number
+}
 
 export interface Skill {
   id: string
