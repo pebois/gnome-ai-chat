@@ -11,7 +11,8 @@ import { ArtifactWindow } from '@/app/window/artifact.js'
 import { Chat } from '@/app/window/main/chat.js'
 import { AppWindow } from '@/app/window/main/index.js'
 import { Sidebar } from '@/app/window/main/sidebar.js'
-import type { AppInterface } from '@/lib/app.js'
+import { isMcpWindowOpen, showMcpWindow } from '@/app/window/mcp/index.js'
+import type { AppInterface, ToastAction } from '@/lib/app.js'
 import { COMMANDS } from '@/lib/commands/index.js'
 import { APPLICATION_ID, DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
@@ -20,6 +21,7 @@ import { db } from '@/lib/db/index.js'
 import { settingsStore } from '@/lib/db/settings.js'
 import { skillsStore } from '@/lib/db/skills.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
+import { McpManager } from '@/lib/mcp/manager.js'
 import { pangoEscape } from '@/lib/parser.js'
 import { OllamaProvider } from '@/lib/providers/ollama.js'
 import { Tracker } from '@/lib/tracker.js'
@@ -41,6 +43,7 @@ export class App extends Adw.Application implements AppInterface {
   public conversation?: ChatConversation
   public conversations: Conversation[]
   public model: string
+  public mcp: McpManager
   public models: string[]
   public provider!: OllamaProvider
   public skills: Skill[] = []
@@ -61,6 +64,20 @@ export class App extends Adw.Application implements AppInterface {
     this.conversations = []
     this.tracker = new Tracker()
     this.provider = new OllamaProvider(this.settings, this.tracker)
+    this.mcp = new McpManager(this)
+    this.mcp.onError = (server, message) => {
+      if (!isMcpWindowOpen()) {
+        this.showToast(`${server.name}: ${message}`, true, {
+          label: 'Manage',
+          onClick: () => {
+            showMcpWindow(this, server.id)
+          }
+        })
+      }
+    }
+    this.mcp.onChanged = () => {
+      this.emit('mcp-changed')
+    }
   }
 
   public get chat(): Chat {
@@ -204,6 +221,7 @@ export class App extends Adw.Application implements AppInterface {
 
       this._active = true
       this.window.setState('app')
+      void this.mcp.start()
     } catch (err: unknown) {
       console.error(err)
       this.window.showError(err instanceof Error ? err.message : String(err))
@@ -233,15 +251,21 @@ export class App extends Adw.Application implements AppInterface {
       await skillsStore.indexSkills(this.provider, this.skills, false)
     }
 
+    await this.mcp.shutdown()
     this.sidebar.clearList()
 
     this.release()
     this.quit()
   }
 
-  public showToast(message: string, error?: boolean): void {
+  public showToast(message: string, error?: boolean, action?: ToastAction): void {
     const toast = new Adw.Toast({ title: pangoEscape(message) })
-    if (error) {
+    if (action) {
+      toast.button_label = action.label
+      toast.connect('button-clicked', () => {
+        action.onClick()
+      })
+    } else if (error) {
       toast.button_label = 'Copy'
       toast.connect('button-clicked', () => {
         const clipboard = Gdk.Display.get_default()!.get_clipboard()
@@ -499,7 +523,11 @@ export class App extends Adw.Application implements AppInterface {
       if (cmd.accels) {
         let actionName = `app.${cmd.name}`
         if (cmd.parameterType) {
-          const target = cmd.name === 'files' ? 'manage' : ''
+          const target = cmd.subCommands?.some((s) => {
+            return s.name === 'manage'
+          })
+            ? 'manage'
+            : ''
           actionName += `('${target}')`
         }
         this.set_accels_for_action(actionName, cmd.accels)
@@ -562,6 +590,9 @@ GObject.registerClass({
       param_types: [GObject.TYPE_BOOLEAN, GObject.TYPE_DOUBLE]
     },
     'capabilities-changed': {
+      param_types: []
+    },
+    'mcp-changed': {
       param_types: []
     },
     'syntax-changed': {

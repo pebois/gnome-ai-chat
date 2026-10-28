@@ -511,13 +511,16 @@ export class Message {
     })
     this._toolRows.length = 0
     calls?.forEach((call) => {
+      const mcpLabel = this._app.mcp.getToolLabel(call.function.name)
       const row = new Adw.ActionRow({
-        title: call.function.name,
+        title: mcpLabel?.label ?? call.function.name,
+        subtitle: mcpLabel?.description ?? '',
+        subtitle_lines: 1,
         use_markup: false,
         activatable: true
       })
       row.add_prefix(new Gtk.Image({
-        icon_name: 'system-run-symbolic'
+        icon_name: mcpLabel ? 'network-server-symbolic' : 'system-run-symbolic'
       }))
       row.add_suffix(new Gtk.Image({
         icon_name: 'view-reveal-symbolic'

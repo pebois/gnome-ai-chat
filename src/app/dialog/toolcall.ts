@@ -41,13 +41,14 @@ export function showToolCallDialog(app: AppInterface, tool_call: ToolCall): void
   toolbarView.set_content(page)
   window.set_child(toolbarView)
 
+  const mcpLabel = app.mcp.getToolLabel(tool_call.function.name)
   const nameGroup = new Adw.PreferencesGroup({
-    title: 'Function Name'
+    title: mcpLabel ? 'MCP Tool' : 'Function Name'
   })
   page.add(nameGroup)
 
   const nameLabel = new Gtk.Label({
-    label: tool_call.function.name,
+    label: mcpLabel?.label ?? tool_call.function.name,
     use_markup: false,
     xalign: 0,
     selectable: true,
@@ -61,6 +62,29 @@ export function showToolCallDialog(app: AppInterface, tool_call: ToolCall): void
     child: nameLabel,
     activatable: false
   }))
+
+  if (mcpLabel?.description) {
+    const descriptionGroup = new Adw.PreferencesGroup({
+      title: 'Description'
+    })
+    page.add(descriptionGroup)
+    descriptionGroup.add(new Gtk.ListBoxRow({
+      child: new Gtk.Label({
+        label: mcpLabel.description,
+        use_markup: false,
+        xalign: 0,
+        selectable: true,
+        wrap: true,
+        wrap_mode: Pango.WrapMode.WORD_CHAR,
+        css_classes: ['dim-label'],
+        margin_top: 12,
+        margin_bottom: 12,
+        margin_start: 12,
+        margin_end: 12
+      }),
+      activatable: false
+    }))
+  }
 
   const argsGroup = new Adw.PreferencesGroup({
     title: 'Arguments'

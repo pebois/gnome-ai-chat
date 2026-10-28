@@ -7,8 +7,14 @@ import type { Chat } from '@/app/window/main/chat.js'
 import type { AppWindow } from '@/app/window/main/index.js'
 import type { Sidebar } from '@/app/window/main/sidebar.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
+import type { McpManager } from '@/lib/mcp/manager.js'
 import type { Provider } from '@/lib/providers/index.js'
 import type { Tracker } from '@/lib/tracker.js'
+
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
 
 export interface AppInterface {
   readonly chat: Chat
@@ -16,6 +22,7 @@ export interface AppInterface {
   readonly conversations: Conversation[]
   readonly isLoaded: boolean
   readonly isBusy: boolean
+  readonly mcp: McpManager
   readonly model: string
   readonly models: string[]
   readonly provider: Provider
@@ -34,6 +41,7 @@ export interface AppInterface {
   connect(sigName: 'busy-changed', callback: (_: number, isBusy: boolean) => void): number
   connect(sigName: 'capabilities-changed', callback: (_: number) => void): number
   connect(sigName: 'files-indexing-changed', callback: (_: number, active: boolean, fraction: number) => void): number
+  connect(sigName: 'mcp-changed', callback: (_: number) => void): number
   connect(sigName: 'syntax-changed', callback: (_: number, theme: string) => void): number
   connect(sigName: string, callback: (...args: unknown[]) => void): number
   disconnect(id: number): void
@@ -58,7 +66,7 @@ export interface AppInterface {
   setSummarizing(id: number, active: boolean): void
   setTheme(theme: number): void
   setSyntax(theme: string): void
-  showToast(message: string, error?: boolean): void
+  showToast(message: string, error?: boolean, action?: ToastAction): void
   toggleDebug(): void
   toggleSidebar(): void
   requestToolPermission(heading: string, body: string): Promise<boolean>

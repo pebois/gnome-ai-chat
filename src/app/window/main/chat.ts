@@ -89,6 +89,7 @@ export class Chat {
 
     menu.append_item(createMenuItem('Settings', 'app.settings', 'preferences-system-symbolic'))
     menu.append_item(createMenuItem('Skills', 'app.skills', 'avatar-default-symbolic'))
+    menu.append_item(createMenuItem('MCP Servers', 'app.mcp', 'network-server-symbolic', GLib.Variant.new_string('manage')))
     menu.append_item(createMenuItem('Indexed Folders', 'app.files', 'folder-symbolic', GLib.Variant.new_string('manage')))
     menu.append_item(createMenuItem('Keyboard Shortcuts', 'app.shortcuts', 'preferences-desktop-keyboard-shortcuts-symbolic'))
     menu.append_item(createMenuItem('Running Models', 'app.ps', 'processor-symbolic'))

@@ -26,6 +26,28 @@ export const DEFAULT_TIMEOUT = 300
 
 export const DEFAULT_SPACING = 12
 
+export const DEFAULT_MCP_TIMEOUT_SEC = 30
+
+export const MCP_INIT_TIMEOUT_MS = 30000
+
+export const MCP_RECONNECT_DELAYS_MS = [2000, 5000, 15000]
+
+export const MCP_PROTOCOL_VERSION = '2025-06-18'
+
+export const MCP_SUPPORTED_PROTOCOL_VERSIONS = [MCP_PROTOCOL_VERSION, '2025-03-26', '2024-11-05']
+
+export const MCP_STABLE_CONNECTION_MS = 60000
+
+export const MCP_MAX_RESULT_CHARS = 100000
+
+export const MCP_MAX_TOOL_NAME_LENGTH = 64
+
+export const MCP_HTTP_MAX_CONNECTIONS = 8
+
+export const MCP_LISTEN_RETRY_MS = 5000
+
+export const MCP_TOOL_PREFIX = 'mcp__'
+
 export const DEFAULT_SYSTEM_PROMPT = /* md */`
 You are Domino, a helpful and friendly AI assistant.
 
@@ -84,7 +106,8 @@ export const DEFAULT_SETTINGS = {
     terminal: 'ask',
     files: 'ask',
     reads: 'auto-accept',
-    apps: 'ask'
+    apps: 'ask',
+    mcp: 'ask'
   }
 } as Settings
 

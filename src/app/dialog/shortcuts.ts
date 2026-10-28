@@ -17,6 +17,10 @@ export function showShortcutsDialog(app: AppInterface): void {
     accelerator: '<Primary><Shift>s'
   }))
   sectionApp.add(new Adw.ShortcutsItem({
+    title: 'MCP Servers',
+    accelerator: '<Primary><Shift>m'
+  }))
+  sectionApp.add(new Adw.ShortcutsItem({
     title: 'Shortcuts',
     accelerator: '<Primary>question'
   }))
