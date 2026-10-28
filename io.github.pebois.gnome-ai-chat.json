@@ -17,7 +17,8 @@
     "--filesystem=xdg-download:ro",
     "--filesystem=xdg-desktop:ro",
     "--filesystem=xdg-pictures:ro",
-    "--own-name=io.github.pebois.gnome-ai-chat"
+    "--own-name=io.github.pebois.gnome-ai-chat",
+    "--talk-name=org.freedesktop.Flatpak"
   ],
   "build-options": {
     "append-path": "/usr/lib/sdk/node24/bin",
