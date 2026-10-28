@@ -48,6 +48,18 @@ export const MCP_LISTEN_RETRY_MS = 5000
 
 export const MCP_TOOL_PREFIX = 'mcp__'
 
+export const MAX_TOOL_ROUNDS = 10
+
+export const TOOL_RESULT_MAX_CHARS = 8000
+
+export const OLD_TOOL_RESULT_MAX_CHARS = 1500
+
+export const CONTEXT_CHARS_PER_TOKEN = 4
+
+export const CONTEXT_IMAGE_TOKENS = 768
+
+export const CONTEXT_RESPONSE_RESERVE_RATIO = 0.25
+
 export const DEFAULT_SYSTEM_PROMPT = /* md */`
 You are Domino, a helpful and friendly AI assistant.
 
