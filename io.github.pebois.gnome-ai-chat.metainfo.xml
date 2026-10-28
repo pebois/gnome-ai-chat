@@ -52,6 +52,18 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.13.0" date="2026-10-28">
+      <description>
+        <p>This release adds Model Context Protocol servers and keeps long conversations within the model's context window.</p>
+        <ul>
+          <li>Added an MCP Servers window to register stdio and Streamable HTTP servers whose tools are offered to the model, with a dedicated permission category and per-server overrides.</li>
+          <li>Added the /mcp command to manage and reload servers, with automatic reconnection when a server drops.</li>
+          <li>Requests now fit the context window: the oldest messages are left out first and long tool results are shortened, while the system prompt and current message are always kept.</li>
+          <li>Tool calls are limited to 10 rounds per response and run one at a time when they need permission or change something.</li>
+          <li>A warning now appears when the selected model does not support tools or images in use.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.12.1" date="2026-10-09">
       <description>
         <p>This release restores model update notifications and makes skill activation more visible and reliable.</p>
