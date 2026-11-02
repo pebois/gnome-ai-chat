@@ -17,6 +17,7 @@ A simple chat application for GNOME built with TypeScript (compiled to GJS), Gtk
 - **MCP Servers**: Connect external Model Context Protocol servers (stdio or Streamable HTTP) from the dedicated MCP Servers window (`/mcp`), and let models call their tools under the same Ask / Auto-accept / Deny permission controls, with per-server overrides and a `/mcp` command. In the Flatpak build, stdio servers run on the host through `flatpak-spawn`.
 - **Performance Insights**: Built-in statistics to track API latency (including embeddings), tool execution times, and token usage per model.
 - **Organized by AI**: New conversations are automatically categorized with AI-generated titles and relevant emojis.
+- **Rename & Pin Chats**: Rename any conversation by hand and pin the important ones to a "Pinned" section at the top of the sidebar.
 - **Privacy by Design**: Your data never leaves your machine. Chat history, settings, and vector indexes are stored completely locally.
 
 ## Prerequisites

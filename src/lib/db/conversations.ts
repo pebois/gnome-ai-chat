@@ -11,7 +11,7 @@ interface PersistedRow {
 }
 
 function rowKey(conversation: Conversation): string {
-  return JSON.stringify([conversation.title, conversation.model, conversation.created_at, conversation.updated_at ?? null])
+  return JSON.stringify([conversation.title, conversation.model, conversation.created_at, conversation.updated_at ?? null, !!conversation.pinned])
 }
 
 export class ConversationsStore {
@@ -20,13 +20,13 @@ export class ConversationsStore {
   private _messageWrites: Map<number, Promise<void>> = new Map()
 
   public async getConversations(): Promise<Conversation[]> {
-    const stdout = await db.execSql(`SELECT id, title, model, created_at, updated_at, embeddings FROM conversations ORDER BY id DESC;`, ['-json'])
+    const stdout = await db.execSql(`SELECT id, title, model, created_at, updated_at, embeddings, pinned FROM conversations ORDER BY id DESC;`, ['-json'])
     this._rows.clear()
     if (!stdout) {
       return []
     }
     try {
-      const rows = JSON.parse(stdout) as { id: number; title: string; model: string; created_at: string; updated_at?: string; embeddings?: string }[]
+      const rows = JSON.parse(stdout) as { id: number; title: string; model: string; created_at: string; updated_at?: string; embeddings?: string; pinned?: number }[]
       return rows.map((r) => {
         const conversation: Conversation = {
           id: r.id,
@@ -34,7 +34,8 @@ export class ConversationsStore {
           model: r.model,
           created_at: r.created_at,
           updated_at: r.updated_at,
-          embeddings: r.embeddings ? JSON.parse(r.embeddings) as number[] : undefined
+          embeddings: r.embeddings ? JSON.parse(r.embeddings) as number[] : undefined,
+          pinned: r.pinned === 1
         }
         this._rows.set(conversation.id, { key: rowKey(conversation), embeddings: conversation.embeddings })
         return conversation
@@ -75,12 +76,12 @@ export class ConversationsStore {
       const createdAt = db.escape(c.created_at)
       const updatedAt = c.updated_at ? `'${db.escape(c.updated_at)}'` : 'NULL'
       const embeddings = c.embeddings ? `'${db.escape(JSON.stringify(c.embeddings))}'` : 'NULL'
-      return `(${c.id}, '${title}', '${model}', '${createdAt}', ${updatedAt}, ${embeddings})`
+      return `(${c.id}, '${title}', '${model}', '${createdAt}', ${updatedAt}, ${embeddings}, ${c.pinned ? 1 : 0})`
     })
 
     for (let i = 0; i < values.length; i += 500) {
       const chunk = values.slice(i, i + 500)
-      sqls.push(`INSERT OR REPLACE INTO conversations (id, title, model, created_at, updated_at, embeddings) VALUES ${chunk.join(',')};`)
+      sqls.push(`INSERT OR REPLACE INTO conversations (id, title, model, created_at, updated_at, embeddings, pinned) VALUES ${chunk.join(',')};`)
     }
 
     await db.execSql(sqls)

@@ -2,6 +2,7 @@ import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
 import { APPLICATION_ID } from '@/lib/constants.js'
+import { migrationStatements, parseUserVersion } from '@/lib/db/migrations.js'
 import { debug } from '@/lib/debug.js'
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async', 'communicate_utf8_finish')
@@ -80,7 +81,23 @@ export class Database {
       CREATE TABLE IF NOT EXISTS mcp_servers (id TEXT PRIMARY KEY, config TEXT);
     `
     await this.execSql(sql)
+    await this._migrate()
     await this._cleanupOldFiles()
+  }
+
+  private async _migrate(): Promise<void> {
+    let version: number
+    try {
+      version = parseUserVersion(await this.execSql('PRAGMA user_version;', ['-json']))
+    } catch (e) {
+      throw new DatabaseError(`Could not read schema version: ${e instanceof Error ? e.message : String(e)}`)
+    }
+    const sqls = migrationStatements(version)
+    if (sqls.length === 0) {
+      return
+    }
+    this._debug(`Migrating schema from version ${version}`)
+    await this.execSql(sqls)
   }
 
   private async _cleanupOldFiles(): Promise<void> {
