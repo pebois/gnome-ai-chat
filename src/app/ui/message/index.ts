@@ -13,9 +13,10 @@ import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_SPACING, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
 import { markdownToPango, parseCodeBlock, parseMarkdownChunks, parseTable } from '@/lib/parser.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
+import type { Source } from '@/lib/sources.js'
 import { handle_render_html } from '@/lib/tools/html.js'
 import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setMarkupSafe, setupContextMenu } from '@/lib/ui.js'
-import { getLanguageMetadata } from '@/lib/utils.js'
+import { formatMessageStats, getLanguageMetadata } from '@/lib/utils.js'
 
 export interface MessageProps {
   message: ChatMessage
@@ -59,10 +60,82 @@ export class Message {
   private _busySignalId: number
   private _syntaxSignalId: number
   private _popover?: Gtk.PopoverMenu
+  private _statsLabel?: Gtk.Label
+  private _sourcesBox?: Gtk.FlowBox
   private _pendingSpinner?: Adw.Spinner
 
   public get widget(): Gtk.Box {
     return this._widget
+  }
+
+  public get message(): ChatMessage {
+    return this._currentMessage
+  }
+
+  public setSources(sources: Source[]): void {
+    if (this._sourcesBox) {
+      this._widget.remove(this._sourcesBox)
+      this._sourcesBox = undefined
+    }
+    if (sources.length === 0) {
+      return
+    }
+    this._sourcesBox = new Gtk.FlowBox({
+      selection_mode: Gtk.SelectionMode.NONE,
+      column_spacing: 6,
+      row_spacing: 6,
+      max_children_per_line: 8,
+      homogeneous: false
+    })
+    this._sourcesBox.add_css_class('message-sources')
+    for (const source of sources) {
+      const content = new Adw.ButtonContent({
+        icon_name: source.kind === 'file' ? 'text-x-generic-symbolic' : 'web-browser-symbolic',
+        label: source.label
+      })
+      const button = new Gtk.Button({
+        child: content,
+        tooltip_text: source.target,
+        halign: Gtk.Align.START
+      })
+      button.add_css_class('pill')
+      button.add_css_class('small')
+      button.connect('clicked', () => {
+        this._openSource(source)
+      })
+      this._sourcesBox.append(button)
+    }
+    this._widget.append(this._sourcesBox)
+  }
+
+  private _openSource(source: Source): void {
+    const onDone = (launcher: Gtk.FileLauncher | Gtk.UriLauncher, result: Gio.AsyncResult): void => {
+      try {
+        launcher.launch_finish(result)
+      } catch (err) {
+        this._app.showToast(`Could not open ${source.label}`, true)
+        console.error('Failed to open source:', err)
+      }
+    }
+    if (source.kind === 'file') {
+      const launcher = new Gtk.FileLauncher({ file: Gio.File.new_for_path(source.target) })
+      launcher.launch(this._app.window, null, (_src, result) => {
+        onDone(launcher, result)
+      })
+    } else {
+      const launcher = new Gtk.UriLauncher({ uri: source.target })
+      launcher.launch(this._app.window, null, (_src, result) => {
+        onDone(launcher, result)
+      })
+    }
+  }
+
+  public setHighlighted(highlighted: boolean): void {
+    if (highlighted) {
+      this._widget.add_css_class('search-match')
+    } else {
+      this._widget.remove_css_class('search-match')
+    }
   }
 
   constructor(app: AppInterface, props: MessageProps) {
@@ -471,7 +544,12 @@ export class Message {
       this._roleBox.append(roleLabel)
     } else {
       this._roleBox.append(roleLabel)
+      this._statsLabel = new Gtk.Label({ selectable: false })
+      this._statsLabel.add_css_class('dim-label')
+      this._statsLabel.add_css_class('caption')
+      this._roleBox.append(this._statsLabel)
       this._roleBox.append(buttonsBox)
+      this._updateStats(message)
     }
 
     const hoverCtrl = new Gtk.EventControllerMotion()
@@ -595,8 +673,21 @@ export class Message {
     })
   }
 
+  private _updateStats(message: ChatMessage): void {
+    if (!this._statsLabel) {
+      return
+    }
+    const { stats } = message
+    this._statsLabel.set_visible(!!stats)
+    if (stats) {
+      this._statsLabel.set_label(formatMessageStats(stats))
+      this._statsLabel.set_tooltip_text(`${stats.promptTokens} prompt tokens, ${stats.outputTokens} output tokens`)
+    }
+  }
+
   public update(updated: ChatMessage): void {
     this._currentMessage = updated
+    this._updateStats(updated)
     if (this._pendingSpinner?.get_visible()) {
       this.setPending(true)
     }

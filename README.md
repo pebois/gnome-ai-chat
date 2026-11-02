@@ -15,6 +15,9 @@ A simple chat application for GNOME built with TypeScript (compiled to GJS), Gtk
 - **Custom @ Skills**: Instantly switch personas using `@` skills (e.g., `@files`, `@coder`, `@writer`, `@canvas`). Manage and define your own custom system prompts natively in Preferences with alphabetical sorting for easy navigation.
 - **Rich Conversations**: Full support for multimodal image attachments, **take screenshots directly into the input**, **text file attachments** (Markdown, CSV, JSON, Code), native syntax-highlighted code blocks with one-click copy, and configurable reasoning levels for "thinking" models.
 - **MCP Servers**: Connect external Model Context Protocol servers (stdio or Streamable HTTP) from the dedicated MCP Servers window (`/mcp`), and let models call their tools under the same Ask / Auto-accept / Deny permission controls, with per-server overrides and a `/mcp` command. In the Flatpak build, stdio servers run on the host through `flatpak-spawn`.
+- **Transparent Answers**: Every reply shows its model, speed and token count, a live list shows what each tool is doing while it runs, and answers based on your files or web pages list them as clickable sources.
+- **Web Search**: Point the app at your SearXNG instance and models can search the web with the `web_search` tool.
+- **Find in Conversation**: `Ctrl+Shift+F` finds and jumps between matching messages in long chats.
 - **Performance Insights**: Built-in statistics to track API latency (including embeddings), tool execution times, and token usage per model.
 - **Organized by AI**: New conversations are automatically categorized with AI-generated titles and relevant emojis.
 - **Rename & Pin Chats**: Rename any conversation by hand and pin the important ones to a "Pinned" section at the top of the sidebar.

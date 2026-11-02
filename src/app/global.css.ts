@@ -64,6 +64,18 @@ export const css = /* css */`
   font-size: 12px;
 }
 
+.message-sources button.small {
+  min-height: 24px;
+  padding: 2px 10px;
+  font-size: smaller;
+}
+
+.search-match {
+  border-radius: 12px;
+  outline: 2px solid alpha(@accent_color, 0.6);
+  outline-offset: 4px;
+}
+
 .user-message {
   padding: 12px;
   border-radius: 12px;

@@ -4,6 +4,7 @@ import Pango from 'gi://Pango'
 
 import type { AppInterface } from '@/lib/app.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
+import { isToolError } from '@/lib/tools/labels.js'
 
 export function showToolCallDialog(app: AppInterface, tool_call: ToolCall): void {
   const conversation = app.conversation
@@ -111,7 +112,7 @@ export function showToolCallDialog(app: AppInterface, tool_call: ToolCall): void
     })
     page.add(responseGroup)
 
-    const isError = toolResponse.content.startsWith('Error') || toolResponse.content.startsWith('Failed') || toolResponse.content.includes('failed:')
+    const isError = isToolError(toolResponse.content)
     const cssClass = isError ? 'error' : 'dim-label'
 
     const responseLabel = new Gtk.Label({
