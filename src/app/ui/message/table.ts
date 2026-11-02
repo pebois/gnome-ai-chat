@@ -3,6 +3,7 @@ import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import { markdownToPango } from '@/lib/parser.js'
+import { setMarkupSafe } from '@/lib/ui.js'
 
 export class TableRowItem extends GObject.Object {
   public cells: string[] = []
@@ -51,7 +52,7 @@ export function createTableWidget(headers: string[], rows: string[][]): {
       const item = listItem.get_item()
       if (item instanceof TableRowItem) {
         const cellContent = item.cells[c] || ''
-        label.set_markup(markdownToPango(cellContent))
+        setMarkupSafe(label, markdownToPango(cellContent), cellContent)
       }
     })
 

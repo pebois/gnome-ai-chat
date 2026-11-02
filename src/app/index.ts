@@ -14,7 +14,7 @@ import { Sidebar } from '@/app/window/main/sidebar.js'
 import { isMcpWindowOpen, showMcpWindow } from '@/app/window/mcp/index.js'
 import type { AppInterface, ToastAction } from '@/lib/app.js'
 import { COMMANDS } from '@/lib/commands/index.js'
-import { APPLICATION_ID, DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
+import { APPLICATION_ID, CONVERSATION_INDEX_DELAY_MS, DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
 import { filesStore } from '@/lib/db/files.js'
 import { db } from '@/lib/db/index.js'
@@ -23,7 +23,9 @@ import { skillsStore } from '@/lib/db/skills.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
 import { McpManager } from '@/lib/mcp/manager.js'
 import { pangoEscape } from '@/lib/parser.js'
+import type { ChatMessage } from '@/lib/providers/index.js'
 import { OllamaProvider } from '@/lib/providers/ollama.js'
+import { debounce } from '@/lib/timeout.js'
 import { Tracker } from '@/lib/tracker.js'
 import { createSimpleAction } from '@/lib/ui.js'
 import { convertMessageToTitle } from '@/lib/utils.js'
@@ -39,6 +41,14 @@ export class App extends Adw.Application implements AppInterface {
   private _filesIndexingCancellable: Gio.Cancellable | null = null
   private _generatingConversations: Set<number> = new Set()
   private _summarizingConversations: Set<number> = new Set()
+  private _indexConversationsLater = debounce(() => {
+    if (!this.isLoaded || this._isExiting) {
+      return
+    }
+    void conversationsStore.indexConversations(this.provider, this.conversations, false).catch((err: unknown) => {
+      console.error('Failed to index conversations:', err)
+    })
+  }, CONVERSATION_INDEX_DELAY_MS)
 
   public conversation?: ChatConversation
   public conversations: Conversation[]
@@ -221,7 +231,9 @@ export class App extends Adw.Application implements AppInterface {
 
       this._active = true
       this.window.setState('app')
-      void this.mcp.start()
+      void this.mcp.start().catch((err: unknown) => {
+        this.reportError('Could not start MCP servers', err)
+      })
     } catch (err: unknown) {
       console.error(err)
       this.window.showError(err instanceof Error ? err.message : String(err))
@@ -236,22 +248,33 @@ export class App extends Adw.Application implements AppInterface {
     }
 
     this._isExiting = true
+    this._indexConversationsLater.cancel()
 
     this.window.hide()
     this.hold()
 
     if (this.isLoaded) {
-      await conversationsStore.saveConversations(this.conversations)
-      await conversationsStore.indexConversations(this.provider, this.conversations, false)
+      try {
+        await conversationsStore.saveConversations(this.conversations)
+        await conversationsStore.indexConversations(this.provider, this.conversations, false)
+      } catch (err) {
+        console.error('Failed to save conversations on quit:', err)
+      }
     }
 
     if (this._settingsLoaded) {
-      await settingsStore.saveSettings(this.settings)
-      await skillsStore.saveSkills(this.skills)
-      await skillsStore.indexSkills(this.provider, this.skills, false)
+      try {
+        await settingsStore.saveSettings(this.settings)
+        await skillsStore.saveSkills(this.skills)
+        await skillsStore.indexSkills(this.provider, this.skills, false)
+      } catch (err) {
+        console.error('Failed to save settings on quit:', err)
+      }
     }
 
-    await this.mcp.shutdown()
+    await this.mcp.shutdown().catch((err: unknown) => {
+      console.error('Failed to stop MCP servers:', err)
+    })
     this.sidebar.clearList()
 
     this.release()
@@ -276,6 +299,11 @@ export class App extends Adw.Application implements AppInterface {
     this.window.toaster.add_toast(toast)
   }
 
+  public reportError(message: string, err: unknown): void {
+    console.error(`${message}:`, err)
+    this.showToast(`${message}: ${err instanceof Error ? err.message : String(err)}`, true)
+  }
+
   public focusInput(): void {
     this.chat.input.grabFocus()
   }
@@ -287,14 +315,14 @@ export class App extends Adw.Application implements AppInterface {
   public saveSettings(): void {
     this.provider.url = this.settings.url
     this.window.updateCssClass()
-    void settingsStore.saveSettings(this.settings)
+    this._persistSettings()
   }
 
   public saveSkills(): void {
     void skillsStore.saveSkills(this.skills).then(() => {
       return skillsStore.indexSkills(this.provider, this.skills, false)
     }).catch((err) => {
-      console.error('Failed to save/index skills:', err)
+      this.reportError('Could not save skills', err)
     })
   }
 
@@ -303,9 +331,36 @@ export class App extends Adw.Application implements AppInterface {
       return
     }
     void conversationsStore.saveConversations(this.conversations).then(() => {
-      return conversationsStore.indexConversations(this.provider, this.conversations, false)
+      this._indexConversationsLater()
     }).catch((err) => {
-      console.error('Failed to save/index conversations:', err)
+      this.reportError('Could not save conversations', err)
+    })
+  }
+
+  public async persistConversation(conversation: ChatConversation): Promise<boolean> {
+    try {
+      await conversationsStore.saveMessages(conversation.id, conversation.messages)
+    } catch (err) {
+      this.reportError('Could not save messages', err)
+      return false
+    }
+    conversation.updated_at = new Date().toISOString()
+    conversation.embeddings = undefined
+    const conv = this.conversations.find((c) => {
+      return c.id === conversation.id
+    })
+    if (conv) {
+      conv.updated_at = conversation.updated_at
+      conv.embeddings = undefined
+      this.sidebar.updateConversation(conv)
+    }
+    this.saveConversations()
+    return true
+  }
+
+  private _persistSettings(): void {
+    void settingsStore.saveSettings(this.settings).catch((err) => {
+      this.reportError('Could not save settings', err)
     })
   }
 
@@ -330,7 +385,7 @@ export class App extends Adw.Application implements AppInterface {
   public setTheme(theme: number): void {
     this.settings.theme = theme
     Adw.StyleManager.get_default().set_color_scheme(theme)
-    void settingsStore.saveSettings(this.settings)
+    this._persistSettings()
     const action = this.lookup_action('theme') as Gio.SimpleAction | null
     if (action) {
       action.set_state(GLib.Variant.new_int32(theme))
@@ -339,7 +394,7 @@ export class App extends Adw.Application implements AppInterface {
 
   public setSyntax(theme: string): void {
     this.settings.syntax = theme
-    void settingsStore.saveSettings(this.settings)
+    this._persistSettings()
     this.emit('syntax-changed', theme)
   }
 
@@ -350,7 +405,7 @@ export class App extends Adw.Application implements AppInterface {
     } else {
       this.window.remove_css_class('devel')
     }
-    void settingsStore.saveSettings(this.settings)
+    this._persistSettings()
   }
 
   public setConversationTitle(conversation: Conversation, title: string): void {
@@ -396,8 +451,17 @@ export class App extends Adw.Application implements AppInterface {
     if (!conv) {
       return
     }
-    const messages = await conversationsStore.getMessages(conv.id)
-    const conversation = { ...conv, messages }
+    let conversation = this.chat.getActiveConversation(conv.id)
+    if (!conversation) {
+      let messages: ChatMessage[]
+      try {
+        messages = await conversationsStore.getMessages(conv.id)
+      } catch (err) {
+        this.reportError('Could not load conversation', err)
+        return
+      }
+      conversation = this.chat.getActiveConversation(conv.id) ?? { ...conv, messages }
+    }
     this.conversation = conversation
     this.model = conversation.model
     this.chat.loadMessages(conversation)

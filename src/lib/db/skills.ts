@@ -1,7 +1,7 @@
 import type Gio from 'gi://Gio'
 
 import { DEFAULT_EMBEDDING_MODEL, DEFAULT_SKILLS } from '@/lib/constants.js'
-import { db } from '@/lib/db/index.js'
+import { DatabaseError, db } from '@/lib/db/index.js'
 import type { Skill } from '@/lib/db/types.js'
 import type { Provider } from '@/lib/providers/index.js'
 
@@ -26,8 +26,7 @@ export class SkillsStore {
         }
       })
     } catch (e) {
-      console.error('Failed to parse skills:', e)
-      return JSON.parse(JSON.stringify(DEFAULT_SKILLS)) as Skill[]
+      throw new DatabaseError(`Invalid skills data: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 

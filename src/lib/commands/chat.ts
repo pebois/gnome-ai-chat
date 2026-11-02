@@ -1,7 +1,6 @@
 import GLib from 'gi://GLib?version=2.0'
 
 import type { Command } from '@/lib/commands/index.js'
-import { conversationsStore } from '@/lib/db/conversations.js'
 import { ACTION_NEW_CONVERSATION } from '@/lib/ipc.js'
 
 export const clear: Command = {
@@ -75,16 +74,9 @@ export const compress: Command = {
       })
 
     app.conversation.messages = compressedMessages
-    await conversationsStore.saveMessages(app.conversation.id, compressedMessages)
-    app.conversation.updated_at = new Date().toISOString()
-    const conv = app.conversations.find((c) => {
-      return c.id === app.conversation?.id
-    })
-    if (conv) {
-      conv.updated_at = app.conversation.updated_at
-      app.sidebar.updateConversation(conv)
+    if (!await app.persistConversation(app.conversation)) {
+      return
     }
-    app.saveConversations()
     app.chat.loadMessages(app.conversation)
     app.showToast('Conversation compressed')
   }

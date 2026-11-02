@@ -14,7 +14,7 @@ import { DEFAULT_SPACING, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
 import { markdownToPango, parseCodeBlock, parseMarkdownChunks, parseTable } from '@/lib/parser.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
 import { handle_render_html } from '@/lib/tools/html.js'
-import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setupContextMenu } from '@/lib/ui.js'
+import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setMarkupSafe, setupContextMenu } from '@/lib/ui.js'
 import { getLanguageMetadata } from '@/lib/utils.js'
 
 export interface MessageProps {
@@ -22,6 +22,7 @@ export interface MessageProps {
   onReload: (message: ChatMessage) => void
   onCopy: () => void
   onRegenerate: (message: ChatMessage) => void
+  pending?: boolean
 }
 
 interface ContentPart {
@@ -57,6 +58,8 @@ export class Message {
   private _regenerateAction?: Gio.SimpleAction
   private _busySignalId: number
   private _syntaxSignalId: number
+  private _popover?: Gtk.PopoverMenu
+  private _pendingSpinner?: Adw.Spinner
 
   public get widget(): Gtk.Box {
     return this._widget
@@ -81,6 +84,7 @@ export class Message {
     })
 
     const { message } = props
+    this._setupPending(message, !!props.pending)
     this._setupThinking(message)
     this._setupToolCalls(message)
     this._setupImages(message)
@@ -101,9 +105,35 @@ export class Message {
     this._updateSensitivity(this._app.isBusy)
   }
 
+  public get isEmpty(): boolean {
+    const m = this._currentMessage
+    return !m.content?.length && !m.thinking?.length && !m.tool_calls?.length && !m.images?.length && !m.files?.length
+  }
+
   public destroy(): void {
     this._app.disconnect(this._busySignalId)
     this._app.disconnect(this._syntaxSignalId)
+    this._popover?.unparent()
+    this._popover = undefined
+  }
+
+  public setPending(pending: boolean): void {
+    this._pendingSpinner?.set_visible(pending && this.isEmpty)
+  }
+
+  private _setupPending(message: ChatMessage, pending: boolean): void {
+    if (!pending) {
+      return
+    }
+    this._pendingSpinner = new Adw.Spinner({
+      halign: Gtk.Align.START,
+      width_request: 24,
+      height_request: 24,
+      margin_start: 6,
+      tooltip_text: 'Waiting for the model'
+    })
+    this._widget.append(this._pendingSpinner)
+    this._pendingSpinner.set_visible(!message.content?.length && !message.thinking?.length && !message.tool_calls?.length)
   }
 
   private _updateSyntax(theme: string): void {
@@ -318,7 +348,7 @@ export class Message {
               continue
             }
           } else {
-            part.contentLabel!.set_markup(markdownToPango(chunk.content))
+            setMarkupSafe(part.contentLabel!, markdownToPango(chunk.content), chunk.content)
             continue
           }
         }
@@ -355,7 +385,7 @@ export class Message {
           selectable: true
         })
         label.add_css_class('message-text')
-        label.set_markup(markdownToPango(chunk.content))
+        setMarkupSafe(label, markdownToPango(chunk.content), chunk.content)
         this._contentBox.append(label)
         this._contentParts.push({
           type: 'text',
@@ -497,6 +527,7 @@ export class Message {
     }
 
     const popover = Gtk.PopoverMenu.new_from_model(menu)
+    this._popover = popover
     popover.set_parent(this._messageGroup)
     popover.set_has_arrow(false)
     popover.set_position(Gtk.PositionType.BOTTOM)
@@ -566,6 +597,9 @@ export class Message {
 
   public update(updated: ChatMessage): void {
     this._currentMessage = updated
+    if (this._pendingSpinner?.get_visible()) {
+      this.setPending(true)
+    }
     this._thinkingListBox.set_visible(!!updated.thinking?.length)
     this._thinkingLabel.set_text(updated.thinking || '')
     this._toolCallsListBox.set_visible(!!updated.tool_calls?.length)

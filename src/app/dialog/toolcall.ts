@@ -3,7 +3,7 @@ import Gtk from 'gi://Gtk?version=4.0'
 import Pango from 'gi://Pango'
 
 import type { AppInterface } from '@/lib/app.js'
-import type { ToolCall } from '@/lib/providers/index.js'
+import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
 
 export function showToolCallDialog(app: AppInterface, tool_call: ToolCall): void {
   const conversation = app.conversation
@@ -11,21 +11,17 @@ export function showToolCallDialog(app: AppInterface, tool_call: ToolCall): void
     return
   }
 
-  let toolMessageIndex = -1
-  for (let i = 0; i < conversation.messages.length; i++) {
-    const msg = conversation.messages[i]
-    if (msg.role === 'assistant' && msg.tool_calls) {
-      const idx = msg.tool_calls.findIndex((tc) => {
-        return tc.id === tool_call.id
-      })
-      if (idx !== -1) {
-        toolMessageIndex = i + 1 + idx
-        break
-      }
+  let toolResponse: ChatMessage | undefined
+  const ownerIndex = conversation.messages.findIndex((m) => {
+    return m.tool_calls?.includes(tool_call)
+  })
+  if (ownerIndex !== -1) {
+    const position = conversation.messages[ownerIndex].tool_calls!.indexOf(tool_call)
+    const candidate = conversation.messages[ownerIndex + 1 + position]
+    if (candidate?.role === 'tool' && (!candidate.tool_name || candidate.tool_name === tool_call.function.name)) {
+      toolResponse = candidate
     }
   }
-
-  const toolResponse = toolMessageIndex !== -1 ? conversation.messages[toolMessageIndex] : undefined
 
   const window = new Adw.Dialog({
     title: 'Tool Call',

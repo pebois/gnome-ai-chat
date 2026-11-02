@@ -1,11 +1,11 @@
 import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
+import type { ChatConversation } from '@/app/ui/history.js'
 import { buildContext } from '@/lib/agent/context.js'
 import { summarizeConversation } from '@/lib/agent/summarize.js'
 import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_CHAT_MODEL, DEFAULT_OPTIONS, MAX_TOOL_ROUNDS } from '@/lib/constants.js'
-import { conversationsStore } from '@/lib/db/conversations.js'
 import { debug } from '@/lib/debug.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
 import { buildSkillPrompt, matchSkill, stripSkillMention } from '@/lib/skills/index.js'
@@ -15,6 +15,7 @@ import { convertSummaryToTitle } from '@/lib/utils.js'
 export interface ChatSessionCallbacks {
   onNewResponse?: () => void
   onMessageChunk?: (chunk: ChatMessage) => void
+  onResponse?: (message: ChatMessage) => void
   onFinish?: (messages: ChatMessage[]) => void
   onError?: (error: string) => void
 }
@@ -22,6 +23,8 @@ export interface ChatSessionCallbacks {
 export class ChatService {
   private _app: AppInterface
   private _cancellables: Map<number, Gio.Cancellable> = new Map()
+  private _conversations: Map<number, ChatConversation> = new Map()
+  private _streaming: Map<number, ChatMessage> = new Map()
   private _capabilityWarnings: Set<string> = new Set()
   private _trimWarnings: Set<number> = new Set()
 
@@ -48,6 +51,14 @@ export class ChatService {
     return this._cancellables.has(id)
   }
 
+  public getActiveConversation(id: number): ChatConversation | undefined {
+    return this._conversations.get(id)
+  }
+
+  public getStreamingMessage(id: number): ChatMessage | undefined {
+    return this._streaming.get(id)
+  }
+
   public async generateResponse(
     conversationId: number,
     isFirstMessage: boolean,
@@ -67,6 +78,7 @@ export class ChatService {
 
     const cancellable = new Gio.Cancellable()
     this._cancellables.set(conversationId, cancellable)
+    this._conversations.set(conversationId, chatConversation)
     this._app.setGeneratingMessage(conversationId, true)
 
     let fullContent = ''
@@ -90,6 +102,7 @@ export class ChatService {
           return
         }
 
+        this._streaming.set(conversationId, { role: 'assistant', content: '' })
         callbacks.onNewResponse?.()
         fullContent = ''
         fullThinking = ''
@@ -125,15 +138,20 @@ export class ChatService {
               fullToolCalls = [...fullToolCalls, ...chunk.message.tool_calls]
             }
 
-            callbacks.onMessageChunk?.({
+            const partial: ChatMessage = {
               ...(chunk.message || {}),
+              role: 'assistant',
               content: fullContent,
               thinking: fullThinking,
               tool_calls: fullToolCalls.length > 0 ? fullToolCalls : undefined
-            })
+            }
+            this._streaming.set(conversationId, partial)
+            callbacks.onMessageChunk?.(partial)
           },
           cancellable
         })
+
+        this._streaming.delete(conversationId)
 
         if (!response) {
           if (cancellable.is_cancelled() && (fullContent || fullThinking || fullToolCalls.length > 0)) {
@@ -145,12 +163,14 @@ export class ChatService {
             }
             generatedMessages.push(partialMessage)
             chatConversation.messages.push(partialMessage)
+            callbacks.onResponse?.(partialMessage)
           }
           return
         }
 
         generatedMessages.push(response)
         chatConversation.messages.push(response)
+        callbacks.onResponse?.(response)
 
         if (response.tool_calls?.length) {
           const startToolTime = GLib.get_monotonic_time()
@@ -170,18 +190,7 @@ export class ChatService {
 
       await recursiveChat(chatConversation.messages, 0)
 
-      await conversationsStore.saveMessages(chatConversation.id, chatConversation.messages)
-      chatConversation.updated_at = new Date().toISOString()
-      chatConversation.embeddings = undefined
-      const conv = this._app.conversations.find((c) => {
-        return c.id === chatConversation.id
-      })
-      if (conv) {
-        conv.updated_at = chatConversation.updated_at
-        conv.embeddings = undefined
-        this._app.sidebar.updateConversation(conv)
-      }
-      this._app.saveConversations()
+      await this._app.persistConversation(chatConversation)
 
       if (!this._app.window.is_active || this._app.conversation?.id !== chatConversation.id) {
         const notification = new Gio.Notification()
@@ -215,8 +224,12 @@ export class ChatService {
       const errorMessage = err instanceof Error ? err.message : String(err)
       callbacks.onError?.(errorMessage)
     } finally {
+      this._streaming.delete(conversationId)
+      this._conversations.delete(conversationId)
       this._app.setGeneratingMessage(conversationId, false)
-      this._cancellables.delete(conversationId)
+      if (this._cancellables.get(conversationId) === cancellable) {
+        this._cancellables.delete(conversationId)
+      }
     }
   }
 

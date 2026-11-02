@@ -7,6 +7,13 @@ import { debug } from '@/lib/debug.js'
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async', 'communicate_utf8_finish')
 Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish')
 
+export class DatabaseError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'DatabaseError'
+  }
+}
+
 export class Database {
   private _dbPath: string
   private _configDir: string
@@ -36,21 +43,21 @@ export class Database {
     const task = async (): Promise<string> => {
       const sqlString = Array.isArray(sql) ? `BEGIN TRANSACTION;\n${sql.join('\n')}\nCOMMIT;` : sql
       this._debug(`SQL: ${sqlString.slice(0, 100)}${sqlString.length > 100 ? '...' : ''}`)
+      let proc: Gio.Subprocess
       try {
-        const proc = new Gio.Subprocess({
-          argv: ['sqlite3', ...flags, this._dbPath],
+        proc = new Gio.Subprocess({
+          argv: ['sqlite3', '-bail', ...flags, this._dbPath],
           flags: Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
         })
         proc.init(null)
-        const [stdout, stderr] = await proc.communicate_utf8_async(sqlString, null)
-        if (!proc.get_successful()) {
-          console.error('SQLite error:', stderr)
-        }
-        return stdout || ''
       } catch (e) {
-        console.error('Failed to execute SQLite:', e)
-        return ''
+        throw new DatabaseError(`Could not run sqlite3: ${e instanceof Error ? e.message : String(e)}`)
       }
+      const [stdout, stderr] = await proc.communicate_utf8_async(sqlString, null)
+      if (!proc.get_successful()) {
+        throw new DatabaseError(stderr?.trim() || `sqlite3 exited with status ${proc.get_exit_status()}`)
+      }
+      return stdout || ''
     }
 
     const promise = this._queue.then(task)
@@ -140,7 +147,7 @@ export class Database {
         return JSON.parse(rows[0].value) as T
       }
     } catch (parseError) {
-      console.error(`Failed to parse KV value for ${key}:`, parseError)
+      throw new DatabaseError(`Invalid value for "${key}": ${parseError instanceof Error ? parseError.message : String(parseError)}`)
     }
     return null
   }

@@ -9,7 +9,6 @@ import { EmptyPage } from '@/app/page/empty.js'
 import type { ChatConversation } from '@/app/ui/history.js'
 import { History } from '@/app/ui/history.js'
 import { Input } from '@/app/ui/input.js'
-import { Message } from '@/app/ui/message/index.js'
 import { ChatService } from '@/lib/agent/chat.js'
 import type { AppInterface } from '@/lib/app.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
@@ -274,6 +273,12 @@ export class Chat {
       this._centerInput(false)
     }
 
+    const streaming = this._chatService.getStreamingMessage(conversation.id)
+    if (streaming && conversation.messages.length > 0) {
+      this._history.beginStreaming(streaming)
+      this._history.scrollToBottom(false)
+    }
+
     const isGenerating = this._app.isGeneratingMessage(conversation.id)
     this._input.setSensitive(!isGenerating)
     this._input.setSendMode(isGenerating ? 'stop' : 'send')
@@ -292,18 +297,7 @@ export class Chat {
     }
 
     conversation.messages = conversation.messages.slice(0, index + 1)
-    await conversationsStore.saveMessages(conversation.id, conversation.messages)
-    conversation.updated_at = new Date().toISOString()
-    conversation.embeddings = undefined
-    const conv = this._app.conversations.find((c) => {
-      return c.id === conversation.id
-    })
-    if (conv) {
-      conv.updated_at = conversation.updated_at
-      conv.embeddings = undefined
-      this._app.sidebar.updateConversation(conv)
-    }
-    this._app.saveConversations()
+    await this._app.persistConversation(conversation)
     this.loadMessages(conversation)
 
     this._input.setSensitive(false)
@@ -312,36 +306,53 @@ export class Chat {
     await this._startGeneration(conversation, conversation.messages.length === 1)
   }
 
+  public getActiveConversation(id: number): ChatConversation | undefined {
+    return this._chatService.getActiveConversation(id)
+  }
+
   private _startGeneration(conversation: ChatConversation, isFirstMessage: boolean): Promise<void> {
-    let currentMessageComponent: Message | undefined
+    const isCurrent = (): boolean => {
+      return this._app.conversation?.id === conversation.id
+    }
+    const done = (): void => {
+      if (!isCurrent()) {
+        return
+      }
+      this._history.endStreaming()
+      this._input.setSensitive(true)
+      this._input.grabFocus()
+      this._input.setSendMode('send')
+      this._history.scrollToBottom()
+    }
     return this._chatService.generateResponse(conversation.id, isFirstMessage, {
       onNewResponse: () => {
-        if (this._app.conversation?.id !== conversation.id) {
+        if (!isCurrent()) {
           return
         }
-        currentMessageComponent = this._renderMessage({ role: 'assistant', content: '•••' })
+        this._contentStack.set_visible_child_name('chat')
+        this._history.beginStreaming()
         this._history.scrollToBottom()
       },
       onMessageChunk: (chunk) => {
-        if (this._app.conversation?.id === conversation.id) {
-          const shouldScroll = this._history.stickToBottom
-          currentMessageComponent?.update(chunk)
-          if (shouldScroll) {
-            this._history.scrollToBottom()
-          }
+        if (!isCurrent()) {
+          return
+        }
+        const shouldScroll = this._history.stickToBottom
+        this._history.updateStreaming(chunk)
+        if (shouldScroll) {
+          this._history.scrollToBottom()
+        }
+      },
+      onResponse: (message) => {
+        if (isCurrent()) {
+          this._history.commitStreaming(message)
         }
       },
       onError: (error) => {
         this._app.showToast(error, true)
+        done()
       },
-      onFinish: () => {
-        if (this._app.conversation?.id === conversation.id) {
-          this._input.setSensitive(true)
-          this._input.grabFocus()
-          this._input.setSendMode('send')
-          this._history.scrollToBottom()
-        }
-      }
+      onFinish: done
     })
   }
 
@@ -401,18 +412,7 @@ export class Chat {
 
     conversation.messages.push(userMessage)
 
-    await conversationsStore.saveMessages(conversation.id, conversation.messages)
-    conversation.updated_at = new Date().toISOString()
-    conversation.embeddings = undefined
-    const conv = this._app.conversations.find((c) => {
-      return c.id === conversation.id
-    })
-    if (conv) {
-      conv.updated_at = conversation.updated_at
-      conv.embeddings = undefined
-      this._app.sidebar.updateConversation(conv)
-    }
-    this._app.saveConversations()
+    await this._app.persistConversation(conversation)
 
     this._history.scrollToBottom()
 
@@ -424,7 +424,7 @@ export class Chat {
       this.stopGeneration(this._app.conversation.id)
       this._app.conversation.messages = []
       void conversationsStore.saveMessages(this._app.conversation.id, []).catch((err) => {
-        console.error('Failed to clear messages:', err)
+        this._app.reportError('Could not clear messages', err)
       })
       this.loadMessages(this._app.conversation)
     }
@@ -441,29 +441,15 @@ export class Chat {
     }
     const text = message.content
     conversation.messages = conversation.messages.slice(0, index)
-    await conversationsStore.saveMessages(conversation.id, conversation.messages)
-    conversation.updated_at = new Date().toISOString()
-    conversation.embeddings = undefined
-    const conv = this._app.conversations.find((c) => {
-      return c.id === conversation.id
-    })
-    if (conv) {
-      conv.updated_at = conversation.updated_at
-      conv.embeddings = undefined
-      this._app.sidebar.updateConversation(conv)
-    }
-    this._app.saveConversations()
+    await this._app.persistConversation(conversation)
     this.loadMessages(conversation)
     this._input.getBuffer().set_text(text, -1)
+    this._input.attachments.restore(message.files, message.images)
   }
 
-  private _renderMessage(message: ChatMessage): Message | undefined {
-    if (message.role === 'tool') {
-      return undefined
-    }
-
+  private _renderMessage(message: ChatMessage): void {
     this._contentStack.set_visible_child_name('chat')
-    return this._history.renderMessage(message)
+    this._history.renderMessage(message)
   }
 
   private _centerInput(centered: boolean, animated = true): void {

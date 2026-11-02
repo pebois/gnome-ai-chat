@@ -52,12 +52,14 @@ export interface AppInterface {
   indexFiles(): Promise<void>
   init: () => Promise<void>
   reloadModels(): Promise<void>
+  reportError(message: string, err: unknown): void
   setPendingConversationId(id: number): void
   isGeneratingMessage(id: number): boolean
   isSummarizing(id: number): boolean
   saveSettings(): void
   saveSkills(): void
   saveConversations(): void
+  persistConversation(conversation: ChatConversation): Promise<boolean>
   sendNotification(id: string, notification: Gio.Notification): void
   setConversation(id: number): Promise<void>
   setConversationTitle(conv: Conversation, title: string): void
