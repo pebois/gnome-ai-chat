@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Rename Chats**: A "Rename…" item in the conversation context menu opens a dialog for editing the title by hand. Before, the only way to change a title was "Generate Summary".
+- **Pinned Chats**: "Pin to Top" in the conversation context menu moves a conversation into a "Pinned" section at the top of the sidebar, whatever its date. The pin is saved in a new `pinned` column on `conversations`.
+- **Schema Migrations**: The database now has a schema version (`PRAGMA user_version`) and a list of ordered migrations (`src/lib/db/migrations.ts`). Pending migrations run in a single transaction at startup, and a newer schema is left untouched. Migration 1 adds `conversations.pinned`.
+
 ### Fixed
 - **Data Loss on Database Errors**: A failed database read was treated as an empty result, so the app could overwrite real data with defaults. Failing to read the conversation list led the next save to delete every conversation. Failing to read skills, settings or stats led them to be replaced by the defaults on quit. `Database.execSql` now throws a `DatabaseError` with the `sqlite3` error message, and invalid stored JSON for skills, conversations, messages or settings raises the same error instead of falling back to defaults. If loading fails at startup, the error page is shown and nothing is saved. Stats are only saved once they have loaded.
 - **Partial Transactions**: `sqlite3` now runs with `-bail`, so a failing statement inside a transaction rolls the whole transaction back. Before, the `DELETE` that starts each full rewrite (skills, messages, conversations) was still committed when a later `INSERT` failed.
