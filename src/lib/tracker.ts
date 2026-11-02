@@ -7,6 +7,7 @@ import type { PerformanceStats } from '@/lib/db/types.js'
 export class Tracker {
   private _stats: PerformanceStats
   private _startTime: number
+  private _loaded = false
 
   constructor() {
     this._stats = DEFAULT_STATS
@@ -16,6 +17,7 @@ export class Tracker {
   public async load(): Promise<void> {
     try {
       const data = await settingsStore.getStats()
+      this._loaded = true
       if (data) {
         this._stats = {
           wallTimeMs: data.wallTimeMs || 0,
@@ -78,6 +80,11 @@ export class Tracker {
     this._stats.wallTimeMs = statsToSave.wallTimeMs
     this._startTime = GLib.get_monotonic_time()
 
-    void settingsStore.saveStats(this._stats)
+    if (!this._loaded) {
+      return
+    }
+    void settingsStore.saveStats(this._stats).catch((err: unknown) => {
+      console.error('Failed to save stats:', err)
+    })
   }
 }

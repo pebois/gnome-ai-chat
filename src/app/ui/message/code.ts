@@ -29,14 +29,14 @@ export function createCodeWidget(
     valign: Gtk.Align.CENTER
   })
   copyBtn.add_css_class('flat')
-  copyBtn.connect('clicked', () => {
-    const cb = Gdk.Display.get_default()!.get_clipboard()
-    cb.set(code)
-    app.showToast('Code copied')
-  })
   expander.add_suffix(copyBtn)
 
   const buffer = new GtkSource.Buffer()
+  copyBtn.connect('clicked', () => {
+    const cb = Gdk.Display.get_default()!.get_clipboard()
+    cb.set(buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false))
+    app.showToast('Code copied')
+  })
   const lang = lm.get_language(metadata.id) || lm.get_language('text')
   if (lang) {
     buffer.set_language(lang)
