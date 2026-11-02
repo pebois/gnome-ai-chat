@@ -347,9 +347,13 @@ export class Sidebar {
 
     const index = this._app.conversations.indexOf(conversation)
     if (index > -1) {
+      try {
+        await conversationsStore.deleteConversation(conversation.id)
+      } catch (err) {
+        this._app.reportError('Could not delete conversation', err)
+        return
+      }
       this._app.conversations.splice(index, 1)
-      await conversationsStore.deleteMessages(conversation.id)
-      await conversationsStore.deleteConversation(conversation.id)
     }
 
     if (this._app.conversations.length === 0) {

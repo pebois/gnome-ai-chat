@@ -165,6 +165,18 @@ export class Attachments {
     this._updateAttachmentsUI()
   }
 
+  public restore(files?: { name: string; content: string }[], images?: string[]): void {
+    this._attachments = [
+      ...(files ?? []).map((f): Attachment => {
+        return { type: 'text', name: f.name, content: f.content }
+      }),
+      ...(images ?? []).map((base64, i): Attachment => {
+        return { type: 'image', name: `Image ${i + 1}`, base64 }
+      })
+    ]
+    this._updateAttachmentsUI()
+  }
+
   private _openFileChooser(title: string, filter: Gtk.FileFilter): void {
     const dialog = new Gtk.FileChooserNative({
       title,

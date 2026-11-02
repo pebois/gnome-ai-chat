@@ -50,6 +50,8 @@ export const MCP_TOOL_PREFIX = 'mcp__'
 
 export const MAX_TOOL_ROUNDS = 10
 
+export const CONVERSATION_INDEX_DELAY_MS = 30000
+
 export const TOOL_RESULT_MAX_CHARS = 8000
 
 export const OLD_TOOL_RESULT_MAX_CHARS = 1500

@@ -32,6 +32,7 @@ export class History {
   private _loading = false
   private _loaded = false
   private _messages: Message[] = []
+  private _streaming?: Message
 
   public get stickToBottom(): boolean {
     return this._scrollManager.stickToBottom
@@ -187,13 +188,57 @@ export class History {
     }
   }
 
-  public renderMessage(message: ChatMessage, atStart: boolean = false): Message | undefined {
+  public beginStreaming(message?: ChatMessage): void {
+    this.endStreaming()
+    this._streaming = this.renderMessage(message ?? { role: 'assistant', content: '' }, false, true)
+  }
+
+  public updateStreaming(message: ChatMessage): void {
+    this._streaming?.update(message)
+  }
+
+  public commitStreaming(message: ChatMessage): void {
+    if (!this._streaming) {
+      return
+    }
+    this._streaming.update(message)
+    this._streaming.setPending(false)
+    this._streaming = undefined
+  }
+
+  public endStreaming(): void {
+    const streaming = this._streaming
+    this._streaming = undefined
+    if (!streaming) {
+      return
+    }
+    if (streaming.isEmpty) {
+      this._removeMessage(streaming)
+    } else {
+      streaming.setPending(false)
+    }
+  }
+
+  private _removeMessage(message: Message): void {
+    const index = this._messages.indexOf(message)
+    if (index !== -1) {
+      this._messages.splice(index, 1)
+    }
+    message.destroy()
+    const row = message.widget.get_parent()
+    if (row) {
+      this._list.remove(row)
+    }
+  }
+
+  public renderMessage(message: ChatMessage, atStart: boolean = false, pending: boolean = false): Message | undefined {
     if (message.role === 'tool') {
       return undefined
     }
 
     const msgComponent = new Message(this._app, {
       message,
+      pending,
       onReload: (m) => {
         return this._app.chat.startFromMessage(m)
       },
@@ -241,6 +286,7 @@ export class History {
       m.destroy()
     })
     this._messages = []
+    this._streaming = undefined
     this._list.remove_all()
     this._banner.revealed = false
     this._loaded = true

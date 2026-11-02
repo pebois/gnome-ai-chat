@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Data Loss on Database Errors**: A failed database read was treated as an empty result, so the app could overwrite real data with defaults. Failing to read the conversation list led the next save to delete every conversation. Failing to read skills, settings or stats led them to be replaced by the defaults on quit. `Database.execSql` now throws a `DatabaseError` with the `sqlite3` error message, and invalid stored JSON for skills, conversations, messages or settings raises the same error instead of falling back to defaults. If loading fails at startup, the error page is shown and nothing is saved. Stats are only saved once they have loaded.
+- **Partial Transactions**: `sqlite3` now runs with `-bail`, so a failing statement inside a transaction rolls the whole transaction back. Before, the `DELETE` that starts each full rewrite (skills, messages, conversations) was still committed when a later `INSERT` failed.
+- **Visible Save Errors**: Failures to save messages, conversations, skills or settings, to load a conversation, to delete or compress a conversation, or to start MCP servers now show an error toast through a new `app.reportError`. Before, they were only logged. A conversation that fails to load is no longer opened empty, which would have let the next message overwrite its history. Deleting a conversation removes it from the list only after the database delete succeeds. Quitting always completes even if a final save fails.
+- **Orphaned Messages**: Deleting a conversation or clearing all conversations now also deletes its messages. Foreign-key cascades are not enabled on the connections that run these deletes, so messages were left behind in the database.
+- **Lost Replies When Switching Conversations**: Opening a conversation that is still generating now reuses the in-flight conversation instead of reloading it from the database. Before, the reply was written to a detached copy. It did not appear until the conversation was opened again, and sending another message first saved the conversation without it.
+- **Live Streaming After Switching Back**: The partial reply of a conversation that is still generating is shown again when you return to it, and keeps streaming. Before, chunks went to a widget that had already been removed. `ChatService` keeps the in-flight message per conversation, and `History` owns a single streaming slot (`beginStreaming`, `updateStreaming`, `commitStreaming`, `endStreaming`).
+- **Stuck Placeholder**: A spinner replaces the `•••` placeholder while waiting for the model. It is removed if the generation is cancelled before the first token, fails, or returns nothing. Before, `•••` stayed in the conversation. The input is also re-enabled after an error.
+- **Copy Code During Streaming**: The copy button of a code block now copies the current contents of the block instead of the first streamed fragment.
+- **Wrong Tool Result in Tool Call Dialog**: The dialog now finds a tool call's result from the assistant message that contains it and the call's position. Before, it matched on `id`, which Ollama often leaves out, so every call could show the result of the first tool call in the conversation.
+- **Blank Paragraphs on Invalid Markup**: Text and table cells whose markdown produces invalid Pango markup, such as overlapping `**` and `*`, now show the raw text instead of rendering empty (`setMarkupSafe`).
+- **Edit Message Drops Attachments**: "Edit message" now puts the message's files and images back in the input along with its text.
+- **Message Popover Leak**: Each message's context menu is unparented when the message is destroyed.
+
+### Changed
+- **Incremental Conversation Saves**: `ConversationsStore` now remembers what it last wrote, so a save only writes the difference. Sending a message appends just the new rows instead of deleting and re-inserting the whole conversation, images included. Regenerating or editing from a message deletes only the rows after it, and anything that no longer matches falls back to a full rewrite. `saveConversations` writes only conversations whose title, model, dates or embedding changed, instead of rewriting the whole table after every message. Saves for the same conversation run in order, and a failed write forces a full rewrite next time.
+- **Debounced Re-Embedding**: Conversations are re-embedded after 30 seconds without changes (`CONVERSATION_INDEX_DELAY_MS`) instead of after every save. Before, each message triggered two embedding passes and two full rewrites of the conversations table. Any pending indexing still runs on quit.
+- **Single Save Path**: The save-and-sync block (save messages, bump `updated_at`, update the sidebar, save the list), repeated in `sendMessage`, `regenerateFromMessage`, `startFromMessage`, the agent loop and `/compress`, is now `app.persistConversation()`. It reports failures itself.
+
 ## [1.13.0] - 2026-10-28
 
 ### Added

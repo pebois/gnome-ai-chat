@@ -4,6 +4,7 @@ import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
+import Pango from 'gi://Pango'
 
 export function downloadImage(parent: Gtk.Window, base64: string): void {
   if (!base64) {
@@ -186,3 +187,12 @@ export const ResizeTracker = GObject.registerClass({
     }
   }
 })
+
+export function setMarkupSafe(label: Gtk.Label, markup: string, fallback: string): void {
+  try {
+    Pango.parse_markup(markup, -1, '')
+    label.set_markup(markup)
+  } catch {
+    label.set_text(fallback)
+  }
+}
