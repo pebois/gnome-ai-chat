@@ -1,5 +1,6 @@
 import Adw from 'gi://Adw?version=1'
 import Gio from 'gi://Gio'
+import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 import Pango from 'gi://Pango'
 
@@ -21,7 +22,12 @@ type ConversationRow = Gtk.ListBoxRow & {
   popover?: Gtk.PopoverMenu
 }
 
-const GROUP_ORDER = ['Today', 'Yesterday', 'This Week', 'This Month', 'Older']
+const PINNED_GROUP = 'Pinned'
+const GROUP_ORDER = [PINNED_GROUP, 'Today', 'Yesterday', 'This Week', 'This Month', 'Older']
+
+function groupOf(conversation: Conversation): string {
+  return conversation.pinned ? PINNED_GROUP : getDateGroup(conversation.updated_at || conversation.created_at)
+}
 
 export class Sidebar {
   private _app: AppInterface
@@ -220,7 +226,7 @@ export class Sidebar {
       const matchesSemantic = similarity >= 0.5
 
       if (matchesText || matchesSemantic) {
-        this._visibleGroups.add(getDateGroup(conv.updated_at || conv.created_at))
+        this._visibleGroups.add(groupOf(conv))
       }
     }
   }
@@ -240,7 +246,7 @@ export class Sidebar {
 
     const grouped = new Map<string, Conversation[]>()
     for (const conv of sortedConvs) {
-      const group = getDateGroup(conv.updated_at || conv.created_at)
+      const group = groupOf(conv)
       if (!grouped.has(group)) {
         grouped.set(group, [])
       }
@@ -319,19 +325,62 @@ export class Sidebar {
   public updateConversation(conversation: Conversation): void {
     const row = this._getRow(conversation)
     if (row) {
-      const newGroup = getDateGroup(conversation.updated_at || conversation.created_at)
+      const newGroup = groupOf(conversation)
       if (row.group !== newGroup) {
-        this.populateList()
-        if (this._app.conversation) {
-          const activeRow = this._getRow(this._app.conversation)
-          if (activeRow) {
-            this._conversationList.select_row(activeRow)
-          }
-        }
+        this._refreshList()
       } else {
         this._conversationList.invalidate_sort()
       }
     }
+  }
+
+  private _refreshList(): void {
+    this.populateList()
+    if (this._app.conversation) {
+      const activeRow = this._getRow(this._app.conversation)
+      if (activeRow) {
+        this._conversationList.select_row(activeRow)
+      }
+    }
+  }
+
+  private _setPinned(conversation: Conversation, pinned: boolean): void {
+    conversation.pinned = pinned
+    if (this._app.conversation?.id === conversation.id) {
+      this._app.conversation.pinned = pinned
+    }
+    this._app.saveConversations()
+    this._refreshList()
+  }
+
+  private _showRenameDialog(conversation: Conversation): void {
+    const entry = new Gtk.Entry({
+      text: conversation.title,
+      activates_default: true
+    })
+    const dialog = new Adw.AlertDialog({
+      heading: 'Rename Chat',
+      extra_child: entry,
+      default_response: 'rename',
+      close_response: 'cancel'
+    })
+    dialog.add_response('cancel', 'Cancel')
+    dialog.add_response('rename', 'Rename')
+    dialog.set_response_appearance('rename', Adw.ResponseAppearance.SUGGESTED)
+    const updateEnabled = (): void => {
+      dialog.set_response_enabled('rename', entry.get_text().trim().length > 0)
+    }
+    entry.connect('changed', updateEnabled)
+    dialog.connect('response', (_: Adw.AlertDialog, response: string) => {
+      const title = entry.get_text().trim()
+      if (response !== 'rename' || !title || title === conversation.title) {
+        return
+      }
+      this._app.setConversationTitle(conversation, title)
+      this._app.saveConversations()
+    })
+    dialog.present(this._app.window)
+    entry.grab_focus()
   }
 
   private async _selectConversation(conversation: Conversation): Promise<void> {
@@ -433,6 +482,19 @@ export class Sidebar {
     })
     actionGroup.add_action(summarizeAction)
 
+    const renameAction = createSimpleAction('rename', () => {
+      this._showRenameDialog(conversation)
+    })
+    actionGroup.add_action(renameAction)
+
+    const pinAction = Gio.SimpleAction.new_stateful('pin', null, GLib.Variant.new_boolean(!!conversation.pinned))
+    pinAction.connect('change-state', (_action: Gio.SimpleAction, value: GLib.Variant | null) => {
+      const pinned = value?.get_boolean() ?? false
+      pinAction.set_state(GLib.Variant.new_boolean(pinned))
+      this._setPinned(conversation, pinned)
+    })
+    actionGroup.add_action(pinAction)
+
     const deleteAction = createSimpleAction('delete', async () => {
       await this._deleteConversation(conversation)
     })
@@ -451,6 +513,8 @@ export class Sidebar {
     row.insert_action_group('conversation', actionGroup)
 
     const menu = new Gio.Menu()
+    menu.append_item(createMenuItem('Rename…', 'conversation.rename', 'document-edit-symbolic'))
+    menu.append_item(Gio.MenuItem.new('Pin to Top', 'conversation.pin'))
     menu.append_item(createMenuItem('Generate Summary', 'conversation.summarize', 'text-x-generic-symbolic'))
     menu.append_item(createMenuItem('Export as JSON', 'conversation.export-json', 'text-x-script-symbolic'))
     menu.append_item(createMenuItem('Export as PDF', 'conversation.export-pdf', 'x-office-document-symbolic'))
@@ -477,7 +541,7 @@ export class Sidebar {
     })
 
     row.conversation = conversation
-    row.group = getDateGroup(conversation.updated_at || conversation.created_at)
+    row.group = groupOf(conversation)
     row.popover = popover
 
     return row
