@@ -8,7 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Rename Chats**: A "Rename…" item in the conversation context menu opens a dialog for editing the title by hand. Before, the only way to change a title was "Generate Summary".
+- **Message Stats**: Each assistant reply shows the model, generation speed (tokens per second), output tokens and total time next to its role label. The tooltip adds the prompt token count. Stats come from Ollama's final response and are saved in a new `messages.stats` column (migration 2).
+- **Tool Activity**: While tools run, a live list under the conversation shows what each one is doing ("Reading web page", "Searching indexed files", "Calling GitHub: search"…) and its main argument, with a spinner. When a tool finishes, the spinner becomes a check mark, or a warning icon on error, plus the duration. The list goes away when the model resumes.
+- **Web Search Tool**: A new `web_search` tool searches the web through a SearXNG instance with the JSON format enabled (Preferences › General › Web Search). It returns titles, URLs and snippets for `fetch_web_page` to follow up on. It is only offered to models when a SearXNG URL is set.
+- **Find in Conversation**: `Ctrl+Shift+F` opens a find bar above the conversation. Enter and Shift+Enter (or the arrows) move between matching messages; older messages are loaded as needed, and the match is outlined and scrolled into view.
+- **Answer Sources**: Answers that used indexed files (`search_vector_index`), `read_file` or `fetch_web_page` show the files and pages they drew on as buttons below the reply. Clicking one opens it with the default app.
+- **Rename Chats**: A "Rename" item in the conversation context menu opens a dialog for editing the title by hand. Before, the only way to change a title was "Generate Summary".
 - **Pinned Chats**: "Pin to Top" in the conversation context menu moves a conversation into a "Pinned" section at the top of the sidebar, whatever its date. The pin is saved in a new `pinned` column on `conversations`.
 - **Schema Migrations**: The database now has a schema version (`PRAGMA user_version`) and a list of ordered migrations (`src/lib/db/migrations.ts`). Pending migrations run in a single transaction at startup, and a newer schema is left untouched. Migration 1 adds `conversations.pinned`.
 

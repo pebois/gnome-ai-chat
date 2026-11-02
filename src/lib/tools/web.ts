@@ -1,8 +1,10 @@
 import GLib from 'gi://GLib?version=2.0'
 import Soup from 'gi://Soup?version=3.0'
 
+import type { AppInterface } from '@/lib/app.js'
 import { APPLICATION_ID } from '@/lib/constants.js'
 import type { Tool } from '@/lib/providers/index.js'
+import { buildSearxngUrl, parseSearxngResults } from '@/lib/tools/searxng.js'
 
 let _session: Soup.Session | undefined
 
@@ -56,6 +58,59 @@ export const fetch_rss_feed: Tool = {
       required: ['url']
     },
     description: 'Fetches and parses an RSS or Atom feed, returning a structured JSON list of the top 20 items with their titles, links, and descriptions.'
+  }
+}
+
+export const web_search: Tool = {
+  type: 'function',
+  function: {
+    name: 'web_search',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'The search query.'
+        }
+      },
+      required: ['query']
+    },
+    description: 'Searches the web and returns the top results as a JSON list of titles, URLs and snippets. Use fetch_web_page to read a result.'
+  }
+}
+
+export async function handle_web_search(app: AppInterface, args: Record<string, unknown>): Promise<string> {
+  const query = typeof args.query === 'string' ? args.query.trim() : ''
+  if (!query) {
+    return 'Error: A search query is required.'
+  }
+  const base = app.settings.searchUrl?.trim()
+  if (!base) {
+    return 'Error: No search engine is configured.'
+  }
+  const url = buildSearxngUrl(base, query)
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return 'Error: The search engine URL must start with http or https.'
+  }
+
+  const msg = Soup.Message.new('GET', url)
+  if (!msg) {
+    return 'Error: Invalid search engine URL.'
+  }
+  msg.get_request_headers().append('Accept', 'application/json')
+
+  try {
+    const bytes = await getSession().send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null)
+    if (msg.get_status() !== Soup.Status.OK || !bytes) {
+      return `Failed to search: ${msg.get_reason_phrase() || msg.get_status()}`
+    }
+    const results = parseSearxngResults(new TextDecoder().decode(bytes.toArray()))
+    if (results.length === 0) {
+      return `No results found for "${query}".`
+    }
+    return JSON.stringify(results, null, 2)
+  } catch (e) {
+    return `Error searching the web: ${e instanceof Error ? e.message : String(e)}`
   }
 }
 

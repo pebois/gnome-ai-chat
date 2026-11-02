@@ -12,7 +12,7 @@ import { add_observations, create_entities, create_relations, delete_entities, d
 import { filterToolsByPermissions } from '@/lib/tools/permissions.js'
 import { get_system_info, handle_get_system_info } from '@/lib/tools/system.js'
 import { get_current_datetime, get_user_timezone, handle_get_current_datetime, handle_get_user_timezone } from '@/lib/tools/time.js'
-import { fetch_rss_feed, fetch_web_page, handle_fetch_rss_feed, handle_fetch_web_page } from '@/lib/tools/web.js'
+import { fetch_rss_feed, fetch_web_page, handle_fetch_rss_feed, handle_fetch_web_page, handle_web_search, web_search } from '@/lib/tools/web.js'
 
 export { checkToolPermission, filterToolsByPermissions, TOOL_PERMISSIONS } from '@/lib/tools/permissions.js'
 
@@ -43,6 +43,7 @@ export const tools = [
   search_files,
   search_nodes,
   search_vector_index,
+  web_search,
   write_file
 ]
 
@@ -59,7 +60,8 @@ const PARALLEL_SAFE_TOOLS = new Set([
   'read_graph',
   'roll_die',
   'search_nodes',
-  'search_vector_index'
+  'search_vector_index',
+  'web_search'
 ])
 
 export function canRunInParallel(names: string[]): boolean {
@@ -69,7 +71,12 @@ export function canRunInParallel(names: string[]): boolean {
 }
 
 export function getAvailableTools(app: AppInterface): Tool[] {
-  return [...filterToolsByPermissions(app, tools), ...app.mcp.getTools()]
+  const available = app.settings.searchUrl?.trim()
+    ? tools
+    : tools.filter((tool) => {
+        return tool.function.name !== 'web_search'
+      })
+  return [...filterToolsByPermissions(app, available), ...app.mcp.getTools()]
 }
 
 export async function onToolCall(app: AppInterface, name: string, args: Record<string, unknown>, cancellable?: Gio.Cancellable): Promise<string> {
@@ -97,6 +104,8 @@ export async function onToolCall(app: AppInterface, name: string, args: Record<s
       return handle_search_files(app, args)
     case 'search_vector_index':
       return handle_search_vector_index(app, args)
+    case 'web_search':
+      return handle_web_search(app, args)
     case 'fetch_rss_feed':
       return handle_fetch_rss_feed(args)
     case 'fetch_web_page':

@@ -54,6 +54,10 @@ export function showShortcutsDialog(app: AppInterface): void {
     accelerator: '<Primary>f'
   }))
   sectionHistory.add(new Adw.ShortcutsItem({
+    title: 'Find in Conversation',
+    accelerator: '<Primary><Shift>f'
+  }))
+  sectionHistory.add(new Adw.ShortcutsItem({
     title: 'Toggle Sidebar',
     accelerator: '<Primary>b'
   }))

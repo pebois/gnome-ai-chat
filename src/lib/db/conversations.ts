@@ -3,7 +3,7 @@ import Gio from 'gi://Gio'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import { DatabaseError, db } from '@/lib/db/index.js'
 import type { Conversation } from '@/lib/db/types.js'
-import type { ChatMessage, Provider, ToolCall } from '@/lib/providers/index.js'
+import type { ChatMessage, MessageStats, Provider, ToolCall } from '@/lib/providers/index.js'
 
 interface PersistedRow {
   key: string
@@ -102,12 +102,12 @@ export class ConversationsStore {
   }
 
   public async getMessages(conversation_id: number): Promise<ChatMessage[]> {
-    const stdout = await db.execSql(`SELECT role, content, images, files, thinking, tool_calls, tool_name FROM messages WHERE conversation_id = ${conversation_id} ORDER BY id ASC;`, ['-json'])
+    const stdout = await db.execSql(`SELECT role, content, images, files, thinking, tool_calls, tool_name, stats FROM messages WHERE conversation_id = ${conversation_id} ORDER BY id ASC;`, ['-json'])
     if (!stdout) {
       return []
     }
     try {
-      const rows = JSON.parse(stdout) as { role: 'user' | 'assistant' | 'system' | 'tool'; content: string; images?: string; files?: string; thinking?: string; tool_calls?: string; tool_name?: string }[]
+      const rows = JSON.parse(stdout) as { role: 'user' | 'assistant' | 'system' | 'tool'; content: string; images?: string; files?: string; thinking?: string; tool_calls?: string; tool_name?: string; stats?: string }[]
       const messages: ChatMessage[] = rows.map((r) => {
         return {
           role: r.role,
@@ -116,7 +116,8 @@ export class ConversationsStore {
           files: r.files ? JSON.parse(r.files) as { name: string; content: string }[] : undefined,
           thinking: r.thinking,
           tool_calls: r.tool_calls ? JSON.parse(r.tool_calls) as ToolCall[] : undefined,
-          tool_name: r.tool_name
+          tool_name: r.tool_name,
+          stats: r.stats ? JSON.parse(r.stats) as MessageStats : undefined
         }
       })
       this._messages.set(conversation_id, [...messages])
@@ -170,12 +171,13 @@ export class ConversationsStore {
       const thinking = m.thinking ? `'${db.escape(m.thinking)}'` : 'NULL'
       const tool_calls = m.tool_calls ? `'${db.escape(JSON.stringify(m.tool_calls))}'` : 'NULL'
       const tool_name = m.tool_name ? `'${db.escape(m.tool_name)}'` : 'NULL'
-      return `(${conversation_id}, '${role}', '${content}', ${images}, ${files}, ${thinking}, ${tool_calls}, ${tool_name})`
+      const stats = m.stats ? `'${db.escape(JSON.stringify(m.stats))}'` : 'NULL'
+      return `(${conversation_id}, '${role}', '${content}', ${images}, ${files}, ${thinking}, ${tool_calls}, ${tool_name}, ${stats})`
     })
 
     for (let i = 0; i < values.length; i += 500) {
       const chunk = values.slice(i, i + 500)
-      sqls.push(`INSERT INTO messages (conversation_id, role, content, images, files, thinking, tool_calls, tool_name) VALUES ${chunk.join(',')};`)
+      sqls.push(`INSERT INTO messages (conversation_id, role, content, images, files, thinking, tool_calls, tool_name, stats) VALUES ${chunk.join(',')};`)
     }
 
     if (sqls.length === 0) {

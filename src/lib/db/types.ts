@@ -45,6 +45,7 @@ export interface Skill {
 
 export interface Settings {
   url: string
+  searchUrl: string
   system: string
   stream: boolean
   think: Think

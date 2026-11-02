@@ -16,6 +16,8 @@ export interface ChatSessionCallbacks {
   onNewResponse?: () => void
   onMessageChunk?: (chunk: ChatMessage) => void
   onResponse?: (message: ChatMessage) => void
+  onToolStart?: (call: ToolCall) => void
+  onToolEnd?: (call: ToolCall, result: ChatMessage, durationMs: number) => void
   onFinish?: (messages: ChatMessage[]) => void
   onError?: (error: string) => void
 }
@@ -175,7 +177,7 @@ export class ChatService {
         if (response.tool_calls?.length) {
           const startToolTime = GLib.get_monotonic_time()
 
-          const toolMessages = await this._runToolCalls(response.tool_calls, cancellable)
+          const toolMessages = await this._runToolCalls(response.tool_calls, cancellable, callbacks)
 
           const endToolTime = GLib.get_monotonic_time()
           const toolDurationMs = (endToolTime - startToolTime) / 1000
@@ -233,13 +235,17 @@ export class ChatService {
     }
   }
 
-  private async _runToolCalls(toolCalls: ToolCall[], cancellable: Gio.Cancellable): Promise<ChatMessage[]> {
+  private async _runToolCalls(toolCalls: ToolCall[], cancellable: Gio.Cancellable, callbacks: ChatSessionCallbacks): Promise<ChatMessage[]> {
     const run = async (tc: ToolCall): Promise<ChatMessage> => {
-      return {
+      callbacks.onToolStart?.(tc)
+      const start = GLib.get_monotonic_time()
+      const result: ChatMessage = {
         role: 'tool',
         tool_name: tc.function.name,
         content: await onToolCall(this._app, tc.function.name, tc.function.arguments, cancellable) || ''
       }
+      callbacks.onToolEnd?.(tc, result, (GLib.get_monotonic_time() - start) / 1000)
+      return result
     }
 
     const names = toolCalls.map((tc) => {

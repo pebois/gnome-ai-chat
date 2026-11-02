@@ -513,11 +513,13 @@ export class Sidebar {
     row.insert_action_group('conversation', actionGroup)
 
     const menu = new Gio.Menu()
-    menu.append_item(createMenuItem('Rename…', 'conversation.rename', 'document-edit-symbolic'))
+    menu.append_item(createMenuItem('Rename', 'conversation.rename', 'document-edit-symbolic'))
     menu.append_item(Gio.MenuItem.new('Pin to Top', 'conversation.pin'))
     menu.append_item(createMenuItem('Generate Summary', 'conversation.summarize', 'text-x-generic-symbolic'))
-    menu.append_item(createMenuItem('Export as JSON', 'conversation.export-json', 'text-x-script-symbolic'))
-    menu.append_item(createMenuItem('Export as PDF', 'conversation.export-pdf', 'x-office-document-symbolic'))
+    const exportMenu = new Gio.Menu()
+    exportMenu.append_item(createMenuItem('JSON', 'conversation.export-json', 'text-x-script-symbolic'))
+    exportMenu.append_item(createMenuItem('PDF', 'conversation.export-pdf', 'x-office-document-symbolic'))
+    menu.append_submenu('Export as', exportMenu)
     menu.append_item(createMenuItem('Delete Chat', 'conversation.delete', 'user-trash-symbolic'))
 
     const popover = Gtk.PopoverMenu.new_from_model(menu)

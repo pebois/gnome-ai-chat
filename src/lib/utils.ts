@@ -1,5 +1,6 @@
 import type { SummaryResponse } from '@/lib/agent/summarize.js'
 import { DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
+import type { MessageStats } from '@/lib/providers/index.js'
 
 export function selectDefaultModel(availableModels: string[]): string {
   if (!availableModels || availableModels.length === 0) {
@@ -178,4 +179,18 @@ export function getLanguageMetadata(lang: string): LanguageMetadata {
     id: l,
     title: l.charAt(0).toUpperCase() + l.slice(1)
   }
+}
+
+export function formatMessageStats(stats: MessageStats): string {
+  const parts = [formatModelName(stats.model)]
+  if (stats.outputTokens > 0 && stats.evalDurationMs > 0) {
+    parts.push(`${(stats.outputTokens / (stats.evalDurationMs / 1000)).toFixed(1)} tok/s`)
+  }
+  if (stats.outputTokens > 0) {
+    parts.push(`${stats.outputTokens} tokens`)
+  }
+  if (stats.durationMs > 0) {
+    parts.push(`${(stats.durationMs / 1000).toFixed(1)} s`)
+  }
+  return parts.filter(Boolean).join(' · ')
 }

@@ -1,13 +1,18 @@
 import Adw from 'gi://Adw?version=1'
+import Gdk from 'gi://Gdk'
 import GLib from 'gi://GLib?version=2.0'
+import Graphene from 'gi://Graphene'
 import Gtk from 'gi://Gtk?version=4.0'
 
+import { ToolActivity } from '@/app/ui/activity.js'
 import { Message } from '@/app/ui/message/index.js'
 import { ScrollManager } from '@/app/ui/scroll.js'
 import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_LIMIT } from '@/lib/constants.js'
 import type { Conversation } from '@/lib/db/types.js'
-import type { ChatMessage } from '@/lib/providers/index.js'
+import { findMessageMatches, stepMatch } from '@/lib/find.js'
+import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
+import { collectSources } from '@/lib/sources.js'
 
 export interface ChatConversation extends Conversation {
   messages: ChatMessage[]
@@ -33,6 +38,14 @@ export class History {
   private _loaded = false
   private _messages: Message[] = []
   private _streaming?: Message
+  private _activity?: ToolActivity
+  private _scrolledContent!: Gtk.Box
+  private _findBar!: Gtk.SearchBar
+  private _findEntry!: Gtk.SearchEntry
+  private _findLabel!: Gtk.Label
+  private _findMatches: number[] = []
+  private _findIndex = -1
+  private _highlighted?: Message
 
   public get stickToBottom(): boolean {
     return this._scrollManager.stickToBottom
@@ -66,6 +79,7 @@ export class History {
       void this.loadOlderMessages()
     })
     this._widget.append(this._banner)
+    this._setupFind()
 
     this._scrolledWindow = new Gtk.ScrolledWindow({
       vexpand: true,
@@ -107,14 +121,168 @@ export class History {
     this._bottomSpacer = new Gtk.Box({
       width_request: 1
     })
-    const scrolledContent = new Gtk.Box({
+    this._scrolledContent = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL
     })
 
-    scrolledContent.append(chatClamp)
-    scrolledContent.append(this._bottomSpacer)
+    this._scrolledContent.append(chatClamp)
+    this._scrolledContent.append(this._bottomSpacer)
 
-    this._scrolledWindow.set_child(scrolledContent)
+    this._scrolledWindow.set_child(this._scrolledContent)
+  }
+
+  private _setupFind(): void {
+    this._findEntry = new Gtk.SearchEntry({
+      hexpand: true,
+      placeholder_text: 'Find in conversation'
+    })
+    this._findLabel = new Gtk.Label()
+    this._findLabel.add_css_class('dim-label')
+    this._findLabel.add_css_class('numeric')
+
+    const prevButton = new Gtk.Button({
+      icon_name: 'go-up-symbolic',
+      tooltip_text: 'Previous Match (shift+enter)'
+    })
+    prevButton.add_css_class('flat')
+    prevButton.connect('clicked', () => {
+      this.findStep(-1)
+    })
+    const nextButton = new Gtk.Button({
+      icon_name: 'go-down-symbolic',
+      tooltip_text: 'Next Match (enter)'
+    })
+    nextButton.add_css_class('flat')
+    nextButton.connect('clicked', () => {
+      this.findStep(1)
+    })
+
+    const box = new Gtk.Box({
+      orientation: Gtk.Orientation.HORIZONTAL,
+      spacing: 6
+    })
+    box.append(this._findEntry)
+    box.append(this._findLabel)
+    box.append(prevButton)
+    box.append(nextButton)
+
+    const clamp = new Adw.Clamp({
+      maximum_size: 600,
+      child: box
+    })
+
+    this._findBar = new Gtk.SearchBar({
+      child: clamp,
+      show_close_button: true
+    })
+    this._findBar.connect_entry(this._findEntry)
+    this._findBar.connect('notify::search-mode-enabled', () => {
+      if (!this._findBar.search_mode_enabled) {
+        this._findEntry.set_text('')
+        this._resetFind()
+      }
+    })
+    this._findEntry.connect('search-changed', () => {
+      this._runFind()
+    })
+    this._findEntry.connect('activate', () => {
+      this.findStep(1)
+    })
+    this._findEntry.connect('next-match', () => {
+      this.findStep(1)
+    })
+    this._findEntry.connect('previous-match', () => {
+      this.findStep(-1)
+    })
+    const keys = new Gtk.EventControllerKey()
+    keys.connect('key-pressed', (_ctrl: Gtk.EventControllerKey, keyval: number, _code: number, state: Gdk.ModifierType) => {
+      if ((keyval === Gdk.KEY_Return || keyval === Gdk.KEY_KP_Enter) && (state & Gdk.ModifierType.SHIFT_MASK)) {
+        this.findStep(-1)
+        return true
+      }
+      return false
+    })
+    this._findEntry.add_controller(keys)
+    this._widget.append(this._findBar)
+  }
+
+  public openFind(): void {
+    this._findBar.search_mode_enabled = true
+    this._findEntry.grab_focus()
+    this._findEntry.select_region(0, -1)
+  }
+
+  public findStep(direction: 1 | -1): void {
+    if (this._findMatches.length === 0) {
+      return
+    }
+    this._findIndex = stepMatch(this._findIndex, this._findMatches.length, direction)
+    this._showMatch()
+  }
+
+  private _runFind(): void {
+    const messages = this._app.conversation?.messages ?? []
+    this._findMatches = findMessageMatches(messages, this._findEntry.get_text())
+    this._findIndex = -1
+    if (this._findMatches.length === 0) {
+      this._setHighlighted(undefined)
+      this._findLabel.set_label(this._findEntry.get_text().trim() ? 'No matches' : '')
+      return
+    }
+    this._findIndex = this._findMatches.length - 1
+    this._showMatch()
+  }
+
+  private _resetFind(): void {
+    this._findMatches = []
+    this._findIndex = -1
+    this._findLabel.set_label('')
+    this._setHighlighted(undefined)
+  }
+
+  private _setHighlighted(message?: Message): void {
+    this._highlighted?.setHighlighted(false)
+    this._highlighted = message
+    message?.setHighlighted(true)
+  }
+
+  private _showMatch(): void {
+    const conversation = this._app.conversation
+    if (!conversation || this._findIndex < 0) {
+      return
+    }
+    this._findLabel.set_label(`${this._findIndex + 1} of ${this._findMatches.length}`)
+    const index = this._findMatches[this._findIndex]
+    this._renderFrom(index)
+    const target = conversation.messages[index]
+    const component = this._messages.find((m) => {
+      return m.message === target
+    })
+    this._setHighlighted(component)
+    if (!component) {
+      return
+    }
+    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      const [ok, point] = component.widget.compute_point(this._scrolledContent, new Graphene.Point({ x: 0, y: 0 }))
+      if (ok) {
+        this._scrolledWindow.get_vadjustment().set_value(Math.max(0, point.y - 24))
+      }
+      return GLib.SOURCE_REMOVE
+    })
+  }
+
+  private _renderFrom(index: number): void {
+    const conversation = this._app.conversation
+    if (!conversation || index >= this._currentOffset) {
+      return
+    }
+    const older = conversation.messages.slice(index, this._currentOffset)
+    for (let i = older.length - 1; i >= 0; i--) {
+      this.renderMessage(older[i], true)
+    }
+    this._currentOffset = index
+    this._loaded = index <= 0
+    this._banner.revealed = false
   }
 
   public loadMessages(conversation: ChatConversation): void {
@@ -203,6 +371,7 @@ export class History {
     }
     this._streaming.update(message)
     this._streaming.setPending(false)
+    this._applySources(this._streaming, message)
     this._streaming = undefined
   }
 
@@ -216,6 +385,44 @@ export class History {
       this._removeMessage(streaming)
     } else {
       streaming.setPending(false)
+    }
+  }
+
+  public get toolActivity(): ToolActivity {
+    if (!this._activity) {
+      this._activity = new ToolActivity(this._app)
+      this._list.append(this._activity.widget)
+      this._disableRow(this._activity.widget)
+    }
+    return this._activity
+  }
+
+  public endToolActivity(call: ToolCall, result: ChatMessage, durationMs: number): void {
+    this._activity?.end(call, result, durationMs)
+  }
+
+  public clearToolActivity(): void {
+    const row = this._activity?.widget.get_parent()
+    if (row) {
+      this._list.remove(row)
+    }
+    this._activity = undefined
+  }
+
+  private _applySources(component: Message, message: ChatMessage): void {
+    const messages = this._app.conversation?.messages ?? []
+    const index = messages.indexOf(message)
+    if (index !== -1) {
+      component.setSources(collectSources(messages, index))
+    }
+  }
+
+  private _disableRow(widget: Gtk.Widget): void {
+    const row = widget.get_parent() as Gtk.ListBoxRow | null
+    if (row) {
+      row.activatable = false
+      row.can_focus = false
+      row.focus_on_click = false
     }
   }
 
@@ -258,11 +465,9 @@ export class History {
       this._messages.push(msgComponent)
     }
 
-    const row = msgComponent.widget.get_parent() as Gtk.ListBoxRow
-    if (row) {
-      row.activatable = false
-      row.can_focus = false
-      row.focus_on_click = false
+    this._disableRow(msgComponent.widget)
+    if (!pending) {
+      this._applySources(msgComponent, message)
     }
     return msgComponent
   }
@@ -286,7 +491,10 @@ export class History {
       m.destroy()
     })
     this._messages = []
+    this._highlighted = undefined
+    this._findBar.search_mode_enabled = false
     this._streaming = undefined
+    this._activity = undefined
     this._list.remove_all()
     this._banner.revealed = false
     this._loaded = true
