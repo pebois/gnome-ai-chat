@@ -24,6 +24,17 @@ export const search: Command = {
   }
 }
 
+export const findInChat: Command = {
+  name: 'find-in-chat',
+  description: 'Find in conversation',
+  icon: 'edit-find-symbolic',
+  visible: false,
+  accels: ['<Primary><Shift>f'],
+  activate: (app) => {
+    app.chat.openFind()
+  }
+}
+
 export const focusInput: Command = {
   name: 'focus-input',
   description: 'Focus chat input',

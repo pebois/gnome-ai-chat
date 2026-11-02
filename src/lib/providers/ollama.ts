@@ -14,6 +14,7 @@ import type {
   EmbedResponse,
   GenerateRequest,
   GenerateResponse,
+  MessageStats,
   ModelDetails,
   Provider,
   PsResponse,
@@ -30,6 +31,16 @@ Gio._promisify(Soup.Session.prototype, 'send_and_read_async', 'send_and_read_fin
 Gio._promisify(Gio.DataInputStream.prototype, 'read_line_async', 'read_line_finish_utf8')
 
 const DEBUG_TRUNCATE_LIMIT = 100
+
+function responseStats(model: string, response: ChatResponse): MessageStats {
+  return {
+    model,
+    promptTokens: response.prompt_eval_count || 0,
+    outputTokens: response.eval_count || 0,
+    durationMs: (response.total_duration || 0) / 1000000,
+    evalDurationMs: (response.eval_duration || 0) / 1000000
+  }
+}
 
 export class OllamaProvider implements Provider {
   private _tracker: Tracker
@@ -243,7 +254,7 @@ export class OllamaProvider implements Provider {
                 response.eval_count || 0,
                 (response.total_duration || 0) / 1000000
               )
-              return { role, content, thinking, tool_calls }
+              return { role, content, thinking, tool_calls, stats: responseStats(props.model, response) }
             }
           }
         }
@@ -266,7 +277,7 @@ export class OllamaProvider implements Provider {
                   response.eval_count || 0,
                   (response.total_duration || 0) / 1000000
                 )
-                return response.message
+                return { ...response.message, stats: responseStats(props.model, response) }
               }
             }
           }
@@ -288,8 +299,8 @@ export class OllamaProvider implements Provider {
     const supportsTools = capabilities.includes('tools')
     const supportsThink = capabilities.includes('think')
 
-    const processedMessages = messages.map((msg) => {
-      let processed = { ...msg }
+    const processedMessages = messages.map(({ stats: _stats, ...msg }) => {
+      let processed: ChatMessage = { ...msg }
       if (!supportsVision && processed.images) {
         this._debug(`Model ${props.model} does not support vision, stripping ${processed.images.length} images`)
         const { images: _, ...rest } = processed

@@ -37,6 +37,7 @@ export const COMMANDS: Command[] = [
   chat.hn,
   ui.toggleSidebar,
   ui.search,
+  ui.findInChat,
   ui.focusInput,
   dialogs.settings,
   dialogs.shortcuts,

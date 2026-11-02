@@ -257,6 +257,12 @@ export class Chat {
     this._history.scrollToBottom(smooth)
   }
 
+  public openFind(): void {
+    if (this._app.conversation?.messages.length) {
+      this._history.openFind()
+    }
+  }
+
   public loadMessages(conversation: ChatConversation): void {
     if (conversation.model) {
       this._input.selectModel(conversation.model)
@@ -319,6 +325,7 @@ export class Chat {
         return
       }
       this._history.endStreaming()
+      this._history.clearToolActivity()
       this._input.setSensitive(true)
       this._input.grabFocus()
       this._input.setSendMode('send')
@@ -330,6 +337,7 @@ export class Chat {
           return
         }
         this._contentStack.set_visible_child_name('chat')
+        this._history.clearToolActivity()
         this._history.beginStreaming()
         this._history.scrollToBottom()
       },
@@ -346,6 +354,21 @@ export class Chat {
       onResponse: (message) => {
         if (isCurrent()) {
           this._history.commitStreaming(message)
+        }
+      },
+      onToolStart: (call) => {
+        if (!isCurrent()) {
+          return
+        }
+        const shouldScroll = this._history.stickToBottom
+        this._history.toolActivity.start(call)
+        if (shouldScroll) {
+          this._history.scrollToBottom()
+        }
+      },
+      onToolEnd: (call, result, durationMs) => {
+        if (isCurrent()) {
+          this._history.endToolActivity(call, result, durationMs)
         }
       },
       onError: (error) => {

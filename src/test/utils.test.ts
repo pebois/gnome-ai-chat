@@ -1,4 +1,4 @@
-import { convertMessageToTitle, convertSummaryToTitle, cosineSimilarity, formatDuration, formatModelName, formatRemainingTime, formatSize, getLanguageMetadata, selectDefaultModel } from '@/lib/utils.js'
+import { convertMessageToTitle, convertSummaryToTitle, cosineSimilarity, formatDuration, formatMessageStats, formatModelName, formatRemainingTime, formatSize, getLanguageMetadata, selectDefaultModel } from '@/lib/utils.js'
 
 describe('utils', () => {
   describe('getLanguageMetadata', () => {
@@ -224,6 +224,17 @@ describe('utils', () => {
       // normB = sqrt(2^2 + 8^2 + 1^2) = sqrt(4 + 64 + 1) = sqrt(69)
       // sim = 1 / sqrt(138) ≈ 0.085125...
       expect(cosineSimilarity([1, 0, -1], [2, 8, 1])).toBeCloseTo(0.085125)
+    })
+  })
+
+  describe('formatMessageStats', () => {
+    it('shows model, speed, tokens and duration', () => {
+      expect(formatMessageStats({ model: 'qwen3:8b', promptTokens: 100, outputTokens: 200, durationMs: 4200, evalDurationMs: 4000 }))
+        .toBe('qwen3 · 50.0 tok/s · 200 tokens · 4.2 s')
+    })
+
+    it('omits values that are missing', () => {
+      expect(formatMessageStats({ model: 'llama3', promptTokens: 0, outputTokens: 0, durationMs: 0, evalDurationMs: 0 })).toBe('llama3')
     })
   })
 })

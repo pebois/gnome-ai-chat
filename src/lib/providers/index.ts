@@ -10,6 +10,15 @@ export interface ChatMessage {
   thinking?: string
   tool_calls?: ToolCall[]
   tool_name?: string
+  stats?: MessageStats
+}
+
+export interface MessageStats {
+  model: string
+  promptTokens: number
+  outputTokens: number
+  durationMs: number
+  evalDurationMs: number
 }
 
 export interface ToolCall {

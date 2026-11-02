@@ -1,5 +1,6 @@
 export const MIGRATIONS: string[][] = [
-  ['ALTER TABLE conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;']
+  ['ALTER TABLE conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;'],
+  ['ALTER TABLE messages ADD COLUMN stats TEXT;']
 ]
 
 export function migrationStatements(version: number, migrations: string[][] = MIGRATIONS): string[] {
