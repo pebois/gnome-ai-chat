@@ -13,8 +13,8 @@ import type { ChatMessage, ChatProps, ToolCall } from '@/lib/providers/index.js'
 import { buildSkillPrompt, matchSkill, stripSkillMention } from '@/lib/skills/index.js'
 import { RecursiveCharacterTextSplitter } from '@/lib/splitter.js'
 import { canRunInParallel, getAvailableTools, onToolCall } from '@/lib/tools/index.js'
-import type { SearchResult } from '@/lib/tools/searxng.js'
 import { defaultSearchLanguage, fetchPageText, searchWeb } from '@/lib/tools/web.js'
+import type { SearchResult } from '@/lib/tools/websearch.js'
 import { mergeResults } from '@/lib/tools/websearch.js'
 import { convertSummaryToTitle, cosineSimilarity } from '@/lib/utils.js'
 
@@ -206,7 +206,7 @@ export class ChatService {
       const gather = async (queries: string[], maxPages: number): Promise<void> => {
         const lists = await Promise.all(queries.map((query) => {
           return step('web_search', { query }, () => {
-            return searchWeb(this._app, query, language, cancellable)
+            return searchWeb(query, language, cancellable)
           }, describeSearchResults).catch((): SearchResult[] => {
             return []
           })

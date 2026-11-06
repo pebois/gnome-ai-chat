@@ -1,5 +1,10 @@
-import type { SearchResult } from '@/lib/tools/searxng.js'
-import { SEARCH_MAX_RESULTS } from '@/lib/tools/searxng.js'
+export interface SearchResult {
+  title: string
+  url: string
+  snippet: string
+}
+
+export const SEARCH_MAX_RESULTS = 8
 
 const ENTITIES: Record<string, string> = {
   amp: '&',
