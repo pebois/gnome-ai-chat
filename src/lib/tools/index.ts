@@ -71,12 +71,7 @@ export function canRunInParallel(names: string[]): boolean {
 }
 
 export function getAvailableTools(app: AppInterface): Tool[] {
-  const available = app.settings.searchUrl?.trim()
-    ? tools
-    : tools.filter((tool) => {
-        return tool.function.name !== 'web_search'
-      })
-  return [...filterToolsByPermissions(app, available), ...app.mcp.getTools()]
+  return [...filterToolsByPermissions(app, tools), ...app.mcp.getTools()]
 }
 
 export async function onToolCall(app: AppInterface, name: string, args: Record<string, unknown>, cancellable?: Gio.Cancellable): Promise<string> {

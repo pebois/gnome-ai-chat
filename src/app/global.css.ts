@@ -125,6 +125,10 @@ export const css = /* css */`
   margin-top: 6px;
 }
 
+.message-input-hint {
+  margin-top: 6px;
+}
+
 .skill-chip {
   background-color: alpha(@accent_bg_color, 0.15);
   color: @accent_color;

@@ -5,24 +5,15 @@ import Pango from 'gi://Pango'
 import type { AppInterface } from '@/lib/app.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
 import { isToolError } from '@/lib/tools/labels.js'
+import { findToolResult } from '@/lib/tools/results.js'
 
-export function showToolCallDialog(app: AppInterface, tool_call: ToolCall): void {
+export function showToolCallDialog(app: AppInterface, tool_call: ToolCall, result?: ChatMessage): void {
   const conversation = app.conversation
   if (!conversation) {
     return
   }
 
-  let toolResponse: ChatMessage | undefined
-  const ownerIndex = conversation.messages.findIndex((m) => {
-    return m.tool_calls?.includes(tool_call)
-  })
-  if (ownerIndex !== -1) {
-    const position = conversation.messages[ownerIndex].tool_calls!.indexOf(tool_call)
-    const candidate = conversation.messages[ownerIndex + 1 + position]
-    if (candidate?.role === 'tool' && (!candidate.tool_name || candidate.tool_name === tool_call.function.name)) {
-      toolResponse = candidate
-    }
-  }
+  const toolResponse = result ?? findToolResult(conversation.messages, tool_call)
 
   const window = new Adw.Dialog({
     title: 'Tool Call',
@@ -46,9 +37,12 @@ export function showToolCallDialog(app: AppInterface, tool_call: ToolCall): void
 
   const nameLabel = new Gtk.Label({
     label: mcpLabel?.label ?? tool_call.function.name,
+    tooltip_text: mcpLabel?.label ?? tool_call.function.name,
     use_markup: false,
     xalign: 0,
     selectable: true,
+    ellipsize: Pango.EllipsizeMode.END,
+    single_line_mode: true,
     css_classes: ['monospace'],
     margin_top: 12,
     margin_bottom: 12,
@@ -68,11 +62,12 @@ export function showToolCallDialog(app: AppInterface, tool_call: ToolCall): void
     descriptionGroup.add(new Gtk.ListBoxRow({
       child: new Gtk.Label({
         label: mcpLabel.description,
+        tooltip_text: mcpLabel.description,
         use_markup: false,
         xalign: 0,
         selectable: true,
-        wrap: true,
-        wrap_mode: Pango.WrapMode.WORD_CHAR,
+        ellipsize: Pango.EllipsizeMode.END,
+        single_line_mode: true,
         css_classes: ['dim-label'],
         margin_top: 12,
         margin_bottom: 12,

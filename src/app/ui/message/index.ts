@@ -5,18 +5,19 @@ import Gtk from 'gi://Gtk?version=4.0'
 import GtkSource from 'gi://GtkSource?version=5'
 import Pango from 'gi://Pango'
 
-import { showToolCallDialog } from '@/app/dialog/toolcall.js'
 import { Images } from '@/app/ui/images.js'
 import { createCodeWidget } from '@/app/ui/message/code.js'
 import { createTableWidget, TableRowItem } from '@/app/ui/message/table.js'
+import { ToolCallRow } from '@/app/ui/toolcall.js'
 import type { AppInterface } from '@/lib/app.js'
+import { messageDisplayText } from '@/lib/commands/parse.js'
 import { DEFAULT_SPACING, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
-import { markdownToPango, parseCodeBlock, parseMarkdownChunks, parseTable } from '@/lib/parser.js'
+import { parseCodeBlock, parseMarkdownChunks, parseTable } from '@/lib/parser.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
-import type { Source } from '@/lib/sources.js'
-import { handle_render_html } from '@/lib/tools/html.js'
-import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setMarkupSafe, setupContextMenu } from '@/lib/ui.js'
-import { formatMessageStats, getLanguageMetadata } from '@/lib/utils.js'
+import { type Source, stripSourcesSection } from '@/lib/sources.js'
+import { findToolResult } from '@/lib/tools/results.js'
+import { createBoxedExpanderRow, createMenuItem, createSimpleAction, setMarkdownMarkup, setupContextMenu } from '@/lib/ui.js'
+import { getLanguageMetadata, messageDetails } from '@/lib/utils.js'
 
 export interface MessageProps {
   message: ChatMessage
@@ -49,7 +50,8 @@ export class Message {
   private _contentParts: ContentPart[] = []
   private _fileBuffers: GtkSource.Buffer[] = []
   private _roleBox!: Gtk.Box
-  private _toolRows: Gtk.Widget[] = []
+  private _toolRows: ToolCallRow[] = []
+  private _toolCallsAutoExpanded = false
   private _currentMessage: ChatMessage
   private _copyButton?: Gtk.Button
   private _copyAction?: Gio.SimpleAction
@@ -60,8 +62,9 @@ export class Message {
   private _busySignalId: number
   private _syntaxSignalId: number
   private _popover?: Gtk.PopoverMenu
-  private _statsLabel?: Gtk.Label
-  private _sourcesBox?: Gtk.FlowBox
+  private _detailsButton?: Gtk.MenuButton
+  private _sourcesBox?: Adw.WrapBox
+  private _hasSources = false
   private _pendingSpinner?: Adw.Spinner
 
   public get widget(): Gtk.Box {
@@ -77,35 +80,37 @@ export class Message {
       this._widget.remove(this._sourcesBox)
       this._sourcesBox = undefined
     }
+    this._hasSources = sources.length > 0
+    this._renderContent(this._currentMessage)
     if (sources.length === 0) {
       return
     }
-    this._sourcesBox = new Gtk.FlowBox({
-      selection_mode: Gtk.SelectionMode.NONE,
-      column_spacing: 6,
-      row_spacing: 6,
-      max_children_per_line: 8,
-      homogeneous: false
+    const numbered = /\[\d+\]/.test(stripSourcesSection(this._currentMessage.content || ''))
+    const box = new Adw.WrapBox({
+      child_spacing: 6,
+      line_spacing: 6,
+      hexpand: true,
+      halign: Gtk.Align.FILL
     })
-    this._sourcesBox.add_css_class('message-sources')
-    for (const source of sources) {
+    box.add_css_class('message-sources')
+    sources.forEach((source, i) => {
       const content = new Adw.ButtonContent({
         icon_name: source.kind === 'file' ? 'text-x-generic-symbolic' : 'web-browser-symbolic',
-        label: source.label
+        label: numbered ? `${i + 1} · ${source.label}` : source.label
       })
       const button = new Gtk.Button({
         child: content,
-        tooltip_text: source.target,
-        halign: Gtk.Align.START
+        tooltip_text: source.target
       })
       button.add_css_class('pill')
       button.add_css_class('small')
       button.connect('clicked', () => {
         this._openSource(source)
       })
-      this._sourcesBox.append(button)
-    }
-    this._widget.append(this._sourcesBox)
+      box.append(button)
+    })
+    this._sourcesBox = box
+    this._widget.append(box)
   }
 
   private _openSource(source: Source): void {
@@ -232,6 +237,7 @@ export class Message {
     this._copyButton?.set_sensitive(sensitive)
     this._reloadButton?.set_sensitive(sensitive)
     this._regenerateButton?.set_sensitive(sensitive)
+    this._detailsButton?.get_first_child()?.set_sensitive(sensitive)
     this._copyAction?.set_enabled(sensitive)
     this._reloadAction?.set_enabled(sensitive)
     this._regenerateAction?.set_enabled(sensitive)
@@ -261,6 +267,9 @@ export class Message {
     const [listBox, expander] = createBoxedExpanderRow('Tool Calls', 'emblem-system-symbolic')
     this._toolCallsListBox = listBox
     this._toolCallsExpander = expander
+    this._toolCallsExpander.connect('notify::expanded', () => {
+      this._toolCallsAutoExpanded = true
+    })
     this._toolCallsListBox.set_visible(!!message.tool_calls?.length)
     this._widget.append(this._toolCallsListBox)
     this._updateToolCalls(message.tool_calls)
@@ -352,7 +361,9 @@ export class Message {
   }
 
   private _renderContent(message: ChatMessage): void {
-    if (!message.content) {
+    const content = messageDisplayText(message)
+    const text = content && this._hasSources ? stripSourcesSection(content) : content
+    if (!text) {
       this._contentParts.forEach((p) => {
         return this._contentBox.remove(p.widget)
       })
@@ -360,7 +371,7 @@ export class Message {
       return
     }
 
-    const finalChunks = parseMarkdownChunks(message.content)
+    const finalChunks = parseMarkdownChunks(text)
 
     for (let i = 0; i < finalChunks.length; i++) {
       const chunk = finalChunks[i]
@@ -421,7 +432,7 @@ export class Message {
               continue
             }
           } else {
-            setMarkupSafe(part.contentLabel!, markdownToPango(chunk.content), chunk.content)
+            setMarkdownMarkup(part.contentLabel!, chunk.content)
             continue
           }
         }
@@ -458,7 +469,7 @@ export class Message {
           selectable: true
         })
         label.add_css_class('message-text')
-        setMarkupSafe(label, markdownToPango(chunk.content), chunk.content)
+        setMarkdownMarkup(label, chunk.content)
         this._contentBox.append(label)
         this._contentParts.push({
           type: 'text',
@@ -524,7 +535,9 @@ export class Message {
         return onReload(message)
       })
       buttonsBox.append(this._reloadButton)
+    }
 
+    if (message.role === 'assistant') {
       this._regenerateButton = new Gtk.Button({
         icon_name: 'view-refresh-symbolic',
         tooltip_text: 'Regenerate response',
@@ -539,17 +552,26 @@ export class Message {
       buttonsBox.append(this._regenerateButton)
     }
 
+    this._detailsButton = new Gtk.MenuButton({
+      icon_name: message.role === 'user' ? 'utilities-terminal-symbolic' : 'info-outline-symbolic',
+      tooltip_text: message.role === 'user' ? 'Command details' : 'Message details',
+      has_frame: false,
+      valign: Gtk.Align.CENTER
+    })
+    this._detailsButton.get_first_child()?.add_css_class('flat')
+    this._detailsButton.get_first_child()?.add_css_class('dim-label')
+    this._detailsButton.set_create_popup_func((button) => {
+      button.set_popover(this._createDetailsPopover())
+    })
+    buttonsBox.append(this._detailsButton)
+    this._updateDetails(message)
+
     if (message.role === 'user') {
       this._roleBox.append(buttonsBox)
       this._roleBox.append(roleLabel)
     } else {
       this._roleBox.append(roleLabel)
-      this._statsLabel = new Gtk.Label({ selectable: false })
-      this._statsLabel.add_css_class('dim-label')
-      this._statsLabel.add_css_class('caption')
-      this._roleBox.append(this._statsLabel)
       this._roleBox.append(buttonsBox)
-      this._updateStats(message)
     }
 
     const hoverCtrl = new Gtk.EventControllerMotion()
@@ -563,6 +585,32 @@ export class Message {
     buttonsBox.set_opacity(0)
 
     this._messageGroup.append(this._roleBox)
+  }
+
+  private _createDetailsPopover(): Gtk.Popover {
+    const grid = new Gtk.Grid({
+      column_spacing: 12,
+      row_spacing: 6,
+      margin_top: 6,
+      margin_bottom: 6,
+      margin_start: 6,
+      margin_end: 6
+    })
+    messageDetails(this._currentMessage).forEach((detail, row) => {
+      const key = new Gtk.Label({ label: detail.label, xalign: 1, yalign: 0 })
+      key.add_css_class('dim-label')
+      const value = new Gtk.Label({
+        label: detail.value,
+        xalign: 0,
+        selectable: true,
+        wrap: true,
+        wrap_mode: Pango.WrapMode.WORD_CHAR,
+        max_width_chars: 48
+      })
+      grid.attach(key, 0, row, 1, 1)
+      grid.attach(value, 1, row, 1, 1)
+    })
+    return new Gtk.Popover({ child: grid })
   }
 
   private _setupActions(props: MessageProps): void {
@@ -579,9 +627,8 @@ export class Message {
     if (message.role === 'user') {
       const reloadMenuItem = createMenuItem('Restart from here', 'chat.reload_message', 'document-edit-symbolic')
       menu.append_item(reloadMenuItem)
-
-      const regenerateMenuItem = createMenuItem('Regenerate response', 'chat.regenerate_message', 'view-refresh-symbolic')
-      menu.append_item(regenerateMenuItem)
+    } else {
+      menu.append_item(createMenuItem('Regenerate response', 'chat.regenerate_message', 'view-refresh-symbolic'))
     }
 
     const actionGroup = new Gio.SimpleActionGroup()
@@ -597,7 +644,7 @@ export class Message {
         return onReload(message)
       })
       actionGroup.add_action(this._reloadAction)
-
+    } else {
       this._regenerateAction = createSimpleAction('regenerate_message', () => {
         return props.onRegenerate(message)
       })
@@ -615,79 +662,46 @@ export class Message {
   }
 
   private _updateToolCalls(calls?: ToolCall[]): void {
-    this._toolRows.forEach((row) => {
-      return this._toolCallsExpander.remove(row)
+    const next = calls ?? []
+    const sameStart = this._toolRows.length <= next.length && this._toolRows.every((row, i) => {
+      return row.call === next[i]
     })
-    this._toolRows.length = 0
-    calls?.forEach((call) => {
-      const mcpLabel = this._app.mcp.getToolLabel(call.function.name)
-      const row = new Adw.ActionRow({
-        title: mcpLabel?.label ?? call.function.name,
-        subtitle: mcpLabel?.description ?? '',
-        subtitle_lines: 1,
-        use_markup: false,
-        activatable: true
+    if (!sameStart) {
+      this._toolRows.forEach((row) => {
+        this._toolCallsExpander.remove(row.widget)
       })
-      row.add_prefix(new Gtk.Image({
-        icon_name: mcpLabel ? 'network-server-symbolic' : 'system-run-symbolic'
-      }))
-      row.add_suffix(new Gtk.Image({
-        icon_name: 'view-reveal-symbolic'
-      }))
-      row.connect('activated', () => {
-        return showToolCallDialog(this._app, call)
+      this._toolRows = []
+    }
+    for (const call of next.slice(this._toolRows.length)) {
+      const row = new ToolCallRow(this._app, call, (c) => {
+        return findToolResult(this._app.conversation?.messages ?? [], c)
       })
-      row.add_css_class('monospace')
-      this._toolCallsExpander.add_row(row)
+      this._toolCallsExpander.add_row(row.widget)
       this._toolRows.push(row)
+    }
+  }
 
-      if (call.function.name === 'render_html') {
-        const previewBtn = new Gtk.Button({
-          label: 'Open preview',
-          hexpand: true,
-          margin_top: 6,
-          margin_bottom: 6,
-          margin_start: 12,
-          margin_end: 12
-        })
-        previewBtn.add_css_class('pill')
-        previewBtn.add_css_class('suggested-action')
-        previewBtn.connect('clicked', () => {
-          const args = call.function.arguments as Record<string, unknown> | undefined
-          if (args) {
-            handle_render_html(this._app, args)
-          }
-        })
-
-        const btnBox = new Gtk.Box()
-        btnBox.append(previewBtn)
-
-        const btnRow = new Gtk.ListBoxRow({
-          child: btnBox,
-          activatable: false,
-          selectable: false
-        })
-        this._toolCallsExpander.add_row(btnRow)
-        this._toolRows.push(btnRow)
-      }
+  public toolRow(call: ToolCall): ToolCallRow | undefined {
+    return this._toolRows.find((row) => {
+      return row.call === call
     })
   }
 
-  private _updateStats(message: ChatMessage): void {
-    if (!this._statsLabel) {
+  public expandToolCalls(): void {
+    if (this._toolCallsAutoExpanded) {
       return
     }
-    const { stats } = message
-    this._statsLabel.set_visible(!!stats)
-    if (stats) {
-      this._statsLabel.set_label(formatMessageStats(stats))
-      this._statsLabel.set_tooltip_text(`${stats.promptTokens} prompt tokens, ${stats.outputTokens} output tokens`)
-    }
+    this._toolCallsAutoExpanded = true
+    this._toolCallsExpander.set_expanded(true)
+  }
+
+  private _updateDetails(message: ChatMessage): void {
+    this._detailsButton?.set_visible(messageDetails(message).length > 0)
   }
 
   public update(updated: ChatMessage): void {
     this._currentMessage = updated
-    this._updateStats(updated)
+    this._updateDetails(updated)
     if (this._pendingSpinner?.get_visible()) {
       this.setPending(true)
     }

@@ -1,13 +1,17 @@
 import Adw from 'gi://Adw?version=1'
 import Gdk from 'gi://Gdk'
+import GLib from 'gi://GLib?version=2.0'
 import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
+import Pango from 'gi://Pango'
 
 import { Attachments } from '@/app/ui/attachments.js'
 import { Commands } from '@/app/ui/commands.js'
 import { Models } from '@/app/ui/models.js'
 import { Skills } from '@/app/ui/skills.js'
 import type { AppInterface } from '@/lib/app.js'
+import { COMMANDS } from '@/lib/commands/index.js'
+import { resolveCommandInput } from '@/lib/commands/parse.js'
 import { matchSkill } from '@/lib/skills/index.js'
 
 export class Input {
@@ -22,6 +26,8 @@ export class Input {
   private _sendButtonContent!: Adw.ButtonContent
   private _skillChip!: Gtk.Box
   private _skillChipLabel!: Gtk.Label
+  private _hint!: Gtk.Label
+  private _hintIdle = 0
 
   public get widget(): Gtk.Box {
     return this._widget
@@ -81,6 +87,18 @@ export class Input {
     inputOverlay.set_child(this._messageInput)
     inputOverlay.add_overlay(placeholder)
 
+    this._hint = new Gtk.Label({
+      halign: Gtk.Align.START,
+      valign: Gtk.Align.START,
+      can_target: false,
+      ellipsize: Pango.EllipsizeMode.END,
+      single_line_mode: true,
+      visible: false
+    })
+    this._hint.add_css_class('dim-label')
+    this._hint.add_css_class('message-input-hint')
+    inputOverlay.add_overlay(this._hint)
+
     const buffer = this._messageInput.get_buffer()
     buffer.connect('changed', () => {
       placeholder.set_visible(buffer.get_char_count() === 0)
@@ -98,7 +116,9 @@ export class Input {
     inputScroll.add_css_class('message-input')
     inputScroll.set_child(inputOverlay)
 
-    this._commands = new Commands(this._app, this._messageInput, inputToolbar)
+    this._commands = new Commands(this._app, this._messageInput, inputToolbar, (text) => {
+      this.setHint(text)
+    })
     this._skills = new Skills(this._app, this._messageInput, inputToolbar)
 
     const keyCtrl = new Gtk.EventControllerKey({
@@ -116,16 +136,7 @@ export class Input {
       const isShift = !!(state & Gdk.ModifierType.SHIFT_MASK)
 
       if (isReturn && !isShift) {
-        const buffer = this._messageInput.get_buffer()
-        const text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false).trim()
-
-        if (text.startsWith('/')) {
-          const fullCmd = text.slice(1).trim()
-          this._commands.execute(fullCmd)
-          return true
-        }
-
-        void this._app.chat.sendMessage()
+        this.submit()
         return true
       }
 
@@ -189,7 +200,7 @@ export class Input {
       }
     })
     this._sendButton.connect('clicked', () => {
-      return this._app.chat.sendMessage()
+      this.submit()
     })
     actionBox.append(this._sendButton)
 
@@ -242,6 +253,47 @@ export class Input {
       this._sendButton.remove_css_class('destructive-action')
       this._sendButton.add_css_class('suggested-action')
     }
+  }
+
+  public submit(): void {
+    const buffer = this._messageInput.get_buffer()
+    const text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false).trim()
+    const route = resolveCommandInput(text, COMMANDS)
+    if (route.kind === 'command') {
+      this._commands.execute(route.line)
+      return
+    }
+    if (route.kind === 'unknown') {
+      this._app.showToast(`Unknown command /${route.name}. Did you mean /${route.suggestion}?`)
+      return
+    }
+    void this._app.chat.sendMessage()
+  }
+
+  public setHint(text: string | null): void {
+    if (this._hintIdle) {
+      GLib.source_remove(this._hintIdle)
+      this._hintIdle = 0
+    }
+    if (!text) {
+      this._hint.set_visible(false)
+      return
+    }
+    this._hint.set_label(text)
+    this._hintIdle = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      this._hintIdle = 0
+      const buffer = this._messageInput.get_buffer()
+      const rect = this._messageInput.get_iter_location(buffer.get_iter_at_mark(buffer.get_insert()))
+      const [x, y] = this._messageInput.buffer_to_window_coords(Gtk.TextWindowType.WIDGET, rect.x, rect.y)
+      const [spaceWidth] = this._messageInput.create_pango_layout(' ').get_pixel_size()
+      const left = Math.max(0, x + spaceWidth * 2)
+      this._hint.set_margin_start(left)
+      this._hint.set_margin_top(Math.max(0, y))
+      this._hint.set_size_request(-1, rect.height)
+      this._hint.set_max_width_chars(Math.max(4, Math.floor((this._messageInput.get_width() - left) / 8)))
+      this._hint.set_visible(true)
+      return GLib.SOURCE_REMOVE
+    })
   }
 
   public getBuffer(): Gtk.TextBuffer {

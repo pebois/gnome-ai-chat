@@ -3,19 +3,10 @@ import GLib from 'gi://GLib?version=2.0'
 import { showMcpWindow } from '@/app/window/mcp/index.js'
 import type { AppInterface } from '@/lib/app.js'
 import type { Command } from '@/lib/commands/index.js'
+import { commandArguments } from '@/lib/commands/parse.js'
 
 function parseSubCommand(parameter: GLib.Variant | undefined): string {
-  const text = parameter?.get_string()[0] ?? ''
-  const parts = text.split(' ').filter((p) => {
-    return p.length > 0
-  })
-  if (parts.length >= 2) {
-    return parts[1].toLowerCase()
-  }
-  if (parts.length === 1 && !parts[0].startsWith('/') && parts[0] !== 'mcp') {
-    return parts[0].toLowerCase()
-  }
-  return 'manage'
+  return commandArguments(parameter?.get_string()[0] ?? '', 'mcp').sub || 'manage'
 }
 
 async function reload(app: AppInterface): Promise<void> {

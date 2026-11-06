@@ -3,6 +3,9 @@ const ACTIVITY_LABELS: Record<string, string> = {
   calculate: 'Calculating',
   create_entities: 'Saving to memory',
   create_relations: 'Saving to memory',
+  deepsearch_followup: 'Checking for gaps',
+  deepsearch_plan: 'Planning research',
+  deepsearch_select: 'Selecting relevant passages',
   delete_entities: 'Updating memory',
   delete_observations: 'Updating memory',
   delete_relations: 'Updating memory',
@@ -28,7 +31,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   web_search: 'Searching the web'
 }
 
-const DETAIL_KEYS = ['query', 'url', 'path', 'command', 'expression', 'name', 'app_id']
+const DETAIL_KEYS = ['question', 'query', 'url', 'path', 'command', 'expression', 'name', 'app_id']
 const DETAIL_MAX_CHARS = 60
 
 export function toolActivityDetail(args?: Record<string, unknown>): string {

@@ -26,6 +26,7 @@ export interface Command {
   parameterType?: GLib.VariantType
   getInitialState?: (app: AppInterface) => GLib.Variant | undefined
   accels?: string[]
+  requiresArgument?: string
   activate: (app: AppInterface, parameter: GLib.Variant | undefined) => void | Promise<void>
 }
 
@@ -34,6 +35,7 @@ export const COMMANDS: Command[] = [
   chat.newConversation,
   chat.openConversation,
   chat.compress,
+  chat.deepsearch,
   chat.hn,
   ui.toggleSidebar,
   ui.search,
