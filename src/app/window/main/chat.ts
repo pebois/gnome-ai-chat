@@ -9,9 +9,10 @@ import { EmptyPage } from '@/app/page/empty.js'
 import type { ChatConversation } from '@/app/ui/history.js'
 import { History } from '@/app/ui/history.js'
 import { Input } from '@/app/ui/input.js'
+import type { ChatSessionCallbacks } from '@/lib/agent/chat.js'
 import { ChatService } from '@/lib/agent/chat.js'
 import type { AppInterface } from '@/lib/app.js'
-import { conversationsStore } from '@/lib/db/conversations.js'
+import { DEEPSEARCH_COMMAND, messageInputText } from '@/lib/commands/parse.js'
 import type { ChatMessage } from '@/lib/providers/index.js'
 import { debounce } from '@/lib/timeout.js'
 import { createMenuItem, ResizeTracker } from '@/lib/ui.js'
@@ -297,8 +298,12 @@ export class Chat {
       return
     }
 
-    const index = conversation.messages.indexOf(message)
-    if (index === -1) {
+    let index = conversation.messages.indexOf(message)
+    while (index > 0 && conversation.messages[index].role !== 'user') {
+      index--
+    }
+    const userMessage = conversation.messages[index]
+    if (!userMessage || userMessage.role !== 'user') {
       return
     }
 
@@ -309,7 +314,12 @@ export class Chat {
     this._input.setSensitive(false)
     this._input.setSendMode('stop')
 
-    await this._startGeneration(conversation, conversation.messages.length === 1)
+    const isFirstMessage = conversation.messages.length === 1
+    if (userMessage.command === DEEPSEARCH_COMMAND) {
+      await this._chatService.deepSearch(conversation.id, userMessage.content, isFirstMessage, this._generationCallbacks(conversation))
+    } else {
+      await this._startGeneration(conversation, isFirstMessage)
+    }
   }
 
   public getActiveConversation(id: number): ChatConversation | undefined {
@@ -317,6 +327,10 @@ export class Chat {
   }
 
   private _startGeneration(conversation: ChatConversation, isFirstMessage: boolean): Promise<void> {
+    return this._chatService.generateResponse(conversation.id, isFirstMessage, this._generationCallbacks(conversation))
+  }
+
+  private _generationCallbacks(conversation: ChatConversation): ChatSessionCallbacks {
     const isCurrent = (): boolean => {
       return this._app.conversation?.id === conversation.id
     }
@@ -325,19 +339,17 @@ export class Chat {
         return
       }
       this._history.endStreaming()
-      this._history.clearToolActivity()
       this._input.setSensitive(true)
       this._input.grabFocus()
       this._input.setSendMode('send')
       this._history.scrollToBottom()
     }
-    return this._chatService.generateResponse(conversation.id, isFirstMessage, {
+    return {
       onNewResponse: () => {
         if (!isCurrent()) {
           return
         }
         this._contentStack.set_visible_child_name('chat')
-        this._history.clearToolActivity()
         this._history.beginStreaming()
         this._history.scrollToBottom()
       },
@@ -347,6 +359,17 @@ export class Chat {
         }
         const shouldScroll = this._history.stickToBottom
         this._history.updateStreaming(chunk)
+        if (shouldScroll) {
+          this._history.scrollToBottom()
+        }
+      },
+      onMessage: (message) => {
+        if (!isCurrent()) {
+          return
+        }
+        const shouldScroll = this._history.stickToBottom
+        this._contentStack.set_visible_child_name('chat')
+        this._history.updateLive(message)
         if (shouldScroll) {
           this._history.scrollToBottom()
         }
@@ -361,14 +384,14 @@ export class Chat {
           return
         }
         const shouldScroll = this._history.stickToBottom
-        this._history.toolActivity.start(call)
+        this._history.toolStarted(call)
         if (shouldScroll) {
           this._history.scrollToBottom()
         }
       },
       onToolEnd: (call, result, durationMs) => {
         if (isCurrent()) {
-          this._history.endToolActivity(call, result, durationMs)
+          this._history.toolFinished(call, result, durationMs)
         }
       },
       onError: (error) => {
@@ -376,7 +399,7 @@ export class Chat {
         done()
       },
       onFinish: done
-    })
+    }
   }
 
   public stopGeneration(id: number): void {
@@ -385,6 +408,25 @@ export class Chat {
 
   public stopAllGenerations(): void {
     this._chatService.stopAllGenerations()
+  }
+
+  public async deepSearch(question: string): Promise<void> {
+    const conversation = this._app.conversation
+    if (!conversation || this._chatService.isGenerating(conversation.id) || !question.trim()) {
+      return
+    }
+    const userMessage: ChatMessage = { role: 'user', content: question.trim(), command: DEEPSEARCH_COMMAND }
+    const isFirstMessage = await this._submit(conversation, userMessage, userMessage.content)
+    await this._chatService.deepSearch(conversation.id, userMessage.content, isFirstMessage, this._generationCallbacks(conversation))
+  }
+
+  public async sendPrompt(prompt: string, command: string): Promise<void> {
+    const conversation = this._app.conversation
+    if (!conversation || this._chatService.isGenerating(conversation.id)) {
+      return
+    }
+    const isFirstMessage = await this._submit(conversation, { role: 'user', content: prompt, command }, `/${command}`)
+    await this._startGeneration(conversation, isFirstMessage)
   }
 
   public async sendMessage(): Promise<void> {
@@ -406,19 +448,6 @@ export class Chat {
       return
     }
 
-    const isFirstMessage = conversation.messages.length === 0
-
-    if (isFirstMessage) {
-      conversation.model = this._app.model
-      conversation.created_at = new Date().toISOString()
-      this._app.setConversationTitle(conversation, text)
-      this._centerInput(false)
-    }
-
-    buffer.set_text('', -1)
-    this._input.setSensitive(false)
-    this._input.setSendMode('stop')
-
     const userMessage: ChatMessage = { role: 'user', content: text }
     if (this._input.attachments.hasAttachments) {
       const textFiles = this._input.attachments.textFiles
@@ -431,26 +460,40 @@ export class Chat {
       }
       this._input.attachments.clear()
     }
-    this._renderMessage(userMessage)
 
-    conversation.messages.push(userMessage)
-
-    await this._app.persistConversation(conversation)
-
-    this._history.scrollToBottom()
-
+    const isFirstMessage = await this._submit(conversation, userMessage, text)
     await this._startGeneration(conversation, isFirstMessage)
   }
 
-  public clearAllMessages(): void {
-    if (this._app.conversation) {
-      this.stopGeneration(this._app.conversation.id)
-      this._app.conversation.messages = []
-      void conversationsStore.saveMessages(this._app.conversation.id, []).catch((err) => {
-        this._app.reportError('Could not clear messages', err)
-      })
-      this.loadMessages(this._app.conversation)
+  private async _submit(conversation: ChatConversation, userMessage: ChatMessage, title: string): Promise<boolean> {
+    const isFirstMessage = conversation.messages.length === 0
+    if (isFirstMessage) {
+      conversation.model = this._app.model
+      conversation.created_at = new Date().toISOString()
+      this._app.setConversationTitle(conversation, title)
+      this._centerInput(false)
     }
+
+    this._input.getBuffer().set_text('', -1)
+    this._input.setSensitive(false)
+    this._input.setSendMode('stop')
+
+    this._renderMessage(userMessage)
+    conversation.messages.push(userMessage)
+    await this._app.persistConversation(conversation)
+    this._history.scrollToBottom()
+    return isFirstMessage
+  }
+
+  public async clearAllMessages(): Promise<void> {
+    const conversation = this._app.conversation
+    if (!conversation) {
+      return
+    }
+    this.stopGeneration(conversation.id)
+    conversation.messages = []
+    await this._app.persistConversation(conversation)
+    this.loadMessages(conversation)
   }
 
   public async startFromMessage(message: ChatMessage): Promise<void> {
@@ -462,7 +505,7 @@ export class Chat {
     if (index === -1) {
       return
     }
-    const text = message.content
+    const text = messageInputText(message)
     conversation.messages = conversation.messages.slice(0, index)
     await this._app.persistConversation(conversation)
     this.loadMessages(conversation)

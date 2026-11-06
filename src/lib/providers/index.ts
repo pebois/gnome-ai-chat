@@ -11,6 +11,7 @@ export interface ChatMessage {
   tool_calls?: ToolCall[]
   tool_name?: string
   stats?: MessageStats
+  command?: string
 }
 
 export interface MessageStats {

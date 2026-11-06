@@ -1,80 +1,46 @@
 import Adw from 'gi://Adw?version=1'
 
 import type { AppInterface } from '@/lib/app.js'
+import { COMMANDS } from '@/lib/commands/index.js'
+import { ACTION_NEW_CONVERSATION, ACTION_QUIT } from '@/lib/ipc.js'
+
+const SECTIONS: { title: string; commands: string[] }[] = [
+  { title: 'App', commands: ['settings', 'skills', 'mcp', 'shortcuts', 'files', 'ps', 'pull', 'stats', ACTION_QUIT] },
+  { title: 'Chat history', commands: [ACTION_NEW_CONVERSATION, 'search', 'find-in-chat', 'toggle-sidebar'] },
+  { title: 'Chat input', commands: ['focus-input'] }
+]
+
+const EXTRA_INPUT_SHORTCUTS = [{ title: 'Emojis', accelerator: '<Primary>semicolon' }]
 
 export function showShortcutsDialog(app: AppInterface): void {
   const shortcutsWin = new Adw.ShortcutsDialog()
-
-  const sectionApp = new Adw.ShortcutsSection({
-    title: 'App'
+  const listed = new Set(SECTIONS.flatMap((section) => {
+    return section.commands
+  }))
+  const unlisted = COMMANDS.filter((cmd) => {
+    return cmd.accels?.length && !listed.has(cmd.name)
+  }).map((cmd) => {
+    return cmd.name
   })
-  sectionApp.add(new Adw.ShortcutsItem({
-    title: 'Settings',
-    accelerator: '<Primary>comma'
-  }))
-  sectionApp.add(new Adw.ShortcutsItem({
-    title: 'Skills Editor',
-    accelerator: '<Primary><Shift>s'
-  }))
-  sectionApp.add(new Adw.ShortcutsItem({
-    title: 'MCP Servers',
-    accelerator: '<Primary><Shift>m'
-  }))
-  sectionApp.add(new Adw.ShortcutsItem({
-    title: 'Shortcuts',
-    accelerator: '<Primary>question'
-  }))
-  sectionApp.add(new Adw.ShortcutsItem({
-    title: 'Indexed Folders',
-    accelerator: '<Primary><Shift>f'
-  }))
-  sectionApp.add(new Adw.ShortcutsItem({
-    title: 'Running Models',
-    accelerator: '<Primary>p'
-  }))
-  sectionApp.add(new Adw.ShortcutsItem({
-    title: 'Performance Stats',
-    accelerator: '<Primary>i'
-  }))
-  sectionApp.add(new Adw.ShortcutsItem({
-    title: 'Quit',
-    accelerator: '<Primary>q'
-  }))
-  shortcutsWin.add(sectionApp)
 
-  const sectionHistory = new Adw.ShortcutsSection({
-    title: 'Chat history'
+  SECTIONS.forEach((section, i) => {
+    const group = new Adw.ShortcutsSection({ title: section.title })
+    const names = i === 0 ? [...section.commands, ...unlisted] : section.commands
+    for (const name of names) {
+      const cmd = COMMANDS.find((c) => {
+        return c.name === name
+      })
+      if (cmd?.accels?.length) {
+        group.add(new Adw.ShortcutsItem({ title: cmd.description, accelerator: cmd.accels[0] }))
+      }
+    }
+    if (section.title === 'Chat input') {
+      for (const item of EXTRA_INPUT_SHORTCUTS) {
+        group.add(new Adw.ShortcutsItem(item))
+      }
+    }
+    shortcutsWin.add(group)
   })
-  sectionHistory.add(new Adw.ShortcutsItem({
-    title: 'New Chat',
-    accelerator: '<Primary>n'
-  }))
-  sectionHistory.add(new Adw.ShortcutsItem({
-    title: 'Search',
-    accelerator: '<Primary>f'
-  }))
-  sectionHistory.add(new Adw.ShortcutsItem({
-    title: 'Find in Conversation',
-    accelerator: '<Primary><Shift>f'
-  }))
-  sectionHistory.add(new Adw.ShortcutsItem({
-    title: 'Toggle Sidebar',
-    accelerator: '<Primary>b'
-  }))
-  shortcutsWin.add(sectionHistory)
-
-  const sectionInput = new Adw.ShortcutsSection({
-    title: 'Chat input'
-  })
-  sectionInput.add(new Adw.ShortcutsItem({
-    title: 'Focus Input',
-    accelerator: '<Primary>l'
-  }))
-  sectionInput.add(new Adw.ShortcutsItem({
-    title: 'Emojis',
-    accelerator: '<Primary>semicolon'
-  }))
-  shortcutsWin.add(sectionInput)
 
   shortcutsWin.present(app.window)
 }

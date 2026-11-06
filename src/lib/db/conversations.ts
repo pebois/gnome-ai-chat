@@ -102,12 +102,12 @@ export class ConversationsStore {
   }
 
   public async getMessages(conversation_id: number): Promise<ChatMessage[]> {
-    const stdout = await db.execSql(`SELECT role, content, images, files, thinking, tool_calls, tool_name, stats FROM messages WHERE conversation_id = ${conversation_id} ORDER BY id ASC;`, ['-json'])
+    const stdout = await db.execSql(`SELECT role, content, images, files, thinking, tool_calls, tool_name, stats, command FROM messages WHERE conversation_id = ${conversation_id} ORDER BY id ASC;`, ['-json'])
     if (!stdout) {
       return []
     }
     try {
-      const rows = JSON.parse(stdout) as { role: 'user' | 'assistant' | 'system' | 'tool'; content: string; images?: string; files?: string; thinking?: string; tool_calls?: string; tool_name?: string; stats?: string }[]
+      const rows = JSON.parse(stdout) as { role: 'user' | 'assistant' | 'system' | 'tool'; content: string; images?: string; files?: string; thinking?: string; tool_calls?: string; tool_name?: string; stats?: string; command?: string }[]
       const messages: ChatMessage[] = rows.map((r) => {
         return {
           role: r.role,
@@ -117,7 +117,8 @@ export class ConversationsStore {
           thinking: r.thinking,
           tool_calls: r.tool_calls ? JSON.parse(r.tool_calls) as ToolCall[] : undefined,
           tool_name: r.tool_name,
-          stats: r.stats ? JSON.parse(r.stats) as MessageStats : undefined
+          stats: r.stats ? JSON.parse(r.stats) as MessageStats : undefined,
+          command: r.command || undefined
         }
       })
       this._messages.set(conversation_id, [...messages])
@@ -172,12 +173,13 @@ export class ConversationsStore {
       const tool_calls = m.tool_calls ? `'${db.escape(JSON.stringify(m.tool_calls))}'` : 'NULL'
       const tool_name = m.tool_name ? `'${db.escape(m.tool_name)}'` : 'NULL'
       const stats = m.stats ? `'${db.escape(JSON.stringify(m.stats))}'` : 'NULL'
-      return `(${conversation_id}, '${role}', '${content}', ${images}, ${files}, ${thinking}, ${tool_calls}, ${tool_name}, ${stats})`
+      const command = m.command ? `'${db.escape(m.command)}'` : 'NULL'
+      return `(${conversation_id}, '${role}', '${content}', ${images}, ${files}, ${thinking}, ${tool_calls}, ${tool_name}, ${stats}, ${command})`
     })
 
     for (let i = 0; i < values.length; i += 500) {
       const chunk = values.slice(i, i + 500)
-      sqls.push(`INSERT INTO messages (conversation_id, role, content, images, files, thinking, tool_calls, tool_name, stats) VALUES ${chunk.join(',')};`)
+      sqls.push(`INSERT INTO messages (conversation_id, role, content, images, files, thinking, tool_calls, tool_name, stats, command) VALUES ${chunk.join(',')};`)
     }
 
     if (sqls.length === 0) {

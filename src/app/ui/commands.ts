@@ -4,7 +4,10 @@ import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/lib/app.js'
 import { type Command, COMMANDS, type SubCommand } from '@/lib/commands/index.js'
+import { parseCommandLine } from '@/lib/commands/parse.js'
 import { pangoEscape } from '@/lib/parser.js'
+
+type Match = { name: string; title: string; description: string; icon: string }
 
 export class Commands {
   private _app: AppInterface
@@ -12,16 +15,19 @@ export class Commands {
   private _parent: Gtk.Widget
   private _popover!: Gtk.Popover
   private _listBox!: Gtk.ListBox
-  private _matches: { name: string; title: string; description: string; icon: string }[] = []
+  private _matches: Match[] = []
   private _currentCommand: Command | null = null
   private _currentSubCommand: SubCommand | null = null
   private _updateId = 0
   private _isExecuting = false
+  private _onHint: (text: string | null) => void
+  private _matchesSource: SubCommand | null = null
 
-  constructor(app: AppInterface, textView: Gtk.TextView, parent: Gtk.Widget) {
+  constructor(app: AppInterface, textView: Gtk.TextView, parent: Gtk.Widget, onHint: (text: string | null) => void) {
     this._app = app
     this._textView = textView
     this._parent = parent
+    this._onHint = onHint
 
     this._setup()
   }
@@ -37,6 +43,8 @@ export class Commands {
     this._popover.add_css_class('menu')
 
     this._popover.connect('closed', () => {
+      this._matches = []
+      this._matchesSource = null
       this._textView.grab_focus()
     })
 
@@ -93,6 +101,7 @@ export class Commands {
       if (this._isExecuting) {
         return
       }
+      this._onHint(null)
 
       const cursor = buffer.get_iter_at_mark(buffer.get_insert())
       const start = cursor.copy()
@@ -107,40 +116,9 @@ export class Commands {
     })
 
     this._listBox.connect('row-activated', (_list, row) => {
-      const index = row.get_index()
-      const selected = this._matches[index]
+      const selected = this._matches[row.get_index()]
       if (selected) {
-        if (this._currentSubCommand) {
-          this._isExecuting = true
-          this._complete(selected.name)
-          this.execute(`${this._currentCommand!.name} ${this._currentSubCommand.name} ${selected.name}`)
-        } else if (this._currentCommand && this._currentCommand.subCommands?.some((s) => {
-          return s.name === selected.name
-        })) {
-          const subCmd = this._currentCommand.subCommands.find((s) => {
-            return s.name === selected.name
-          })
-          if (subCmd?.getDynamicMatches || subCmd?.requiresArgument) {
-            this._complete(selected.name)
-            this._updateList(`/${this._currentCommand.name} ${selected.name} `)
-          } else {
-            this._isExecuting = true
-            this._complete(selected.name)
-            this.execute(`${this._currentCommand.name} ${selected.name}`)
-          }
-        } else {
-          const cmd = COMMANDS.find((c) => {
-            return c.name === selected.name
-          })
-          if (cmd?.subCommands) {
-            this._complete(selected.name)
-            this._updateList(`/${cmd.name} `)
-          } else {
-            this._isExecuting = true
-            this._complete(selected.name)
-            this.execute(selected.name)
-          }
-        }
+        this._activate(selected, true)
       }
     })
   }
@@ -150,6 +128,7 @@ export class Commands {
   }
 
   public execute(commandPath: string): void {
+    this._onHint(null)
     this._isExecuting = true
     this._updateId++
     this._popover.popdown()
@@ -159,11 +138,19 @@ export class Commands {
       this._listBox.remove(child)
     }
 
-    const parts = commandPath.split(' ')
-    const commandName = parts[0]
+    const { args, name: commandName } = parseCommandLine(commandPath)
     const cmd = COMMANDS.find((c) => {
       return c.name === commandName
     })
+    if (cmd?.requiresArgument && !args) {
+      const buffer = this._textView.get_buffer()
+      buffer.set_text(`/${cmd.name} `, -1)
+      buffer.place_cursor(buffer.get_end_iter())
+      this._isExecuting = false
+      this._textView.grab_focus()
+      this._updateList(`/${cmd.name} `)
+      return
+    }
 
     let parameter: GLib.Variant | undefined
     if (cmd?.parameterType) {
@@ -211,53 +198,15 @@ export class Commands {
     } else if (isEnd) {
       index = this._matches.length - 1
     } else if (isTab || isReturn) {
-      if (selectedRow) {
-        const selected = this._matches[index]
-        if (selected) {
-          if (this._currentSubCommand) {
-            if (isReturn) {
-              this._isExecuting = true
-              this._complete(selected.name)
-              this.execute(`${this._currentCommand!.name} ${this._currentSubCommand.name} ${selected.name}`)
-            } else {
-              this._complete(selected.name)
-            }
-          } else {
-            if (isReturn) {
-              if (this._currentCommand && this._currentCommand.subCommands?.some((s) => {
-                return s.name === selected.name
-              })) {
-                const subCmd = this._currentCommand.subCommands.find((s) => {
-                  return s.name === selected.name
-                })
-                if (subCmd?.getDynamicMatches || subCmd?.requiresArgument) {
-                  this._complete(selected.name)
-                  this._updateList(`/${this._currentCommand.name} ${selected.name} `)
-                } else {
-                  this._isExecuting = true
-                  this._complete(selected.name)
-                  this.execute(`${this._currentCommand.name} ${selected.name}`)
-                }
-              } else {
-                const cmd = COMMANDS.find((c) => {
-                  return c.name === selected.name
-                })
-                if (cmd?.subCommands) {
-                  this._complete(selected.name)
-                  this._updateList(`/${cmd.name} `)
-                } else {
-                  this._isExecuting = true
-                  this._complete(selected.name)
-                  this.execute(selected.name)
-                }
-              }
-            } else {
-              this._complete(selected.name)
-            }
-          }
-          return true
+      const selected = selectedRow ? this._matches[index] : undefined
+      if (!selected) {
+        if (isReturn) {
+          this._popover.popdown()
+          return false
         }
+        return true
       }
+      this._activate(selected, isReturn)
       return true
     } else if (isEscape) {
       this._popover.popdown()
@@ -272,6 +221,45 @@ export class Commands {
       row.grab_focus()
     }
     return true
+  }
+
+  private _activate(selected: Match, run: boolean): void {
+    if (!run) {
+      this._complete(selected.name)
+      return
+    }
+    const command = this._currentCommand
+    if (command && this._currentSubCommand) {
+      this._isExecuting = true
+      this._complete(selected.name)
+      this.execute(`${command.name} ${this._currentSubCommand.name} ${selected.name}`)
+      return
+    }
+    const subCommand = command?.subCommands?.find((s) => {
+      return s.name === selected.name
+    })
+    if (command && subCommand) {
+      if (subCommand.getDynamicMatches || subCommand.requiresArgument) {
+        this._complete(selected.name)
+        this._updateList(`/${command.name} ${selected.name} `)
+      } else {
+        this._isExecuting = true
+        this._complete(selected.name)
+        this.execute(`${command.name} ${selected.name}`)
+      }
+      return
+    }
+    const cmd = COMMANDS.find((c) => {
+      return c.name === selected.name
+    })
+    if (cmd?.subCommands || cmd?.requiresArgument) {
+      this._complete(selected.name)
+      this._updateList(`/${cmd.name} `)
+    } else {
+      this._isExecuting = true
+      this._complete(selected.name)
+      this.execute(selected.name)
+    }
   }
 
   private _complete(name: string): void {
@@ -292,7 +280,7 @@ export class Commands {
 
   private _updateList(lineText: string): void {
     let filterText = lineText.startsWith('/') ? lineText.slice(1).toLowerCase() : lineText.toLowerCase()
-    let matches: { name: string; title: string; description: string; icon: string }[] = []
+    let matches: Match[] = []
     this._currentCommand = null
     this._currentSubCommand = null
 
@@ -303,6 +291,13 @@ export class Commands {
       const baseCmd = COMMANDS.find((c) => {
         return c.name === baseCmdName && c.visible !== false
       })
+      if (baseCmd?.requiresArgument && !baseCmd.subCommands) {
+        this._currentCommand = baseCmd
+        this._matches = []
+        this._popover.popdown()
+        this._onHint(subFilter.trim() ? null : baseCmd.requiresArgument)
+        return
+      }
       if (baseCmd && baseCmd.subCommands) {
         this._currentCommand = baseCmd
 
@@ -332,9 +327,18 @@ export class Commands {
         filterText = subFilter
       }
     } else {
-      matches = COMMANDS.filter((cmd) => {
-        return cmd.visible !== false && cmd.name.startsWith(filterText)
-      }).map((cmd) => {
+      const visible = COMMANDS.filter((cmd) => {
+        return cmd.visible !== false
+      })
+      const byName = visible.filter((cmd) => {
+        return cmd.name.startsWith(filterText)
+      })
+      const byDescription = filterText.length < 2
+        ? []
+        : visible.filter((cmd) => {
+            return !byName.includes(cmd) && cmd.description.toLowerCase().includes(filterText)
+          })
+      matches = [...byName, ...byDescription].map((cmd) => {
         return {
           name: cmd.name,
           title: cmd.name,
@@ -357,64 +361,26 @@ export class Commands {
       if (this._updateId !== updateId) {
         return
       }
-      this._renderMatches(matches, filterText)
+      this._renderMatches(matches, filterText, query ? 'No matches found' : 'Type to search')
     }).catch((err) => {
       console.error(err)
     })
   }
 
-  private _renderMatches(matches: { name: string; title: string; description: string; icon: string }[], filterText: string): void {
+  private _renderMatches(matches: Match[], filterText: string, emptyHint?: string): void {
     if (matches.length === 0) {
-      this._matches = []
-      let child
-      while ((child = this._listBox.get_first_child())) {
-        this._listBox.remove(child)
+      if (this._currentSubCommand && this._matchesSource === this._currentSubCommand && this._matches.length > 0) {
+        return
       }
-
-      if (this._currentSubCommand) {
-        const box = new Gtk.Box({
-          orientation: Gtk.Orientation.HORIZONTAL,
-          spacing: 6,
-          margin_top: 6,
-          margin_bottom: 6,
-          margin_start: 6,
-          margin_end: 6
-        })
-
-        const icon = new Gtk.Image({
-          icon_name: 'edit-find-symbolic',
-          pixel_size: 16
-        })
-        icon.add_css_class('dim-label')
-
-        const label = new Gtk.Label({
-          label: 'No matches found',
-          halign: Gtk.Align.START
-        })
-        label.add_css_class('dim-label')
-
-        box.append(icon)
-        box.append(label)
-
-        const row = new Gtk.ListBoxRow({
-          child: box,
-          activatable: false,
-          selectable: false
-        })
-        this._listBox.append(row)
-
-        const width = Math.max(this._parent.get_allocated_width(), 200)
-        const rect = new Gdk.Rectangle({ x: 0, y: 0, width, height: 0 })
-        this._popover.set_pointing_to(rect)
-
-        if (!this._popover.get_visible()) {
-          this._popover.popup()
-        }
-      } else {
-        this._popover.popdown()
+      this._matches = []
+      this._matchesSource = null
+      this._popover.popdown()
+      if (emptyHint) {
+        this._onHint(emptyHint)
       }
       return
     }
+    this._matchesSource = this._currentSubCommand
 
     const matchesChanged = matches.length !== this._matches.length
       || matches.some((m, i) => {
@@ -516,10 +482,13 @@ export class Commands {
       firstRow.grab_focus()
     }
 
+    this._popup()
+  }
+
+  private _popup(): void {
     const width = Math.max(this._parent.get_allocated_width(), 200)
     const rect = new Gdk.Rectangle({ x: 0, y: 0, width, height: 0 })
     this._popover.set_pointing_to(rect)
-
     if (!this._popover.get_visible()) {
       this._popover.popup()
     }

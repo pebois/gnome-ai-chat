@@ -36,12 +36,12 @@ export function createGeneralPage(app: AppInterface): Adw.PreferencesPage {
 
   const searchGroup = new Adw.PreferencesGroup({
     title: 'Web Search',
-    description: 'Lets models search the web with the web_search tool, through a SearXNG instance with the JSON format enabled. Leave empty to disable.'
+    description: 'Models search the web with the web_search tool, using Wikipedia and DuckDuckGo instant answers. Optionally enter a SearXNG instance with the JSON format enabled for full web results.'
   })
   page.add(searchGroup)
 
   const searchRow = new Adw.EntryRow({
-    title: 'SearXNG URL',
+    title: 'SearXNG URL (optional)',
     text: app.settings.searchUrl ?? ''
   })
   searchRow.connect('notify::text', () => {

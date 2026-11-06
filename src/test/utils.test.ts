@@ -1,4 +1,4 @@
-import { convertMessageToTitle, convertSummaryToTitle, cosineSimilarity, formatDuration, formatMessageStats, formatModelName, formatRemainingTime, formatSize, getLanguageMetadata, selectDefaultModel } from '@/lib/utils.js'
+import { convertMessageToTitle, convertSummaryToTitle, cosineSimilarity, formatDuration, formatModelName, formatRemainingTime, formatSize, getLanguageMetadata, messageDetails, selectDefaultModel } from '@/lib/utils.js'
 
 describe('utils', () => {
   describe('getLanguageMetadata', () => {
@@ -227,14 +227,34 @@ describe('utils', () => {
     })
   })
 
-  describe('formatMessageStats', () => {
-    it('shows model, speed, tokens and duration', () => {
-      expect(formatMessageStats({ model: 'qwen3:8b', promptTokens: 100, outputTokens: 200, durationMs: 4200, evalDurationMs: 4000 }))
-        .toBe('qwen3 · 50.0 tok/s · 200 tokens · 4.2 s')
+  describe('messageDetails', () => {
+    it('lists model, speed, tokens and times for a reply', () => {
+      const stats = { model: 'qwen3:8b', promptTokens: 100, outputTokens: 200, durationMs: 4200, evalDurationMs: 4000 }
+      expect(messageDetails({ role: 'assistant', content: 'Hi', stats })).toEqual([
+        { label: 'Model', value: 'qwen3' },
+        { label: 'Speed', value: '50.0 tok/s' },
+        { label: 'Output tokens', value: '200' },
+        { label: 'Prompt tokens', value: '100' },
+        { label: 'Generation time', value: '4.0 s' },
+        { label: 'Total time', value: '4.2 s' }
+      ])
     })
 
-    it('omits values that are missing', () => {
-      expect(formatMessageStats({ model: 'llama3', promptTokens: 0, outputTokens: 0, durationMs: 0, evalDurationMs: 0 })).toBe('llama3')
+    it('skips missing values', () => {
+      const stats = { model: 'llama3', promptTokens: 0, outputTokens: 0, durationMs: 0, evalDurationMs: 0 }
+      expect(messageDetails({ role: 'assistant', content: 'Hi', stats })).toEqual([{ label: 'Model', value: 'llama3' }])
+    })
+
+    it('shows the command, and the prompt for prompt commands', () => {
+      expect(messageDetails({ role: 'user', content: 'Why?', command: 'deepsearch' })).toEqual([{ label: 'Command', value: '/deepsearch' }])
+      expect(messageDetails({ role: 'user', content: 'Use fetch_rss_feed', command: 'hn best' })).toEqual([
+        { label: 'Command', value: '/hn best' },
+        { label: 'Prompt', value: 'Use fetch_rss_feed' }
+      ])
+    })
+
+    it('has nothing for a plain message', () => {
+      expect(messageDetails({ role: 'user', content: 'Hello' })).toEqual([])
     })
   })
 })

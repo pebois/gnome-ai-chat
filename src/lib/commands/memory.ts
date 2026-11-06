@@ -1,6 +1,7 @@
 import GLib from 'gi://GLib?version=2.0'
 
 import type { Command } from '@/lib/commands/index.js'
+import { commandArguments } from '@/lib/commands/parse.js'
 
 export const memory: Command = {
   name: 'memory',
@@ -13,18 +14,12 @@ export const memory: Command = {
   ],
   parameterType: GLib.VariantType.new('s'),
   activate: (app, parameter) => {
-    if (!parameter) {
-      return
-    }
-    const text = parameter.get_string()[0]
-    const parts = text.split(' ')
-
-    if (parts.length < 2) {
+    const subCommand = commandArguments(parameter?.get_string()[0] ?? '', 'memory').sub
+    if (!subCommand) {
       app.showToast('Usage: /memory [summarize|clean|optimize]')
       return
     }
 
-    const subCommand = parts[1].toLowerCase()
     let prompt: string
     switch (subCommand) {
       case 'summarize':
@@ -41,8 +36,6 @@ export const memory: Command = {
         return
     }
 
-    const buffer = app.chat.input.getBuffer()
-    buffer.set_text(prompt, -1)
-    void app.chat.sendMessage()
+    return app.chat.sendPrompt(prompt, `memory ${subCommand}`)
   }
 }

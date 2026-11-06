@@ -196,69 +196,156 @@ interface InlineStyle {
   italic: [string, string]
   codeSpan: (code: string) => string
   codeBlock?: (code: string) => string
-  lineBreaks: boolean
 }
 
-function renderInline(text: string, style: InlineStyle): string {
-  let escaped = pangoEscape(text)
+type LineRenderer = (line: string, inline: (text: string) => string) => string | null
 
-  const escapedChars: string[] = []
-  const charPh = (i: number) => {
-    return `\x01${i}\x01`
-  }
-  escaped = escaped.replace(/\\([*~_`\\])/g, (_match, char: string) => {
-    escapedChars.push(char)
-    return charPh(escapedChars.length - 1)
-  })
+interface Delimiter {
+  char: string
+  index: number
+}
 
-  escaped = escaped.replace(/\n?^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$\n?/gm, '')
+const SLOT = /\x02(\d+)\x02/g
+const RULE_LINE = /^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$/
+const HEADING_LINE = /^[ \t]*(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/
+const QUOTE_LINE = /^[ \t]*((?:&gt;[ \t]?)+)(.*)$/
+const BULLET_LINE = /^([ \t]*)[-*+][ \t]+(.*)$/
+const HEADING_SIZES = ['x-large', 'large']
 
-  const codeSpans: string[] = []
-  const ph = (i: number) => {
-    return `\x02${i}\x02`
-  }
+function isSpace(char: string | undefined): boolean {
+  return char === undefined || /\s/.test(char)
+}
 
-  if (style.codeBlock) {
-    escaped = escaped.replace(/```([\s\S]*?)```/g, (_match, code: string) => {
-      codeSpans.push(style.codeBlock!(code))
-      return ph(codeSpans.length - 1)
-    })
-  }
-  escaped = escaped.replace(/`([^`]+)`/g, (_match, code: string) => {
-    codeSpans.push(style.codeSpan(code))
-    return ph(codeSpans.length - 1)
-  })
+function isWord(char: string | undefined): boolean {
+  return char !== undefined && /[\p{L}\p{N}]/u.test(char)
+}
 
+function renderEmphasis(line: string, style: InlineStyle): string {
   const [bold, boldEnd] = style.bold
   const [italic, italicEnd] = style.italic
+  const out: string[] = []
+  const runs = new Map<number, { char: string; count: number; openTags: string[]; closeTags: string[] }>()
+  const stack: Delimiter[] = []
 
-  escaped = escaped.replace(/^#{1,7} (.*)$/gm, `${bold}$1${boldEnd}`)
+  let i = 0
+  while (i < line.length) {
+    const char = line[i]
+    if (char !== '*' && char !== '~') {
+      const next = line.slice(i + 1).search(/[*~]/)
+      const endIndex = next === -1 ? line.length : i + 1 + next
+      out.push(line.slice(i, endIndex))
+      i = endIndex
+      continue
+    }
 
-  escaped = escaped.replace(/^\s*&gt;\s?(.*)$/gm, `${italic}$1${italicEnd}`)
+    let length = 1
+    while (line[i + length] === char) {
+      length++
+    }
+    const before = line[i - 1]
+    const after = line[i + length]
+    i += length
 
-  escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    const run = { char, count: length, openTags: [] as string[], closeTags: [] as string[] }
+    const index = out.length
+    out.push('')
+    runs.set(index, run)
 
-  escaped = escaped.replace(/~~([^~]+)~~/g, '<s>$1</s>')
+    if (char === '~' && length !== 2) {
+      continue
+    }
+    const intraword = char === '*' && length === 1
+    const canOpen = !isSpace(after) && !(intraword && isWord(before))
+    const canClose = !isSpace(before) && !(intraword && isWord(after))
 
-  escaped = escaped.replace(/\*\*\*(.+?)\*\*\*/g, `${bold}${italic}$1${italicEnd}${boldEnd}`)
+    if (canClose) {
+      let s = stack.length - 1
+      while (s >= 0 && run.count > 0) {
+        const opener = stack[s]
+        if (opener.char !== char) {
+          s--
+          continue
+        }
+        const openerRun = runs.get(opener.index)!
+        let use: number
+        let open: string
+        let close: string
+        if (char === '~') {
+          use = 2
+          open = '<s>'
+          close = '</s>'
+        } else {
+          use = openerRun.count >= 2 && run.count >= 2 && !(openerRun.count >= 3 && run.count >= 3) ? 2 : 1
+          open = use === 2 ? bold : italic
+          close = use === 2 ? boldEnd : italicEnd
+        }
+        openerRun.count -= use
+        run.count -= use
+        openerRun.openTags.unshift(open)
+        run.closeTags.push(close)
+        if (openerRun.count > 0) {
+          stack.splice(s + 1)
+        } else {
+          stack.splice(s)
+          s--
+        }
+      }
+    }
+    if (run.count > 0 && canOpen) {
+      stack.push({ char, index })
+    }
+  }
 
-  escaped = escaped.replace(/\*\*(.+?)\*\*/g, `${bold}$1${boldEnd}`)
+  for (const [index, run] of runs) {
+    out[index] = run.closeTags.join('') + run.char.repeat(run.count) + run.openTags.join('')
+  }
+  return out.join('')
+}
 
-  escaped = escaped.replace(/(^|[^*\w])\*([^*\n]+?)\*(?![*\w])/gm, `$1${italic}$2${italicEnd}`)
+function renderSegment(text: string, style: InlineStyle, renderLine: LineRenderer): string[] {
+  const slots: string[] = []
+  const slot = (value: string) => {
+    slots.push(value)
+    return `\x02${slots.length - 1}\x02`
+  }
 
-  escaped = escaped.replace(/\x02(\d+)\x02/g, (_match: string, i: string) => {
-    return codeSpans[parseInt(i)]
+  let escaped = pangoEscape(text)
+  escaped = escaped.replace(/\\([*~_`\\[\]#>-])/g, (_match, char: string) => {
+    return slot(char)
+  })
+  if (style.codeBlock) {
+    escaped = escaped.replace(/```([\s\S]*?)```/g, (_match, code: string) => {
+      return slot(style.codeBlock!(code))
+    })
+  }
+  escaped = escaped.replace(/`([^`\n]+)`/g, (_match, code: string) => {
+    return slot(style.codeSpan(code))
   })
 
-  escaped = escaped.replace(/\x01(\d+)\x01/g, (_match: string, i: string) => {
-    return escapedChars[parseInt(i)]
+  const inline = (value: string) => {
+    return renderEmphasis(value, style)
+  }
+  escaped = escaped.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) => {
+    return slot(`<a href="${href.replace(SLOT, (_m, n: string) => {
+      return slots[parseInt(n)].replace(/<[^>]*>/g, '')
+    })}">${inline(label)}</a>`)
   })
 
-  if (style.lineBreaks) {
-    escaped = escaped.replace(/\n/g, '<br/>')
+  const restore = (value: string): string => {
+    return value.replace(SLOT, (_match, n: string) => {
+      return restore(slots[parseInt(n)])
+    })
   }
 
   return escaped
+    .split('\n')
+    .map((line) => {
+      return renderLine(line, inline)
+    })
+    .filter((line): line is string => {
+      return line !== null
+    })
+    .map(restore)
 }
 
 const PANGO_STYLE: InlineStyle = {
@@ -269,8 +356,7 @@ const PANGO_STYLE: InlineStyle = {
   },
   codeBlock: (code) => {
     return `<span font_family="monospace" size="small">${code}</span>`
-  },
-  lineBreaks: false
+  }
 }
 
 const HTML_STYLE: InlineStyle = {
@@ -278,15 +364,83 @@ const HTML_STYLE: InlineStyle = {
   italic: ['<em>', '</em>'],
   codeSpan: (code) => {
     return `<code>${code}</code>`
-  },
-  lineBreaks: true
+  }
+}
+
+const renderPangoLine: LineRenderer = (line, inline) => {
+  if (RULE_LINE.test(line)) {
+    return '<span alpha="35%">──────────</span>'
+  }
+  const heading = line.match(HEADING_LINE)
+  if (heading) {
+    const size = HEADING_SIZES[heading[1].length - 1]
+    return `<span weight="bold"${size ? ` size="${size}"` : ''}>${inline(heading[2])}</span>`
+  }
+  const quote = line.match(QUOTE_LINE)
+  if (quote) {
+    const depth = (quote[1].match(/&gt;/g) ?? []).length
+    return `<span alpha="70%"><i>${'▎ '.repeat(depth)}${inline(quote[2])}</i></span>`
+  }
+  const bullet = line.match(BULLET_LINE)
+  if (bullet) {
+    return `${bullet[1].replace(/\t/g, '  ')}• ${inline(bullet[2])}`
+  }
+  return inline(line)
+}
+
+const renderHtmlLine: LineRenderer = (line, inline) => {
+  if (RULE_LINE.test(line)) {
+    return null
+  }
+  const heading = line.match(HEADING_LINE)
+  if (heading) {
+    return `<strong>${inline(heading[2])}</strong>`
+  }
+  const quote = line.match(QUOTE_LINE)
+  if (quote) {
+    return `<em>${inline(quote[2])}</em>`
+  }
+  return inline(line)
+}
+
+function groupFencedLines(text: string): string[] {
+  const groups: string[] = []
+  let current: string[] = []
+  let open = false
+  for (const line of text.split('\n')) {
+    current.push(line)
+    if ((line.match(/```/g) ?? []).length % 2 === 1) {
+      open = !open
+    }
+    if (!open) {
+      groups.push(current.join('\n'))
+      current = []
+    }
+  }
+  if (current.length > 0) {
+    groups.push(...current)
+  }
+  return groups
+}
+
+export interface MarkupLine {
+  markup: string
+  source: string
+}
+
+export function markdownLinesToPango(text: string): MarkupLine[] {
+  if (!text) {
+    return []
+  }
+  return groupFencedLines(text).map((source) => {
+    return { source, markup: renderSegment(source, PANGO_STYLE, renderPangoLine).join('\n') }
+  })
 }
 
 export function markdownToPango(text: string): string {
-  if (!text) {
-    return ''
-  }
-  return renderInline(text, PANGO_STYLE)
+  return markdownLinesToPango(text).map((line) => {
+    return line.markup
+  }).join('\n')
 }
 
 export function markdownToHtml(text: string): string {
@@ -320,7 +474,7 @@ export function markdownToHtml(text: string): string {
       }
       html += '</tbody></table>'
     } else {
-      html += `<p>${renderInline(chunk.content, HTML_STYLE)}</p>`
+      html += `<p>${renderSegment(chunk.content, HTML_STYLE, renderHtmlLine).join('<br/>')}</p>`
     }
   }
 
