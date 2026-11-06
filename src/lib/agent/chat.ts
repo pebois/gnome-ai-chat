@@ -2,7 +2,7 @@ import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 
 import type { ChatConversation } from '@/app/ui/history.js'
-import { buildContext } from '@/lib/agent/context.js'
+import { buildContext, type ContextResult } from '@/lib/agent/context.js'
 import type { Passage, ResearchSource } from '@/lib/agent/research.js'
 import { buildFollowUpPrompt, buildPlanPrompt, buildReportPrompt, CANCELLED_RESULT, describeSearchResults, describeSources, FOLLOW_UP_FORMAT, mapWithConcurrency, NOT_CITED_RESULT, parseFollowUps, parsePlan, PLAN_FORMAT, queryTerms, recentContext, REPORT_SYSTEM_PROMPT, researchBudget, scorePassage, selectPassages } from '@/lib/agent/research.js'
 import { summarizeConversation } from '@/lib/agent/summarize.js'
@@ -104,7 +104,7 @@ export class ChatService {
 
         const tools = round < MAX_TOOL_ROUNDS ? getAvailableTools(this._app) : undefined
         const context = buildContext({ system, messages: outgoingMessages, tools: tools ?? [], numCtx })
-        this._reportContext(conversation.id, context.droppedMessages, context.truncatedResults, context.estimatedTokens, numCtx)
+        this._reportContext(conversation.id, context, numCtx)
 
         const response = await this._streamReply(session, callbacks, {
           model,
@@ -556,13 +556,13 @@ export class ChatService {
     }
   }
 
-  private _reportContext(conversationId: number, dropped: number, truncated: number, tokens: number, numCtx: number): void {
+  private _reportContext(conversationId: number, context: ContextResult, numCtx: number): void {
     if (this._app.settings.debug) {
-      debug('Context', `~${tokens}/${numCtx} tokens, ${dropped} messages dropped, ${truncated} tool results truncated`)
+      debug('Context', `~${context.estimatedTokens}/${numCtx} tokens, ${context.droppedMessages} messages dropped, ${context.slimmedTurns} turns slimmed, ${context.truncatedResults} tool results truncated`)
     }
-    if (dropped > 0 && !this._trimWarnings.has(conversationId)) {
+    if (context.droppedMessages > 0 && !this._trimWarnings.has(conversationId)) {
       this._trimWarnings.add(conversationId)
-      this._app.showToast('Older messages were left out to fit the context window')
+      this._app.showToast('Older messages were left out to fit the context window. A larger Context Window in Preferences › Advanced keeps more.')
     }
   }
 }

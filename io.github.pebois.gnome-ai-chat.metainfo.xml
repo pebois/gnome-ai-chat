@@ -52,6 +52,21 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.14.0" date="2026-11-06">
+      <description>
+        <p>This release adds deep web research, clearer answers with their sources and details, and a reworked find in conversation.</p>
+        <ul>
+          <li>Added /deepsearch, which plans web searches, reads the best pages and writes a report with numbered citations.</li>
+          <li>Added a web_search tool that works without any setup.</li>
+          <li>Answers now show the files and web pages they used as sources, and a details button shows the model, speed and token counts.</li>
+          <li>Tool calls are shown live with their status and duration.</li>
+          <li>Find in conversation highlights every match in the text, including code blocks, and steps through them one by one.</li>
+          <li>Conversations can be renamed and pinned to the top of the sidebar.</li>
+          <li>Follow-up questions after a deep search keep the report and its sources.</li>
+          <li>Fixed Markdown rendering while streaming, regenerating commands, and several data loss issues on database errors.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.13.0" date="2026-10-28">
       <description>
         <p>This release adds Model Context Protocol servers and keeps long conversations within the model's context window.</p>
