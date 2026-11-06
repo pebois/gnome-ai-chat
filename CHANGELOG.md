@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-11-06
+
 ### Added
 - **Message Details**: Hovering a reply reveals an ⓘ button next to Copy and Regenerate. It opens the model, generation speed (tokens per second), output and prompt tokens, generation time and total time, so the conversation itself carries no metadata lines. Stats come from Ollama's final response and are saved in a new `messages.stats` column (migration 2).
 - **Live Tool Calls**: Each tool call on an assistant message now shows what the tool does ("Reading web page", "Searching indexed files", "Calling GitHub: search"…) with its main argument, a live status (spinner, then a check mark or a warning icon) and its duration. Clicking a row opens the tool call dialog with the arguments and the result, and `render_html` rows have an "Open Preview" button. The "Tool Calls" group expands on its own when the first tool starts, and stays collapsed if you close it while later tools run. Rows update in place while tools run and stay on the message afterwards. Row titles and subtitles, and the dialog's tool name and description, stay on one line, with the full text in a tooltip.
@@ -19,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Schema Migrations**: The database now has a schema version (`PRAGMA user_version`) and a list of ordered migrations (`src/lib/db/migrations.ts`). Pending migrations run in a single transaction at startup, and a newer schema is left untouched. Migration 1 adds `conversations.pinned`.
 
 ### Fixed
+- **Follow-ups After a Deep Search**: A follow-up question after a deep search no longer loses the report. When the full research (plan, searches, page reads) no longer fits in the context window, the exchange is kept as the question, the report and its numbered source list, instead of being dropped whole. The model can refer to the report, cite its sources and open one with `fetch_web_page` to dig deeper. The "Older messages were left out" toast now points to the Context Window setting.
 - **Commands in the Conversation**: A message sent by a command now remembers it (new `messages.command` column, migration 3). Regenerating a `/deepsearch` question or its report runs a new deep search instead of a plain reply, and **Restart from here** puts `/deepsearch <question>` back in the input. `/hn` and `/memory` messages show the command (for example "/hn best") instead of the long internal prompt. A message sent with a command has a terminal button among its hover actions that shows the command and, for `/hn` and `/memory`, the full prompt that was sent.
 - **Messages Starting with `/`**: Pressing Enter on text that starts with `/` but is not a command (such as `/etc/hosts is missing`) now sends it as a normal message instead of silently erasing it. A near miss such as `/deepserch` keeps the text and suggests the right command. The Send button now runs commands the same way as Enter, so re-sending an edited `/deepsearch` message starts a new deep search instead of sending the text to the model.
 - **Duplicate Shortcut**: Ctrl+Shift+F was bound to both Find in Conversation and Indexed Folders. It now only opens Find in Conversation.
