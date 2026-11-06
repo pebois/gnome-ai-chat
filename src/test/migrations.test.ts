@@ -23,6 +23,10 @@ describe('migrationStatements', () => {
     const sqls = migrationStatements(0)
     expect(sqls[sqls.length - 1]).toBe(`PRAGMA user_version = ${MIGRATIONS.length};`)
   })
+
+  it('adds the message command column', () => {
+    expect(migrationStatements(2)).toEqual(['ALTER TABLE messages ADD COLUMN command TEXT;', `PRAGMA user_version = ${MIGRATIONS.length};`])
+  })
 })
 
 describe('parseUserVersion', () => {

@@ -1,6 +1,7 @@
 import type { SummaryResponse } from '@/lib/agent/summarize.js'
+import { isPromptCommand } from '@/lib/commands/parse.js'
 import { DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
-import type { MessageStats } from '@/lib/providers/index.js'
+import type { ChatMessage } from '@/lib/providers/index.js'
 
 export function selectDefaultModel(availableModels: string[]): string {
   if (!availableModels || availableModels.length === 0) {
@@ -181,16 +182,40 @@ export function getLanguageMetadata(lang: string): LanguageMetadata {
   }
 }
 
-export function formatMessageStats(stats: MessageStats): string {
-  const parts = [formatModelName(stats.model)]
-  if (stats.outputTokens > 0 && stats.evalDurationMs > 0) {
-    parts.push(`${(stats.outputTokens / (stats.evalDurationMs / 1000)).toFixed(1)} tok/s`)
+export interface MessageDetail {
+  label: string
+  value: string
+}
+
+export function messageDetails(message: ChatMessage): MessageDetail[] {
+  const details: MessageDetail[] = []
+  const { command, stats } = message
+  if (command) {
+    details.push({ label: 'Command', value: `/${command}` })
+    if (isPromptCommand(message)) {
+      details.push({ label: 'Prompt', value: message.content })
+    }
   }
-  if (stats.outputTokens > 0) {
-    parts.push(`${stats.outputTokens} tokens`)
+  if (stats) {
+    const seconds = (ms: number) => {
+      return `${(ms / 1000).toFixed(1)} s`
+    }
+    details.push({ label: 'Model', value: formatModelName(stats.model) })
+    if (stats.outputTokens > 0 && stats.evalDurationMs > 0) {
+      details.push({ label: 'Speed', value: `${(stats.outputTokens / (stats.evalDurationMs / 1000)).toFixed(1)} tok/s` })
+    }
+    if (stats.outputTokens > 0) {
+      details.push({ label: 'Output tokens', value: String(stats.outputTokens) })
+    }
+    if (stats.promptTokens > 0) {
+      details.push({ label: 'Prompt tokens', value: String(stats.promptTokens) })
+    }
+    if (stats.evalDurationMs > 0) {
+      details.push({ label: 'Generation time', value: seconds(stats.evalDurationMs) })
+    }
+    if (stats.durationMs > 0) {
+      details.push({ label: 'Total time', value: seconds(stats.durationMs) })
+    }
   }
-  if (stats.durationMs > 0) {
-    parts.push(`${(stats.durationMs / 1000).toFixed(1)} s`)
-  }
-  return parts.filter(Boolean).join(' · ')
+  return details
 }

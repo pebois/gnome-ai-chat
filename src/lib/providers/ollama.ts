@@ -299,7 +299,7 @@ export class OllamaProvider implements Provider {
     const supportsTools = capabilities.includes('tools')
     const supportsThink = capabilities.includes('think')
 
-    const processedMessages = messages.map(({ stats: _stats, ...msg }) => {
+    const processedMessages = messages.map(({ command: _command, stats: _stats, ...msg }) => {
       let processed: ChatMessage = { ...msg }
       if (!supportsVision && processed.images) {
         this._debug(`Model ${props.model} does not support vision, stripping ${processed.images.length} images`)

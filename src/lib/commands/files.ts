@@ -3,6 +3,7 @@ import GLib from 'gi://GLib?version=2.0'
 
 import { showFilesDialog } from '@/app/dialog/files.js'
 import type { Command } from '@/lib/commands/index.js'
+import { commandArguments } from '@/lib/commands/parse.js'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import { filesStore } from '@/lib/db/files.js'
 import type { SearchResult } from '@/lib/db/types.js'
@@ -99,23 +100,11 @@ export const files: Command = {
       }
     }
   ],
-  accels: ['<Primary><Shift>f'],
+  accels: ['<Primary><Shift>o'],
   parameterType: GLib.VariantType.new('s'),
   activate: (app, parameter) => {
-    let subCommand = 'manage'
-    let argument = ''
-    if (parameter) {
-      const text = parameter.get_string()[0]
-      if (text) {
-        const parts = text.split(' ')
-        if (parts.length >= 2) {
-          subCommand = parts[1].toLowerCase()
-          argument = parts.slice(2).join(' ').trim()
-        } else if (parts.length === 1 && parts[0] && !parts[0].startsWith('/') && parts[0] !== 'files') {
-          subCommand = parts[0].toLowerCase()
-        }
-      }
-    }
+    const { sub, subArgs: argument } = commandArguments(parameter?.get_string()[0] ?? '', 'files')
+    const subCommand = sub || 'manage'
 
     if (subCommand === 'manage') {
       showFilesDialog(app)

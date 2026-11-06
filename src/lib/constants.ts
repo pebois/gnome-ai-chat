@@ -62,6 +62,20 @@ export const CONTEXT_IMAGE_TOKENS = 768
 
 export const CONTEXT_RESPONSE_RESERVE_RATIO = 0.25
 
+export const DEEPSEARCH_MAX_PAGES = 6
+
+export const DEEPSEARCH_FOLLOWUP_PAGES = 3
+
+export const DEEPSEARCH_CHUNK_CHARS = 800
+
+export const DEEPSEARCH_PAGE_MAX_BYTES = 300000
+
+export const DEEPSEARCH_FETCH_CONCURRENCY = 3
+
+export const DEEPSEARCH_CHUNKS_PER_PAGE = 40
+
+export const DEEPSEARCH_EMBED_BATCH = 64
+
 export const DEFAULT_SYSTEM_PROMPT = /* md */`
 You are Domino, a helpful and friendly AI assistant.
 

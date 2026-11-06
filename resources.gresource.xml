@@ -10,6 +10,7 @@
     <file alias="scalable/actions/paper-plane-symbolic.svg">icons/scalable/actions/paper-plane-symbolic.svg</file>
     <file alias="scalable/actions/processor-symbolic.svg">icons/scalable/actions/processor-symbolic.svg</file>
     <file alias="scalable/actions/resources-symbolic.svg">icons/scalable/actions/resources-symbolic.svg</file>
+    <file alias="scalable/actions/info-outline-symbolic.svg">icons/scalable/actions/info-outline-symbolic.svg</file>
     <file alias="scalable/apps/io.github.pebois.gnome-ai-chat.svg">icons/scalable/apps/io.github.pebois.gnome-ai-chat.svg</file>
     <file alias="hicolor/48x48/apps/io.github.pebois.gnome-ai-chat.png">icons/hicolor/48x48/apps/io.github.pebois.gnome-ai-chat.png</file>
     <file alias="hicolor/128x128/apps/io.github.pebois.gnome-ai-chat.png">icons/hicolor/128x128/apps/io.github.pebois.gnome-ai-chat.png</file>

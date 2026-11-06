@@ -1,4 +1,4 @@
-import { markdownToHtml, markdownToPango, pangoEscape, parseCodeBlock, parseMarkdownChunks, parseTable } from '@/lib/parser.js'
+import { markdownLinesToPango, markdownToHtml, markdownToPango, pangoEscape, parseCodeBlock, parseMarkdownChunks, parseTable } from '@/lib/parser.js'
 
 describe('parser', () => {
   describe('pangoEscape', () => {
@@ -24,23 +24,23 @@ describe('parser', () => {
     })
 
     it('Parses Header 3', () => {
-      expect(markdownToPango('### Header 3')).toBe('<b>Header 3</b>')
+      expect(markdownToPango('### Header 3')).toBe('<span weight="bold">Header 3</span>')
     })
 
     it('Parses Header 4', () => {
-      expect(markdownToPango('#### Header 4')).toBe('<b>Header 4</b>')
+      expect(markdownToPango('#### Header 4')).toBe('<span weight="bold">Header 4</span>')
     })
 
     it('Parses Header 5', () => {
-      expect(markdownToPango('##### Header 5')).toBe('<b>Header 5</b>')
+      expect(markdownToPango('##### Header 5')).toBe('<span weight="bold">Header 5</span>')
     })
 
     it('Parses Header 2', () => {
-      expect(markdownToPango('## Header 2')).toBe('<b>Header 2</b>')
+      expect(markdownToPango('## Header 2')).toBe('<span weight="bold" size="large">Header 2</span>')
     })
 
     it('Parses Header 1', () => {
-      expect(markdownToPango('# Header 1')).toBe('<b>Header 1</b>')
+      expect(markdownToPango('# Header 1')).toBe('<span weight="bold" size="x-large">Header 1</span>')
     })
 
     it('Parses inline code', () => {
@@ -56,7 +56,7 @@ describe('parser', () => {
     })
 
     it('Parses blockquotes', () => {
-      expect(markdownToPango('> This is a quote')).toBe('<i>This is a quote</i>')
+      expect(markdownToPango('> This is a quote')).toBe('<span alpha="70%"><i>▎ This is a quote</i></span>')
     })
 
     it('Parses strikethrough', () => {
@@ -75,7 +75,7 @@ describe('parser', () => {
 
     it('Handles multiple blockquotes', () => {
       const input = '> Quote 1\n> Quote 2'
-      const expected = '<i>Quote 1</i>\n<i>Quote 2</i>'
+      const expected = '<span alpha="70%"><i>▎ Quote 1</i></span>\n<span alpha="70%"><i>▎ Quote 2</i></span>'
       expect(markdownToPango(input)).toBe(expected)
     })
 
@@ -127,8 +127,62 @@ describe('parser', () => {
       expect(markdownToPango('**bold *italic* bold**')).toBe('<b>bold <i>italic</i> bold</b>')
     })
 
-    it('Strips horizontal rules', () => {
-      expect(markdownToPango('---\n***\n___\n- - -\n* * *\n_ _ _')).toBe('')
+    it('Renders horizontal rules as a dim line', () => {
+      const rule = '<span alpha="35%">──────────</span>'
+      expect(markdownToPango('---\n***\n___\n- - -\n* * *\n_ _ _')).toBe(Array(6).fill(rule).join('\n'))
+    })
+
+    it('Renders bullet lists with indentation', () => {
+      expect(markdownToPango('- one\n* **two**\n  + three')).toBe('• one\n• <b>two</b>\n  • three')
+    })
+
+    it('Keeps ordered list numbers', () => {
+      expect(markdownToPango('1. **Bold** item\n2) Two')).toBe('1. <b>Bold</b> item\n2) Two')
+    })
+
+    it('Nests bold and italic closed by one run', () => {
+      expect(markdownToPango('**watch *logs***')).toBe('<b>watch <i>logs</i></b>')
+    })
+
+    it('Leaves crossing emphasis literal instead of mis-nesting', () => {
+      expect(markdownToPango('~~a *b~~ c*')).toBe('<s>a *b</s> c*')
+    })
+
+    it('Does not apply emphasis inside link URLs', () => {
+      expect(markdownToPango('[the docs](https://example.com/a_b*c*d)')).toBe('<a href="https://example.com/a_b*c*d">the docs</a>')
+    })
+
+    it('Leaves spaced and intraword asterisks literal', () => {
+      expect(markdownToPango('5 * 3 = 15 and 2*4')).toBe('5 * 3 = 15 and 2*4')
+    })
+
+    it('Keeps quote formatting balanced with inline emphasis', () => {
+      expect(markdownToPango('> **Note:** quoted *text*')).toBe('<span alpha="70%"><i>▎ <b>Note:</b> quoted <i>text</i></i></span>')
+    })
+
+    it('Produces balanced markup for every streaming prefix', () => {
+      const samples = [
+        '## Setup **guide**\n\nUse `npm *run* build` then *check* the **output** of [the docs](https://example.com/a_b*c).\n\n* **Step one**: install *deps*\n* Step two: run `make` and **watch *logs***\n* Price is 5 * 3 = 15 and 2*4\n\n> **Note:** quoted *text*\n\n---\n\n~~old~~ ***new*** **a *b** c* & <tag>',
+        '**bold *nested ~~strike~~* end** and *unclosed **mix'
+      ]
+      const balanced = (markup: string) => {
+        const stack: string[] = []
+        for (const [, closing, name] of markup.matchAll(/<(\/?)([a-z]+)[^>]*>/g)) {
+          if (!closing) {
+            stack.push(name)
+          } else if (stack.pop() !== name) {
+            return false
+          }
+        }
+        return stack.length === 0
+      }
+      for (const sample of samples) {
+        for (let n = 1; n <= sample.length; n++) {
+          for (const line of markdownLinesToPango(sample.slice(0, n))) {
+            expect([sample.slice(0, n), balanced(line.markup)]).toEqual([sample.slice(0, n), true])
+          }
+        }
+      }
     })
 
     it('Preserves newlines', () => {

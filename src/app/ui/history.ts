@@ -4,7 +4,6 @@ import GLib from 'gi://GLib?version=2.0'
 import Graphene from 'gi://Graphene'
 import Gtk from 'gi://Gtk?version=4.0'
 
-import { ToolActivity } from '@/app/ui/activity.js'
 import { Message } from '@/app/ui/message/index.js'
 import { ScrollManager } from '@/app/ui/scroll.js'
 import type { AppInterface } from '@/lib/app.js'
@@ -38,7 +37,6 @@ export class History {
   private _loaded = false
   private _messages: Message[] = []
   private _streaming?: Message
-  private _activity?: ToolActivity
   private _scrolledContent!: Gtk.Box
   private _findBar!: Gtk.SearchBar
   private _findEntry!: Gtk.SearchEntry
@@ -388,25 +386,36 @@ export class History {
     }
   }
 
-  public get toolActivity(): ToolActivity {
-    if (!this._activity) {
-      this._activity = new ToolActivity(this._app)
-      this._list.append(this._activity.widget)
-      this._disableRow(this._activity.widget)
+  public toolStarted(call: ToolCall): void {
+    for (const message of this._messages) {
+      const row = message.toolRow(call)
+      if (row) {
+        message.expandToolCalls()
+        row.setRunning()
+        return
+      }
     }
-    return this._activity
   }
 
-  public endToolActivity(call: ToolCall, result: ChatMessage, durationMs: number): void {
-    this._activity?.end(call, result, durationMs)
+  public toolFinished(call: ToolCall, result: ChatMessage, durationMs: number): void {
+    for (const message of this._messages) {
+      const row = message.toolRow(call)
+      if (row) {
+        row.setResult(result, durationMs)
+        return
+      }
+    }
   }
 
-  public clearToolActivity(): void {
-    const row = this._activity?.widget.get_parent()
-    if (row) {
-      this._list.remove(row)
+  public updateLive(message: ChatMessage): void {
+    const component = this._messages.find((m) => {
+      return m.message === message
+    })
+    if (component) {
+      component.update(message)
+    } else {
+      this.renderMessage(message)
     }
-    this._activity = undefined
   }
 
   private _applySources(component: Message, message: ChatMessage): void {
@@ -494,7 +503,6 @@ export class History {
     this._highlighted = undefined
     this._findBar.search_mode_enabled = false
     this._streaming = undefined
-    this._activity = undefined
     this._list.remove_all()
     this._banner.revealed = false
     this._loaded = true

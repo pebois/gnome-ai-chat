@@ -1,10 +1,15 @@
+import type Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import Soup from 'gi://Soup?version=3.0'
 
+import type { PageText } from '@/lib/agent/research.js'
+import { htmlToText } from '@/lib/agent/research.js'
 import type { AppInterface } from '@/lib/app.js'
-import { APPLICATION_ID } from '@/lib/constants.js'
+import { APPLICATION_ID, DEEPSEARCH_PAGE_MAX_BYTES, VERSION } from '@/lib/constants.js'
 import type { Tool } from '@/lib/providers/index.js'
+import type { SearchResult } from '@/lib/tools/searxng.js'
 import { buildSearxngUrl, parseSearxngResults } from '@/lib/tools/searxng.js'
+import { buildDuckDuckGoUrl, buildWikipediaUrl, mergeResults, parseDuckDuckGoResults, parseWikipediaResults, wikipediaLanguage } from '@/lib/tools/websearch.js'
 
 let _session: Soup.Session | undefined
 
@@ -70,13 +75,86 @@ export const web_search: Tool = {
       properties: {
         query: {
           type: 'string',
-          description: 'The search query.'
+          description: 'The search query. Short keyword queries work best.'
+        },
+        language: {
+          type: 'string',
+          description: 'Optional two-letter language code for the results, such as "en" or "fr". Defaults to the user\'s language.'
         }
       },
       required: ['query']
     },
-    description: 'Searches the web and returns the top results as a JSON list of titles, URLs and snippets. Use fetch_web_page to read a result.'
+    description: 'Searches the web (encyclopedia articles, official sites and instant answers) and returns the top results as a JSON list of titles, URLs and snippets. Use fetch_web_page to read a result.'
   }
+}
+
+async function getJson(url: string, cancellable: Gio.Cancellable | null = null): Promise<string> {
+  const msg = Soup.Message.new('GET', url)
+  if (!msg) {
+    throw new Error(`Invalid URL: ${url}`)
+  }
+  const headers = msg.get_request_headers()
+  headers.append('Accept', 'application/json')
+  headers.append('User-Agent', `${APPLICATION_ID}/${VERSION}`)
+  const bytes = await getSession().send_and_read_async(msg, GLib.PRIORITY_DEFAULT, cancellable)
+  if (msg.get_status() !== Soup.Status.OK || !bytes) {
+    throw new Error(`${msg.get_reason_phrase() || msg.get_status()}`)
+  }
+  return new TextDecoder().decode(bytes.toArray())
+}
+
+async function searchBuiltIn(query: string, language: string, cancellable: Gio.Cancellable | null): Promise<SearchResult[]> {
+  const [ddg, wikipedia] = await Promise.allSettled([
+    getJson(buildDuckDuckGoUrl(query), cancellable).then(parseDuckDuckGoResults),
+    getJson(buildWikipediaUrl(language, query), cancellable).then((json) => {
+      return parseWikipediaResults(json, language)
+    })
+  ])
+  if (ddg.status === 'rejected' && wikipedia.status === 'rejected') {
+    throw ddg.reason instanceof Error ? ddg.reason : new Error(String(ddg.reason))
+  }
+  return mergeResults([
+    ddg.status === 'fulfilled' ? ddg.value : [],
+    wikipedia.status === 'fulfilled' ? wikipedia.value : []
+  ])
+}
+
+export function defaultSearchLanguage(): string {
+  return wikipediaLanguage(GLib.get_language_names())
+}
+
+export async function searchWeb(app: AppInterface, query: string, language: string = defaultSearchLanguage(), cancellable: Gio.Cancellable | null = null): Promise<SearchResult[]> {
+  const searxng = app.settings.searchUrl?.trim()
+  if (!searxng) {
+    return searchBuiltIn(query, language, cancellable)
+  }
+  const url = buildSearxngUrl(searxng, query)
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    throw new Error('The search engine URL must start with http or https.')
+  }
+  return parseSearxngResults(await getJson(url, cancellable))
+}
+
+export async function fetchPageText(url: string, cancellable: Gio.Cancellable | null = null): Promise<PageText> {
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    throw new Error('Only http and https URLs are allowed.')
+  }
+  const msg = Soup.Message.new('GET', url)
+  if (!msg) {
+    throw new Error(`Invalid URL: ${url}`)
+  }
+  msg.get_request_headers().append('User-Agent', `${APPLICATION_ID}/${VERSION}`)
+  const bytes = await getSession().send_and_read_async(msg, GLib.PRIORITY_DEFAULT, cancellable)
+  if (msg.get_status() !== Soup.Status.OK || !bytes) {
+    throw new Error(`${msg.get_reason_phrase() || msg.get_status()}`)
+  }
+  const [contentType] = msg.get_response_headers().get_content_type()
+  if (contentType && !contentType.startsWith('text/') && !contentType.includes('xml')) {
+    throw new Error(`Unsupported content type ${contentType}`)
+  }
+  const data = bytes.toArray()
+  const html = new TextDecoder().decode(data.length > DEEPSEARCH_PAGE_MAX_BYTES ? data.subarray(0, DEEPSEARCH_PAGE_MAX_BYTES) : data)
+  return contentType?.startsWith('text/plain') ? { title: '', text: html } : htmlToText(html)
 }
 
 export async function handle_web_search(app: AppInterface, args: Record<string, unknown>): Promise<string> {
@@ -84,29 +162,13 @@ export async function handle_web_search(app: AppInterface, args: Record<string, 
   if (!query) {
     return 'Error: A search query is required.'
   }
-  const base = app.settings.searchUrl?.trim()
-  if (!base) {
-    return 'Error: No search engine is configured.'
-  }
-  const url = buildSearxngUrl(base, query)
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    return 'Error: The search engine URL must start with http or https.'
-  }
-
-  const msg = Soup.Message.new('GET', url)
-  if (!msg) {
-    return 'Error: Invalid search engine URL.'
-  }
-  msg.get_request_headers().append('Accept', 'application/json')
+  const requestedLanguage = typeof args.language === 'string' ? args.language.trim().toLowerCase() : ''
+  const language = /^[a-z]{2,3}$/.test(requestedLanguage) ? requestedLanguage : defaultSearchLanguage()
 
   try {
-    const bytes = await getSession().send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null)
-    if (msg.get_status() !== Soup.Status.OK || !bytes) {
-      return `Failed to search: ${msg.get_reason_phrase() || msg.get_status()}`
-    }
-    const results = parseSearxngResults(new TextDecoder().decode(bytes.toArray()))
+    const results = await searchWeb(app, query, language)
     if (results.length === 0) {
-      return `No results found for "${query}".`
+      return `No results found for "${query}". Try a shorter query, or different keywords.`
     }
     return JSON.stringify(results, null, 2)
   } catch (e) {

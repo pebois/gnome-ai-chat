@@ -3,23 +3,36 @@ import GLib from 'gi://GLib?version=2.0'
 
 import type { ChatConversation } from '@/app/ui/history.js'
 import { buildContext } from '@/lib/agent/context.js'
+import type { Passage, ResearchSource } from '@/lib/agent/research.js'
+import { buildFollowUpPrompt, buildPlanPrompt, buildReportPrompt, CANCELLED_RESULT, describeSearchResults, describeSources, FOLLOW_UP_FORMAT, mapWithConcurrency, NOT_CITED_RESULT, parseFollowUps, parsePlan, PLAN_FORMAT, queryTerms, recentContext, REPORT_SYSTEM_PROMPT, researchBudget, scorePassage, selectPassages } from '@/lib/agent/research.js'
 import { summarizeConversation } from '@/lib/agent/summarize.js'
 import type { AppInterface } from '@/lib/app.js'
-import { DEFAULT_CHAT_MODEL, DEFAULT_OPTIONS, MAX_TOOL_ROUNDS } from '@/lib/constants.js'
+import { DEEPSEARCH_CHUNK_CHARS, DEEPSEARCH_CHUNKS_PER_PAGE, DEEPSEARCH_EMBED_BATCH, DEEPSEARCH_FETCH_CONCURRENCY, DEEPSEARCH_FOLLOWUP_PAGES, DEEPSEARCH_MAX_PAGES, DEFAULT_CHAT_MODEL, DEFAULT_EMBEDDING_MODEL, DEFAULT_OPTIONS, MAX_TOOL_ROUNDS } from '@/lib/constants.js'
 import { debug } from '@/lib/debug.js'
-import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
+import type { ChatMessage, ChatProps, ToolCall } from '@/lib/providers/index.js'
 import { buildSkillPrompt, matchSkill, stripSkillMention } from '@/lib/skills/index.js'
+import { RecursiveCharacterTextSplitter } from '@/lib/splitter.js'
 import { canRunInParallel, getAvailableTools, onToolCall } from '@/lib/tools/index.js'
-import { convertSummaryToTitle } from '@/lib/utils.js'
+import type { SearchResult } from '@/lib/tools/searxng.js'
+import { defaultSearchLanguage, fetchPageText, searchWeb } from '@/lib/tools/web.js'
+import { mergeResults } from '@/lib/tools/websearch.js'
+import { convertSummaryToTitle, cosineSimilarity } from '@/lib/utils.js'
 
 export interface ChatSessionCallbacks {
   onNewResponse?: () => void
   onMessageChunk?: (chunk: ChatMessage) => void
   onResponse?: (message: ChatMessage) => void
+  onMessage?: (message: ChatMessage) => void
   onToolStart?: (call: ToolCall) => void
   onToolEnd?: (call: ToolCall, result: ChatMessage, durationMs: number) => void
   onFinish?: (messages: ChatMessage[]) => void
   onError?: (error: string) => void
+}
+
+interface GenerationSession {
+  conversation: ChatConversation
+  cancellable: Gio.Cancellable
+  generated: ChatMessage[]
 }
 
 export class ChatService {
@@ -61,54 +74,27 @@ export class ChatService {
     return this._streaming.get(id)
   }
 
-  public async generateResponse(
+  public generateResponse(
     conversationId: number,
     isFirstMessage: boolean,
     callbacks: ChatSessionCallbacks
   ): Promise<void> {
-    const conversation = this._app.conversations.find((c) => {
-      return c.id === conversationId
-    })
-    if (!conversation) {
-      return
-    }
+    return this._runSession(conversationId, isFirstMessage, callbacks, async (session) => {
+      const { cancellable, conversation } = session
+      const lastUserMessage = [...conversation.messages].reverse().find((m) => {
+        return m.role === 'user'
+      })
+      const skill = lastUserMessage ? matchSkill(lastUserMessage.content, this._app.skills ?? []) : undefined
+      const model = this._app.model ?? DEFAULT_CHAT_MODEL
+      const system = [this._app.settings.system, skill ? buildSkillPrompt(skill) : ''].filter(Boolean).join('\n\n')
+      const numCtx = this._app.settings.options.num_ctx ?? DEFAULT_OPTIONS.num_ctx
 
-    const chatConversation = this._app.conversation
-    if (!chatConversation || chatConversation.id !== conversationId) {
-      return
-    }
-
-    const cancellable = new Gio.Cancellable()
-    this._cancellables.set(conversationId, cancellable)
-    this._conversations.set(conversationId, chatConversation)
-    this._app.setGeneratingMessage(conversationId, true)
-
-    let fullContent = ''
-    let fullThinking = ''
-    let fullToolCalls: ToolCall[] = []
-    const generatedMessages: ChatMessage[] = []
-
-    const lastUserMessage = [...chatConversation.messages].reverse().find((m) => {
-      return m.role === 'user'
-    })
-    const skill = lastUserMessage ? matchSkill(lastUserMessage.content, this._app.skills ?? []) : undefined
-    const model = this._app.model ?? DEFAULT_CHAT_MODEL
-    const system = [this._app.settings.system, skill ? buildSkillPrompt(skill) : ''].filter(Boolean).join('\n\n')
-    const numCtx = this._app.settings.options.num_ctx ?? DEFAULT_OPTIONS.num_ctx
-
-    try {
-      await this._warnMissingCapabilities(model, chatConversation.messages)
+      await this._warnMissingCapabilities(model, conversation.messages)
 
       const recursiveChat = async (messages: ChatMessage[], round: number): Promise<void> => {
         if (cancellable.is_cancelled()) {
           return
         }
-
-        this._streaming.set(conversationId, { role: 'assistant', content: '' })
-        callbacks.onNewResponse?.()
-        fullContent = ''
-        fullThinking = ''
-        fullToolCalls = []
 
         const outgoingMessages = skill
           ? messages.map((m) => {
@@ -118,9 +104,9 @@ export class ChatService {
 
         const tools = round < MAX_TOOL_ROUNDS ? getAvailableTools(this._app) : undefined
         const context = buildContext({ system, messages: outgoingMessages, tools: tools ?? [], numCtx })
-        this._reportContext(conversationId, context.droppedMessages, context.truncatedResults, context.estimatedTokens, numCtx)
+        this._reportContext(conversation.id, context.droppedMessages, context.truncatedResults, context.estimatedTokens, numCtx)
 
-        const response = await this._app.provider.chat({
+        const response = await this._streamReply(session, callbacks, {
           model,
           system: this._app.settings.system,
           stream: this._app.settings.stream,
@@ -128,87 +114,301 @@ export class ChatService {
           options: this._app.settings.options,
           messages: context.messages,
           skill,
-          tools,
-          onMessageChunk: (chunk) => {
-            if (chunk.message?.thinking) {
-              fullThinking += chunk.message.thinking
-            }
-            if (chunk.message?.content) {
-              fullContent += chunk.message.content
-            }
-            if (chunk.message?.tool_calls) {
-              fullToolCalls = [...fullToolCalls, ...chunk.message.tool_calls]
-            }
-
-            const partial: ChatMessage = {
-              ...(chunk.message || {}),
-              role: 'assistant',
-              content: fullContent,
-              thinking: fullThinking,
-              tool_calls: fullToolCalls.length > 0 ? fullToolCalls : undefined
-            }
-            this._streaming.set(conversationId, partial)
-            callbacks.onMessageChunk?.(partial)
-          },
-          cancellable
+          tools
         })
 
-        this._streaming.delete(conversationId)
-
-        if (!response) {
-          if (cancellable.is_cancelled() && (fullContent || fullThinking || fullToolCalls.length > 0)) {
-            const partialMessage: ChatMessage = {
-              role: 'assistant',
-              content: fullContent,
-              thinking: fullThinking,
-              tool_calls: fullToolCalls.length > 0 ? fullToolCalls : undefined
-            }
-            generatedMessages.push(partialMessage)
-            chatConversation.messages.push(partialMessage)
-            callbacks.onResponse?.(partialMessage)
-          }
+        if (!response?.tool_calls?.length) {
           return
         }
 
-        generatedMessages.push(response)
-        chatConversation.messages.push(response)
-        callbacks.onResponse?.(response)
+        const startToolTime = GLib.get_monotonic_time()
+        const toolMessages = await this._runToolCalls(response.tool_calls, cancellable, callbacks)
+        this._app.tracker.recordToolCall((GLib.get_monotonic_time() - startToolTime) / 1000)
 
-        if (response.tool_calls?.length) {
-          const startToolTime = GLib.get_monotonic_time()
+        session.generated.push(...toolMessages)
+        conversation.messages.push(...toolMessages)
 
-          const toolMessages = await this._runToolCalls(response.tool_calls, cancellable, callbacks)
+        await recursiveChat([...messages, response, ...toolMessages], round + 1)
+      }
 
-          const endToolTime = GLib.get_monotonic_time()
-          const toolDurationMs = (endToolTime - startToolTime) / 1000
-          this._app.tracker.recordToolCall(toolDurationMs)
+      await recursiveChat(conversation.messages, 0)
+    })
+  }
 
-          generatedMessages.push(...toolMessages)
-          chatConversation.messages.push(...toolMessages)
+  public deepSearch(
+    conversationId: number,
+    question: string,
+    isFirstMessage: boolean,
+    callbacks: ChatSessionCallbacks
+  ): Promise<void> {
+    return this._runSession(conversationId, isFirstMessage, callbacks, async (session) => {
+      const { cancellable, conversation } = session
+      const model = this._app.model ?? DEFAULT_CHAT_MODEL
+      const numCtx = this._app.settings.options.num_ctx ?? DEFAULT_OPTIONS.num_ctx
+      const language = defaultSearchLanguage()
+      const splitter = new RecursiveCharacterTextSplitter({ chunkSize: DEEPSEARCH_CHUNK_CHARS, chunkOverlap: 100 })
+      const seen = new Set<string>()
+      const passages: Passage[] = []
+      const snippets: Passage[] = []
 
-          await recursiveChat([...messages, response, ...toolMessages], round + 1)
+      const research: ChatMessage = { role: 'assistant', content: '', tool_calls: [] }
+      const calls = research.tool_calls!
+      const results = new Map<ToolCall, string>()
+      const fetched = new Map<string, { call: ToolCall; title: string }>()
+      let flushed = false
+      const flush = (): void => {
+        if (flushed) {
+          return
+        }
+        flushed = true
+        const toolMessages = calls.map((call): ChatMessage => {
+          return { role: 'tool', tool_name: call.function.name, content: results.get(call) ?? CANCELLED_RESULT }
+        })
+        session.generated.push(...toolMessages)
+        conversation.messages.push(...toolMessages)
+      }
+      session.generated.push(research)
+      conversation.messages.push(research)
+      callbacks.onMessage?.(research)
+
+      const step = async <T>(name: string, args: Record<string, unknown>, run: (call: ToolCall) => Promise<T>, describe: (result: T) => string): Promise<T> => {
+        const call: ToolCall = { id: '', function: { index: calls.length, name, arguments: args } }
+        calls.push(call)
+        callbacks.onMessage?.(research)
+        callbacks.onToolStart?.(call)
+        const start = GLib.get_monotonic_time()
+        const finish = (text: string): void => {
+          results.set(call, text)
+          callbacks.onToolEnd?.(call, { role: 'tool', tool_name: name, content: text }, (GLib.get_monotonic_time() - start) / 1000)
+        }
+        try {
+          const result = await run(call)
+          finish(describe(result))
+          return result
+        } catch (err) {
+          finish(cancellable.is_cancelled() ? CANCELLED_RESULT : `Error: ${err instanceof Error ? err.message : String(err)}`)
+          throw err
         }
       }
 
-      await recursiveChat(chatConversation.messages, 0)
+      const askJson = async (prompt: string, format: object): Promise<string> => {
+        const response = await this._app.provider.chat({
+          model,
+          stream: false,
+          format,
+          options: this._app.settings.options,
+          messages: [{ role: 'user', content: prompt }],
+          cancellable
+        })
+        return response?.content ?? ''
+      }
 
-      await this._app.persistConversation(chatConversation)
+      const gather = async (queries: string[], maxPages: number): Promise<void> => {
+        const lists = await Promise.all(queries.map((query) => {
+          return step('web_search', { query }, () => {
+            return searchWeb(this._app, query, language, cancellable)
+          }, describeSearchResults).catch((): SearchResult[] => {
+            return []
+          })
+        }))
+        if (cancellable.is_cancelled()) {
+          return
+        }
+        const results = mergeResults(lists, Number.MAX_SAFE_INTEGER).filter((r) => {
+          return !seen.has(r.url)
+        })
+        for (const r of results) {
+          seen.add(r.url)
+          if (r.snippet) {
+            snippets.push({ url: r.url, title: r.title, text: r.snippet })
+          }
+        }
+        const pages = results.filter((r) => {
+          return /^https?:\/\//.test(r.url) && !/^https?:\/\/(?:[^/]+\.)?duckduckgo\.com\/?$/.test(r.url)
+        }).slice(0, maxPages)
+        await mapWithConcurrency(pages, DEEPSEARCH_FETCH_CONCURRENCY, async (r) => {
+          if (cancellable.is_cancelled()) {
+            return
+          }
+          try {
+            let call: ToolCall | undefined
+            const page = await step('fetch_web_page', { url: r.url }, (stepCall) => {
+              call = stepCall
+              return fetchPageText(r.url, cancellable)
+            }, (result) => {
+              const chunks = splitter.splitText(result.text).filter((chunk) => {
+                return chunk.trim().length > 80
+              }).slice(0, DEEPSEARCH_CHUNKS_PER_PAGE)
+              for (const chunk of chunks) {
+                passages.push({ url: r.url, title: result.title || r.title, text: chunk.trim() })
+              }
+              return `${result.title || r.title || r.url}\n${r.url}\n\nRead ${chunks.length} passages.`
+            })
+            if (call) {
+              fetched.set(r.url, { call, title: page.title || r.title })
+            }
+          } catch (err) {
+            if (!cancellable.is_cancelled()) {
+              console.error(`Deep search could not read ${r.url}:`, err)
+            }
+          }
+        })
+      }
 
-      if (!this._app.window.is_active || this._app.conversation?.id !== chatConversation.id) {
+      const select = (): Promise<ResearchSource[]> => {
+        return step('deepsearch_select', {}, async () => {
+          const pool = passages.length > 0 ? passages : snippets
+          const scores = await this._scorePassages(question, pool)
+          return selectPassages(pool, scores, researchBudget(numCtx))
+        }, describeSources)
+      }
+
+      const run = async (): Promise<void> => {
+        const queries = await step('deepsearch_plan', { question }, async () => {
+          return parsePlan(await askJson(buildPlanPrompt(question, recentContext(conversation.messages)), PLAN_FORMAT), question)
+        }, (list) => {
+          return `Queries:\n${list.map((q) => {
+            return `- ${q}`
+          }).join('\n')}`
+        })
+        if (cancellable.is_cancelled()) {
+          return
+        }
+
+        await gather(queries, DEEPSEARCH_MAX_PAGES)
+        if (cancellable.is_cancelled()) {
+          return
+        }
+        let sources = await select()
+
+        const followUps = await step('deepsearch_followup', {}, async () => {
+          return parseFollowUps(await askJson(buildFollowUpPrompt(question, sources), FOLLOW_UP_FORMAT))
+        }, (list) => {
+          return list.length > 0
+            ? `Follow-up queries:\n${list.map((q) => {
+              return `- ${q}`
+            }).join('\n')}`
+            : 'Nothing missing.'
+        }).catch((): string[] => {
+          return []
+        })
+        if (followUps.length > 0 && !cancellable.is_cancelled()) {
+          await gather(followUps, DEEPSEARCH_FOLLOWUP_PAGES)
+          if (cancellable.is_cancelled()) {
+            return
+          }
+          sources = await select()
+        }
+        if (cancellable.is_cancelled()) {
+          return
+        }
+
+        const fetchOrder = [...fetched.keys()]
+        sources = [...sources].sort((a, b) => {
+          return fetchOrder.indexOf(a.url) - fetchOrder.indexOf(b.url)
+        })
+        for (const [url, page] of fetched) {
+          const source = sources.find((s) => {
+            return s.url === url
+          })
+          results.set(page.call, source
+            ? `${source.title || page.title}\n${url}\n\n${source.passages.join('\n\n')}`
+            : `${NOT_CITED_RESULT}: ${page.title || url}`)
+        }
+        flush()
+
+        await this._streamReply(session, callbacks, {
+          model,
+          system: REPORT_SYSTEM_PROMPT,
+          stream: this._app.settings.stream,
+          think: this._app.settings.think,
+          options: this._app.settings.options,
+          messages: [{ role: 'user', content: buildReportPrompt(question, sources, passages.length === 0) }]
+        })
+      }
+
+      try {
+        await run()
+      } finally {
+        flush()
+      }
+    })
+  }
+
+  private async _scorePassages(question: string, passages: Passage[]): Promise<number[]> {
+    if (passages.length === 0) {
+      return []
+    }
+    try {
+      const [questionResponse, ...batches] = await Promise.all([
+        this._app.provider.embed({ model: DEFAULT_EMBEDDING_MODEL, input: question }),
+        ...Array.from({ length: Math.ceil(passages.length / DEEPSEARCH_EMBED_BATCH) }, (_, i) => {
+          return this._app.provider.embed({
+            model: DEFAULT_EMBEDDING_MODEL,
+            input: passages.slice(i * DEEPSEARCH_EMBED_BATCH, (i + 1) * DEEPSEARCH_EMBED_BATCH).map((p) => {
+              return p.text
+            })
+          })
+        })
+      ])
+      const target = questionResponse?.embeddings?.[0]
+      const vectors = batches.flatMap((b) => {
+        return b?.embeddings ?? []
+      })
+      if (target && vectors.length === passages.length) {
+        return vectors.map((v) => {
+          return cosineSimilarity(target, v)
+        })
+      }
+    } catch (err) {
+      console.error('Deep search could not embed passages, using keyword scores:', err)
+    }
+    const terms = queryTerms(question)
+    return passages.map((p) => {
+      return scorePassage(p.text, terms)
+    })
+  }
+
+  private async _runSession(
+    conversationId: number,
+    isFirstMessage: boolean,
+    callbacks: ChatSessionCallbacks,
+    run: (session: GenerationSession) => Promise<void>
+  ): Promise<void> {
+    const known = this._app.conversations.some((c) => {
+      return c.id === conversationId
+    })
+    const conversation = this._app.conversation
+    if (!known || !conversation || conversation.id !== conversationId) {
+      return
+    }
+
+    const cancellable = new Gio.Cancellable()
+    this._cancellables.set(conversationId, cancellable)
+    this._conversations.set(conversationId, conversation)
+    this._app.setGeneratingMessage(conversationId, true)
+    const session: GenerationSession = { conversation, cancellable, generated: [] }
+
+    try {
+      await run(session)
+
+      await this._app.persistConversation(conversation)
+
+      if (!this._app.window.is_active || this._app.conversation?.id !== conversation.id) {
         const notification = new Gio.Notification()
         notification.set_title('Gnome AI Chat')
         notification.set_body('The assistant has finished responding.')
-        notification.set_default_action_and_target('app.open-conversation', GLib.Variant.new_string(chatConversation.id.toString()))
-        this._app.sendNotification(`message-completed-${chatConversation.id}`, notification)
+        notification.set_default_action_and_target('app.open-conversation', GLib.Variant.new_string(conversation.id.toString()))
+        this._app.sendNotification(`message-completed-${conversation.id}`, notification)
       }
 
       if (isFirstMessage && !cancellable.is_cancelled()) {
-        this._app.setSummarizing(chatConversation.id, true)
-        void summarizeConversation({ provider: this._app.provider, messages: chatConversation.messages })
+        this._app.setSummarizing(conversation.id, true)
+        void summarizeConversation({ provider: this._app.provider, messages: conversation.messages })
           .then((summary) => {
             if (summary) {
               const title = convertSummaryToTitle(summary)
-              this._app.setConversationTitle(chatConversation, title)
+              this._app.setConversationTitle(conversation, title)
               this._app.saveConversations()
             }
           })
@@ -216,11 +416,11 @@ export class ChatService {
             console.error('Failed to auto-summarize conversation:', err)
           })
           .finally(() => {
-            this._app.setSummarizing(chatConversation.id, false)
+            this._app.setSummarizing(conversation.id, false)
           })
       }
 
-      callbacks.onFinish?.(generatedMessages)
+      callbacks.onFinish?.(session.generated)
     } catch (err) {
       console.error(err)
       const errorMessage = err instanceof Error ? err.message : String(err)
@@ -233,6 +433,63 @@ export class ChatService {
         this._cancellables.delete(conversationId)
       }
     }
+  }
+
+  private async _streamReply(
+    session: GenerationSession,
+    callbacks: ChatSessionCallbacks,
+    request: Omit<ChatProps, 'cancellable' | 'onMessageChunk'>
+  ): Promise<ChatMessage | undefined> {
+    const { cancellable, conversation } = session
+    let fullContent = ''
+    let fullThinking = ''
+    let fullToolCalls: ToolCall[] = []
+
+    this._streaming.set(conversation.id, { role: 'assistant', content: '' })
+    callbacks.onNewResponse?.()
+
+    const response = await this._app.provider.chat({
+      ...request,
+      onMessageChunk: (chunk) => {
+        if (chunk.message?.thinking) {
+          fullThinking += chunk.message.thinking
+        }
+        if (chunk.message?.content) {
+          fullContent += chunk.message.content
+        }
+        if (chunk.message?.tool_calls) {
+          fullToolCalls = [...fullToolCalls, ...chunk.message.tool_calls]
+        }
+
+        const partial: ChatMessage = {
+          ...(chunk.message || {}),
+          role: 'assistant',
+          content: fullContent,
+          thinking: fullThinking,
+          tool_calls: fullToolCalls.length > 0 ? fullToolCalls : undefined
+        }
+        this._streaming.set(conversation.id, partial)
+        callbacks.onMessageChunk?.(partial)
+      },
+      cancellable
+    })
+
+    this._streaming.delete(conversation.id)
+
+    const message = response ?? (cancellable.is_cancelled() && (fullContent || fullThinking || fullToolCalls.length > 0)
+      ? {
+          role: 'assistant' as const,
+          content: fullContent,
+          thinking: fullThinking,
+          tool_calls: fullToolCalls.length > 0 ? fullToolCalls : undefined
+        }
+      : undefined)
+    if (message) {
+      session.generated.push(message)
+      conversation.messages.push(message)
+      callbacks.onResponse?.(message)
+    }
+    return response
   }
 
   private async _runToolCalls(toolCalls: ToolCall[], cancellable: Gio.Cancellable, callbacks: ChatSessionCallbacks): Promise<ChatMessage[]> {

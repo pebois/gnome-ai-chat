@@ -6,6 +6,8 @@ import GObject from 'gi://GObject'
 import Gtk from 'gi://Gtk?version=4.0'
 import Pango from 'gi://Pango'
 
+import { markdownLinesToPango, pangoEscape } from '@/lib/parser.js'
+
 export function downloadImage(parent: Gtk.Window, base64: string): void {
   if (!base64) {
     return
@@ -188,11 +190,26 @@ export const ResizeTracker = GObject.registerClass({
   }
 })
 
-export function setMarkupSafe(label: Gtk.Label, markup: string, fallback: string): void {
+function isValidMarkup(markup: string): boolean {
   try {
-    Pango.parse_markup(markup, -1, '')
-    label.set_markup(markup)
+    Pango.parse_markup(markup.replace(/<a\s[^>]*>/g, '<span>').replace(/<\/a>/g, '</span>'), -1, '')
+    return true
   } catch {
+    return false
+  }
+}
+
+export function setMarkupSafe(label: Gtk.Label, markup: string, fallback: string): void {
+  if (isValidMarkup(markup)) {
+    label.set_markup(markup)
+  } else {
     label.set_text(fallback)
   }
+}
+
+export function setMarkdownMarkup(label: Gtk.Label, text: string): void {
+  const markup = markdownLinesToPango(text).map(({ markup, source }) => {
+    return isValidMarkup(markup) ? markup : pangoEscape(source)
+  }).join('\n')
+  setMarkupSafe(label, markup, text)
 }
