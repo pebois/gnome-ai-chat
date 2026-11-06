@@ -123,7 +123,6 @@ export const DEFAULT_OPTIONS = {
 
 export const DEFAULT_SETTINGS = {
   url: DEFAULT_OLLAMA_URL,
-  searchUrl: '',
   system: DEFAULT_SYSTEM_PROMPT,
   options: DEFAULT_OPTIONS,
   think: DEFAULT_THINK,

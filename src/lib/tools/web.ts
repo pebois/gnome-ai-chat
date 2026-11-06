@@ -7,8 +7,7 @@ import { htmlToText } from '@/lib/agent/research.js'
 import type { AppInterface } from '@/lib/app.js'
 import { APPLICATION_ID, DEEPSEARCH_PAGE_MAX_BYTES, VERSION } from '@/lib/constants.js'
 import type { Tool } from '@/lib/providers/index.js'
-import type { SearchResult } from '@/lib/tools/searxng.js'
-import { buildSearxngUrl, parseSearxngResults } from '@/lib/tools/searxng.js'
+import type { SearchResult } from '@/lib/tools/websearch.js'
 import { buildDuckDuckGoUrl, buildWikipediaUrl, mergeResults, parseDuckDuckGoResults, parseWikipediaResults, wikipediaLanguage } from '@/lib/tools/websearch.js'
 
 let _session: Soup.Session | undefined
@@ -103,7 +102,7 @@ async function getJson(url: string, cancellable: Gio.Cancellable | null = null):
   return new TextDecoder().decode(bytes.toArray())
 }
 
-async function searchBuiltIn(query: string, language: string, cancellable: Gio.Cancellable | null): Promise<SearchResult[]> {
+export async function searchWeb(query: string, language: string, cancellable: Gio.Cancellable | null = null): Promise<SearchResult[]> {
   const [ddg, wikipedia] = await Promise.allSettled([
     getJson(buildDuckDuckGoUrl(query), cancellable).then(parseDuckDuckGoResults),
     getJson(buildWikipediaUrl(language, query), cancellable).then((json) => {
@@ -121,18 +120,6 @@ async function searchBuiltIn(query: string, language: string, cancellable: Gio.C
 
 export function defaultSearchLanguage(): string {
   return wikipediaLanguage(GLib.get_language_names())
-}
-
-export async function searchWeb(app: AppInterface, query: string, language: string = defaultSearchLanguage(), cancellable: Gio.Cancellable | null = null): Promise<SearchResult[]> {
-  const searxng = app.settings.searchUrl?.trim()
-  if (!searxng) {
-    return searchBuiltIn(query, language, cancellable)
-  }
-  const url = buildSearxngUrl(searxng, query)
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    throw new Error('The search engine URL must start with http or https.')
-  }
-  return parseSearxngResults(await getJson(url, cancellable))
 }
 
 export async function fetchPageText(url: string, cancellable: Gio.Cancellable | null = null): Promise<PageText> {
@@ -166,7 +153,7 @@ export async function handle_web_search(app: AppInterface, args: Record<string, 
   const language = /^[a-z]{2,3}$/.test(requestedLanguage) ? requestedLanguage : defaultSearchLanguage()
 
   try {
-    const results = await searchWeb(app, query, language)
+    const results = await searchWeb(query, language)
     if (results.length === 0) {
       return `No results found for "${query}". Try a shorter query, or different keywords.`
     }

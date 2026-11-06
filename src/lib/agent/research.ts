@@ -1,5 +1,5 @@
 import { CONTEXT_CHARS_PER_TOKEN } from '@/lib/constants.js'
-import type { SearchResult } from '@/lib/tools/searxng.js'
+import type { SearchResult } from '@/lib/tools/websearch.js'
 import { stripHtml } from '@/lib/tools/websearch.js'
 
 export const RESEARCH_MAX_QUERIES = 4
