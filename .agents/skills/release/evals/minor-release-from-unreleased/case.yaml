@@ -1,0 +1,9 @@
+schema_version: "1.1"
+name: minor-release-from-unreleased
+context:
+  scaffold_script: setup.sh
+expected_outcome: |
+  [Unreleased] has an Added entry, so a minor release 1.15.0 is made with today's date:
+  package.json, package-lock.json, VERSION, metainfo <release> and CHANGELOG all say 1.15.0,
+  a new empty [Unreleased] sits on top, the .desktop Version stays 1.1, and one commit
+  "Release version 1.15.0" with an Added/Fixed body is created and tagged v1.15.0. No push.

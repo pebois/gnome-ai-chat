@@ -187,12 +187,13 @@ src/
   2. `npm run lint-fix`
   3. `npm run build`
 - **Changelog**: After verifying that the build and linting commands pass, you MUST update `CHANGELOG.md` to document the changes made during the session.
-- **Release Workflow**: When instructed to bump a version or prepare a release, you MUST execute the following exact steps:
-  1. Use `npm version <type> --no-git-tag-version` to seamlessly update `package.json` and `package-lock.json`.
+- **Release Workflow**: When instructed to bump a version or prepare a release, follow the `release` skill (`.agents/skills/release/SKILL.md`):
+  1. `npm version <type> --no-git-tag-version` updates `package.json` and `package-lock.json`.
   2. Update `export const VERSION` in `src/lib/constants.ts`.
-  3. Update `io.github.pebois.gnome-ai-chat.metainfo.xml` by adding a new `<release>` block with the new version, today's date, and a summary of the most significant changes.
-  4. Finalize `CHANGELOG.md` by replacing the `[Unreleased]` header with the new version and today's date (e.g., `## [1.7.0] - YYYY-MM-DD`), and insert a new empty `## [Unreleased]` block above it.
-  5. After verifying the build, commit the changes using `git commit -a -m "Release version X.Y.Z"` along with an extended description summarizing the `CHANGELOG.md` additions.
+  3. Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD` and insert a new empty `## [Unreleased]` above it.
+  4. Add a `<release>` block to `io.github.pebois.gnome-ai-chat.metainfo.xml` with the version, today's date and a user-facing summary.
+  5. Verify (versions, lint, build, tests, `appstreamcli validate`), commit with `Release version X.Y.Z` and a condensed changelog body, then create the lightweight tag `vX.Y.Z`.
+  - Never push: give the user `git push origin main vX.Y.Z` instead.
   - Do NOT touch the `Version` field in `io.github.pebois.gnome-ai-chat.desktop`: it declares the Desktop Entry Specification version (fixed at `1.1`), not the application version.
 
 ### Architecture & State

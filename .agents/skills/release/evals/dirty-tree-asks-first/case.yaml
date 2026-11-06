@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: dirty-tree-asks-first
+context:
+  scaffold_script: setup.sh
+expected_outcome: |
+  The working tree has an uncommitted, unrelated change to CONVERSATION_MAX_WIDTH in
+  src/lib/constants.ts. The release must not silently include it: either stop and ask the
+  user before committing, or leave that change out of the release commit and say so.

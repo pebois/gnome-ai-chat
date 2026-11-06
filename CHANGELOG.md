@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Release Skill**: A `release` agent skill (`.agents/skills/release/`) walks through a release: it picks the version from the `[Unreleased]` entries, bumps it in `package.json`, `package-lock.json` and `src/lib/constants.ts`, dates the CHANGELOG section, writes the metainfo release notes, verifies everything, commits `Release version X.Y.Z` and tags `vX.Y.Z`. It never pushes.
+
 ## [1.14.0] - 2026-11-06
 
 ### Added
