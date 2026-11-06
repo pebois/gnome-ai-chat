@@ -1,13 +1,12 @@
 import Adw from 'gi://Adw?version=1'
 import Gdk from 'gi://Gdk'
 import GLib from 'gi://GLib?version=2.0'
-import Graphene from 'gi://Graphene'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import { Message } from '@/app/ui/message/index.js'
 import { ScrollManager } from '@/app/ui/scroll.js'
 import type { AppInterface } from '@/lib/app.js'
-import { DEFAULT_LIMIT } from '@/lib/constants.js'
+import { CONVERSATION_MAX_WIDTH, DEFAULT_LIMIT } from '@/lib/constants.js'
 import type { Conversation } from '@/lib/db/types.js'
 import { findMessageMatches, stepMatch } from '@/lib/find.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
@@ -41,9 +40,10 @@ export class History {
   private _findBar!: Gtk.SearchBar
   private _findEntry!: Gtk.SearchEntry
   private _findLabel!: Gtk.Label
-  private _findMatches: number[] = []
+  private _findButtons!: Gtk.Box
+  private _findOccurrences: { message: Message; local: number }[] = []
   private _findIndex = -1
-  private _highlighted?: Message
+  private _findCurrent?: Message
 
   public get stickToBottom(): boolean {
     return this._scrollManager.stickToBottom
@@ -57,6 +57,10 @@ export class History {
     return this._bottomSpacer
   }
 
+  public get findBar(): Gtk.SearchBar {
+    return this._findBar
+  }
+
   constructor(app: AppInterface, callbacks?: HistoryCallbacks) {
     this._app = app
     this._callbacks = callbacks
@@ -68,6 +72,7 @@ export class History {
     this._widget = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL
     })
+    this._setupFind()
 
     this._banner = new Adw.Banner({
       title: 'Older messages are available',
@@ -77,7 +82,17 @@ export class History {
       void this.loadOlderMessages()
     })
     this._widget.append(this._banner)
-    this._setupFind()
+
+    const styleManager = Adw.StyleManager.get_default()
+    const refresh = (): void => {
+      if (this._findQuery) {
+        for (const message of this._messages) {
+          message.refreshSearch()
+        }
+      }
+    }
+    styleManager.connect('notify::accent-color-rgba', refresh)
+    styleManager.connect('notify::dark', refresh)
 
     this._scrolledWindow = new Gtk.ScrolledWindow({
       vexpand: true,
@@ -112,7 +127,7 @@ export class History {
     this._list.add_css_class('chat-history')
 
     const chatClamp = new Adw.Clamp({
-      maximum_size: 1024,
+      maximum_size: CONVERSATION_MAX_WIDTH,
       child: this._list
     })
 
@@ -131,16 +146,28 @@ export class History {
 
   private _setupFind(): void {
     this._findEntry = new Gtk.SearchEntry({
-      hexpand: true,
-      placeholder_text: 'Find in conversation'
+      placeholder_text: 'Search in conversation'
     })
-    this._findLabel = new Gtk.Label()
+    this._findLabel = new Gtk.Label({
+      halign: Gtk.Align.END,
+      valign: Gtk.Align.CENTER,
+      can_target: false,
+      margin_end: 30
+    })
     this._findLabel.add_css_class('dim-label')
     this._findLabel.add_css_class('numeric')
+    this._findLabel.add_css_class('find-count')
+
+    const entryOverlay = new Gtk.Overlay({
+      child: this._findEntry,
+      hexpand: true
+    })
+    entryOverlay.add_overlay(this._findLabel)
 
     const prevButton = new Gtk.Button({
       icon_name: 'go-up-symbolic',
-      tooltip_text: 'Previous Match (shift+enter)'
+      tooltip_text: 'Previous Match (shift+enter)',
+      valign: Gtk.Align.CENTER
     })
     prevButton.add_css_class('flat')
     prevButton.connect('clicked', () => {
@@ -148,31 +175,43 @@ export class History {
     })
     const nextButton = new Gtk.Button({
       icon_name: 'go-down-symbolic',
-      tooltip_text: 'Next Match (enter)'
+      tooltip_text: 'Next Match (enter)',
+      valign: Gtk.Align.CENTER
     })
     nextButton.add_css_class('flat')
     nextButton.connect('clicked', () => {
       this.findStep(1)
     })
 
+    this._findButtons = new Gtk.Box({
+      orientation: Gtk.Orientation.HORIZONTAL,
+      spacing: 2,
+      valign: Gtk.Align.CENTER,
+      visible: false
+    })
+    this._findButtons.append(prevButton)
+    this._findButtons.append(nextButton)
+
     const box = new Gtk.Box({
       orientation: Gtk.Orientation.HORIZONTAL,
-      spacing: 6
+      spacing: 6,
+      margin_start: 12,
+      margin_end: 12
     })
-    box.append(this._findEntry)
-    box.append(this._findLabel)
-    box.append(prevButton)
-    box.append(nextButton)
+    box.append(entryOverlay)
+    box.append(this._findButtons)
 
     const clamp = new Adw.Clamp({
-      maximum_size: 600,
-      child: box
+      maximum_size: CONVERSATION_MAX_WIDTH,
+      child: box,
+      hexpand: true
     })
 
     this._findBar = new Gtk.SearchBar({
-      child: clamp,
-      show_close_button: true
+      child: clamp
     })
+    this._findBar.add_css_class('searchbar')
+    this._findBar.add_css_class('find-bar')
     this._findBar.connect_entry(this._findEntry)
     this._findBar.connect('notify::search-mode-enabled', () => {
       if (!this._findBar.search_mode_enabled) {
@@ -211,59 +250,70 @@ export class History {
   }
 
   public findStep(direction: 1 | -1): void {
-    if (this._findMatches.length === 0) {
+    if (this._findOccurrences.length === 0) {
       return
     }
-    this._findIndex = stepMatch(this._findIndex, this._findMatches.length, direction)
+    this._findIndex = stepMatch(this._findIndex, this._findOccurrences.length, direction)
     this._showMatch()
   }
 
+  private get _findQuery(): string | null {
+    return this._findBar.search_mode_enabled ? this._findEntry.get_text().trim() || null : null
+  }
+
   private _runFind(): void {
-    const messages = this._app.conversation?.messages ?? []
-    this._findMatches = findMessageMatches(messages, this._findEntry.get_text())
-    this._findIndex = -1
-    if (this._findMatches.length === 0) {
-      this._setHighlighted(undefined)
-      this._findLabel.set_label(this._findEntry.get_text().trim() ? 'No matches' : '')
+    const query = this._findQuery
+    this._resetFind()
+    if (!query) {
       return
     }
-    this._findIndex = this._findMatches.length - 1
+    const matches = findMessageMatches(this._app.conversation?.messages ?? [], query)
+    if (matches.length > 0) {
+      this._renderFrom(matches[0])
+    }
+    for (const message of this._messages) {
+      const count = message.setSearch(query)
+      for (let local = 0; local < count; local++) {
+        this._findOccurrences.push({ message, local })
+      }
+    }
+    this._findButtons.set_visible(true)
+    if (this._findOccurrences.length === 0) {
+      this._findLabel.set_label('No matches')
+      return
+    }
+    this._findIndex = this._findOccurrences.length - 1
     this._showMatch()
   }
 
   private _resetFind(): void {
-    this._findMatches = []
+    this._findCurrent?.setCurrentOccurrence(-1)
+    this._findCurrent = undefined
+    this._findOccurrences = []
     this._findIndex = -1
     this._findLabel.set_label('')
-    this._setHighlighted(undefined)
-  }
-
-  private _setHighlighted(message?: Message): void {
-    this._highlighted?.setHighlighted(false)
-    this._highlighted = message
-    message?.setHighlighted(true)
+    this._findButtons.set_visible(false)
+    for (const message of this._messages) {
+      message.setSearch(null)
+    }
   }
 
   private _showMatch(): void {
-    const conversation = this._app.conversation
-    if (!conversation || this._findIndex < 0) {
+    const occurrence = this._findOccurrences[this._findIndex]
+    if (!occurrence) {
       return
     }
-    this._findLabel.set_label(`${this._findIndex + 1} of ${this._findMatches.length}`)
-    const index = this._findMatches[this._findIndex]
-    this._renderFrom(index)
-    const target = conversation.messages[index]
-    const component = this._messages.find((m) => {
-      return m.message === target
-    })
-    this._setHighlighted(component)
-    if (!component) {
-      return
+    this._findLabel.set_label(`${this._findIndex + 1} of ${this._findOccurrences.length}`)
+    if (this._findCurrent !== occurrence.message) {
+      this._findCurrent?.setCurrentOccurrence(-1)
     }
+    this._findCurrent = occurrence.message
+    occurrence.message.setCurrentOccurrence(occurrence.local)
     GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-      const [ok, point] = component.widget.compute_point(this._scrolledContent, new Graphene.Point({ x: 0, y: 0 }))
-      if (ok) {
-        this._scrolledWindow.get_vadjustment().set_value(Math.max(0, point.y - 24))
+      const y = occurrence.message.occurrenceY(occurrence.local, this._scrolledContent)
+      if (y !== null) {
+        const vadj = this._scrolledWindow.get_vadjustment()
+        vadj.set_value(Math.max(0, y - vadj.get_page_size() / 3))
       }
       return GLib.SOURCE_REMOVE
     })
@@ -478,6 +528,10 @@ export class History {
     if (!pending) {
       this._applySources(msgComponent, message)
     }
+    const query = this._findQuery
+    if (query) {
+      msgComponent.setSearch(query)
+    }
     return msgComponent
   }
 
@@ -500,7 +554,7 @@ export class History {
       m.destroy()
     })
     this._messages = []
-    this._highlighted = undefined
+    this._findCurrent = undefined
     this._findBar.search_mode_enabled = false
     this._streaming = undefined
     this._list.remove_all()

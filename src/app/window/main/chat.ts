@@ -13,6 +13,7 @@ import type { ChatSessionCallbacks } from '@/lib/agent/chat.js'
 import { ChatService } from '@/lib/agent/chat.js'
 import type { AppInterface } from '@/lib/app.js'
 import { DEEPSEARCH_COMMAND, messageInputText } from '@/lib/commands/parse.js'
+import { CONVERSATION_MAX_WIDTH } from '@/lib/constants.js'
 import type { ChatMessage } from '@/lib/providers/index.js'
 import { debounce } from '@/lib/timeout.js'
 import { createMenuItem, ResizeTracker } from '@/lib/ui.js'
@@ -138,6 +139,26 @@ export class Chat {
       }
     })
 
+    const findButton = new Gtk.ToggleButton({
+      icon_name: 'system-search-symbolic',
+      tooltip_text: 'Find in Conversation (ctrl+shift+f)'
+    })
+    findButton.connect('toggled', () => {
+      if (findButton.active === this._history.findBar.search_mode_enabled) {
+        return
+      }
+      if (findButton.active) {
+        this.openFind()
+        findButton.active = this._history.findBar.search_mode_enabled
+      } else {
+        this._history.findBar.search_mode_enabled = false
+      }
+    })
+    this._history.findBar.connect('notify::search-mode-enabled', () => {
+      findButton.active = this._history.findBar.search_mode_enabled
+    })
+    this._contentHeader.pack_end(findButton)
+
     this._statusPage = new EmptyPage(this._app, {
       icon_name: 'chat-message-new-symbolic',
       css_classes: ['status-page', 'dim-label'],
@@ -169,7 +190,7 @@ export class Chat {
     this._input = new Input(this._app)
 
     this._inputClamp = new Adw.Clamp({
-      maximum_size: 1024,
+      maximum_size: CONVERSATION_MAX_WIDTH,
       child: this._input.widget,
       margin_start: 12,
       margin_end: 12,

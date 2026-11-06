@@ -1,6 +1,7 @@
 import Adw from 'gi://Adw?version=1'
 import Gdk from 'gi://Gdk'
 import Gio from 'gi://Gio'
+import Graphene from 'gi://Graphene'
 import Gtk from 'gi://Gtk?version=4.0'
 import GtkSource from 'gi://GtkSource?version=5'
 import Pango from 'gi://Pango'
@@ -12,6 +13,7 @@ import { ToolCallRow } from '@/app/ui/toolcall.js'
 import type { AppInterface } from '@/lib/app.js'
 import { messageDisplayText } from '@/lib/commands/parse.js'
 import { DEFAULT_SPACING, DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
+import { findRanges, type TextRange, toByteRanges } from '@/lib/find.js'
 import { parseCodeBlock, parseMarkdownChunks, parseTable } from '@/lib/parser.js'
 import type { ChatMessage, ToolCall } from '@/lib/providers/index.js'
 import { type Source, stripSourcesSection } from '@/lib/sources.js'
@@ -35,6 +37,34 @@ interface ContentPart {
   buffer?: GtkSource.Buffer
   columnView?: Gtk.ColumnView
   listStore?: Gio.ListStore
+}
+
+interface Occurrence {
+  part: ContentPart
+  range: TextRange
+}
+
+interface SearchColors {
+  match: Gdk.RGBA
+  current: Gdk.RGBA
+  currentFg: Gdk.RGBA
+}
+
+const MATCH_TAG = 'find-match'
+const CURRENT_TAG = 'find-current'
+
+function rgba(color: Gdk.RGBA, alpha: number): Gdk.RGBA {
+  return new Gdk.RGBA({ red: color.red, green: color.green, blue: color.blue, alpha })
+}
+
+function colorAttributes(color: Gdk.RGBA, foreground: boolean): Pango.Attribute[] {
+  const [r, g, b] = [color.red, color.green, color.blue].map((c) => {
+    return Math.round(c * 65535)
+  })
+  if (foreground) {
+    return [Pango.attr_foreground_new(r, g, b), Pango.attr_foreground_alpha_new(Math.round(color.alpha * 65535))]
+  }
+  return [Pango.attr_background_new(r, g, b), Pango.attr_background_alpha_new(Math.round(color.alpha * 65535))]
 }
 
 export class Message {
@@ -66,6 +96,9 @@ export class Message {
   private _sourcesBox?: Adw.WrapBox
   private _hasSources = false
   private _pendingSpinner?: Adw.Spinner
+  private _query: string | null = null
+  private _occurrences: Occurrence[] = []
+  private _currentOccurrence = -1
 
   public get widget(): Gtk.Box {
     return this._widget
@@ -135,11 +168,125 @@ export class Message {
     }
   }
 
-  public setHighlighted(highlighted: boolean): void {
-    if (highlighted) {
-      this._widget.add_css_class('search-match')
-    } else {
-      this._widget.remove_css_class('search-match')
+  public setSearch(query: string | null): number {
+    this._query = query?.trim() || null
+    this._currentOccurrence = -1
+    this._applySearch()
+    return this._occurrences.length
+  }
+
+  public setCurrentOccurrence(index: number): void {
+    this._currentOccurrence = index
+    this._paintSearch()
+  }
+
+  public occurrenceY(index: number, target: Gtk.Widget): number | null {
+    const occurrence = this._occurrences[index]
+    if (!occurrence) {
+      return null
+    }
+    const { part, range } = occurrence
+    let widget = part.widget
+    let y = 0
+    if (part.contentLabel) {
+      widget = part.contentLabel
+      const [, layoutY] = part.contentLabel.get_layout_offsets()
+      y = layoutY + part.contentLabel.get_layout().index_to_pos(range.start).y / Pango.SCALE
+    }
+    const [ok, point] = widget.compute_point(target, new Graphene.Point({ x: 0, y }))
+    return ok ? point.y : null
+  }
+
+  private _applySearch(): void {
+    this._occurrences = []
+    for (const part of this._contentParts) {
+      if (!this._query) {
+        continue
+      }
+      if (part.contentLabel) {
+        const text = part.contentLabel.get_text()
+        for (const range of toByteRanges(text, findRanges(text, this._query))) {
+          this._occurrences.push({ part, range })
+        }
+      } else if (part.buffer) {
+        const text = part.buffer.get_text(part.buffer.get_start_iter(), part.buffer.get_end_iter(), false)
+        for (const range of findRanges(text, this._query)) {
+          this._occurrences.push({ part, range })
+        }
+      }
+    }
+    if (this._currentOccurrence >= this._occurrences.length) {
+      this._currentOccurrence = -1
+    }
+    this._paintSearch()
+  }
+
+  public refreshSearch(): void {
+    this._paintSearch()
+  }
+
+  private _searchColors(): SearchColors {
+    const manager = Adw.StyleManager.get_default()
+    const accent = manager.get_accent_color_rgba()
+    const white = new Gdk.RGBA({ red: 1, green: 1, blue: 1, alpha: 1 })
+    if (this._currentMessage.role === 'user') {
+      return { match: rgba(white, 0.28), current: rgba(white, 0.92), currentFg: accent }
+    }
+    return { match: rgba(accent, manager.get_dark() ? 0.32 : 0.22), current: accent, currentFg: white }
+  }
+
+  private _paintSearch(): void {
+    const current = this._occurrences[this._currentOccurrence]
+    const colors = this._searchColors()
+    for (const part of this._contentParts) {
+      const ranges = this._occurrences.filter((o) => {
+        return o.part === part
+      })
+      if (part.contentLabel) {
+        if (ranges.length === 0) {
+          part.contentLabel.set_attributes(null)
+          continue
+        }
+        const attrs = new Pango.AttrList()
+        for (const occurrence of ranges) {
+          const isCurrent = occurrence === current
+          const list = colorAttributes(isCurrent ? colors.current : colors.match, false)
+          if (isCurrent) {
+            list.push(...colorAttributes(colors.currentFg, true), Pango.attr_weight_new(Pango.Weight.BOLD))
+          }
+          for (const attr of list) {
+            attr.start_index = occurrence.range.start
+            attr.end_index = occurrence.range.end
+            attrs.insert(attr)
+          }
+        }
+        part.contentLabel.set_attributes(attrs)
+      } else if (part.buffer) {
+        const buffer = part.buffer
+        const table = buffer.get_tag_table()
+        const tag = (name: string): Gtk.TextTag => {
+          let found = table.lookup(name)
+          if (!found) {
+            found = new Gtk.TextTag({ name })
+            table.add(found)
+          }
+          found.set_priority(table.get_size() - 1)
+          return found
+        }
+        const matchTag = tag(MATCH_TAG)
+        const currentTag = tag(CURRENT_TAG)
+        matchTag.background_rgba = colors.match
+        currentTag.background_rgba = colors.current
+        currentTag.foreground_rgba = colors.currentFg
+        currentTag.weight = Pango.Weight.BOLD
+        buffer.remove_tag(matchTag, buffer.get_start_iter(), buffer.get_end_iter())
+        buffer.remove_tag(currentTag, buffer.get_start_iter(), buffer.get_end_iter())
+        for (const occurrence of ranges) {
+          const start = buffer.get_iter_at_offset(occurrence.range.start)
+          const end = buffer.get_iter_at_offset(occurrence.range.end)
+          buffer.apply_tag(occurrence === current ? currentTag : matchTag, start, end)
+        }
+      }
     }
   }
 
@@ -482,6 +629,9 @@ export class Message {
     while (this._contentParts.length > finalChunks.length) {
       const part = this._contentParts.pop()!
       this._contentBox.remove(part.widget)
+    }
+    if (this._query) {
+      this._applySearch()
     }
   }
 

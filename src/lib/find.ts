@@ -23,3 +23,48 @@ export function stepMatch(current: number, count: number, direction: 1 | -1): nu
   }
   return (current + direction + count) % count
 }
+
+export interface TextRange {
+  start: number
+  end: number
+}
+
+export function findRanges(text: string, query: string): TextRange[] {
+  const needle = Array.from(query.trim().toLocaleLowerCase())
+  if (needle.length === 0) {
+    return []
+  }
+  const chars = Array.from(text)
+  const lower = chars.map((c) => {
+    return c.toLocaleLowerCase()
+  })
+  const ranges: TextRange[] = []
+  let i = 0
+  while (i + needle.length <= lower.length) {
+    let matched = true
+    for (let j = 0; j < needle.length; j++) {
+      if (lower[i + j] !== needle[j]) {
+        matched = false
+        break
+      }
+    }
+    if (matched) {
+      ranges.push({ start: i, end: i + needle.length })
+      i += needle.length
+    } else {
+      i++
+    }
+  }
+  return ranges
+}
+
+export function toByteRanges(text: string, ranges: TextRange[]): TextRange[] {
+  const encoder = new TextEncoder()
+  const chars = Array.from(text)
+  return ranges.map((r) => {
+    return {
+      start: encoder.encode(chars.slice(0, r.start).join('')).length,
+      end: encoder.encode(chars.slice(0, r.end).join('')).length
+    }
+  })
+}
