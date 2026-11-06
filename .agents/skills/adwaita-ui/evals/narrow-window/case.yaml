@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: narrow-window
+expected_outcome: |
+  The main window gets a minimum size (width_request/height_request no wider than 360) and its breakpoint uses sp units, the sidebar collapses at narrow widths, and lint and build pass.

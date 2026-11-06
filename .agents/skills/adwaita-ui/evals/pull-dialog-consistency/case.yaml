@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: pull-dialog-consistency
+expected_outcome: |
+  The Pull Model dialog is an Adw.Dialog presented on the main window (no modal Adw.Window with transient_for), built with Adw.ToolbarView and a header bar like the other dialogs, keeps its progress behaviour, and lint and build pass.

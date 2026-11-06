@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: model-info-dialog
+expected_outcome: |
+  A header icon button with a tooltip opens an Adw.Dialog (presented on the main window, Adw.ToolbarView + header bar) listing model details in Adwaita rows (PreferencesGroup/ActionRow), with no deprecated or hand-built window, and lint and build pass.
