@@ -1,4 +1,4 @@
-import { findMessageMatches, stepMatch } from '@/lib/find.js'
+import { findMessageMatches, findRanges, stepMatch, toByteRanges } from '@/lib/find.js'
 import type { ChatMessage } from '@/lib/providers/index.js'
 
 describe('findMessageMatches', () => {
@@ -31,5 +31,40 @@ describe('stepMatch', () => {
 
   it('returns -1 without matches', () => {
     expect(stepMatch(0, 0, 1)).toBe(-1)
+  })
+})
+
+describe('findRanges', () => {
+  it('finds every occurrence case-insensitively', () => {
+    expect(findRanges('Gnome and GNOME and gnome', 'gnome')).toEqual([
+      { start: 0, end: 5 },
+      { start: 10, end: 15 },
+      { start: 20, end: 25 }
+    ])
+  })
+
+  it('does not overlap occurrences', () => {
+    expect(findRanges('aaa', 'aa')).toEqual([{ start: 0, end: 2 }])
+  })
+
+  it('returns nothing for an empty query', () => {
+    expect(findRanges('text', '  ')).toEqual([])
+  })
+
+  it('counts characters, not code units', () => {
+    expect(findRanges('😀 Été été', 'été')).toEqual([
+      { start: 2, end: 5 },
+      { start: 6, end: 9 }
+    ])
+  })
+})
+
+describe('toByteRanges', () => {
+  it('converts character offsets to UTF-8 byte offsets', () => {
+    const text = '😀 Été été'
+    expect(toByteRanges(text, findRanges(text, 'été'))).toEqual([
+      { start: 5, end: 10 },
+      { start: 11, end: 16 }
+    ])
   })
 })

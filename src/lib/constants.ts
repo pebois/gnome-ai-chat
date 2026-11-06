@@ -21,6 +21,7 @@ export const DEFAULT_GENERATE_MODEL = 'qwen3:latest'
 export const DEFAULT_EMBEDDING_MODEL = 'nomic-embed-text:latest'
 
 export const DEFAULT_LIMIT = 50
+export const CONVERSATION_MAX_WIDTH = 1024
 
 export const DEFAULT_TIMEOUT = 300
 

@@ -26,6 +26,15 @@ export const css = /* css */`
   border: none;
 }
 
+.find-bar > revealer > box {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.find-bar .find-count {
+  font-size: smaller;
+}
+
 .content-panel {
   background-color: @view_bg_color;
 }
@@ -68,12 +77,6 @@ export const css = /* css */`
   min-height: 24px;
   padding: 2px 10px;
   font-size: smaller;
-}
-
-.search-match {
-  border-radius: 12px;
-  outline: 2px solid alpha(@accent_color, 0.6);
-  outline-offset: 4px;
 }
 
 .user-message {
