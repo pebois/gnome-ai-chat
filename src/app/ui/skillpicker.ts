@@ -6,7 +6,7 @@ import type { AppInterface } from '@/lib/app.js'
 import { applySkillMention, matchSkill } from '@/lib/skills/index.js'
 import { availableSkills } from '@/lib/tools/groups.js'
 
-const NO_SKILL_TOOLTIP = 'Skill (type @ to pick)'
+const NO_SKILL_TOOLTIP = 'Choose a skill (@)'
 
 export class SkillPicker {
   private _app: AppInterface

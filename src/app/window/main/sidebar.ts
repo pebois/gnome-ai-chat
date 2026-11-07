@@ -98,7 +98,7 @@ export class Sidebar {
 
     const newChatButton = new Gtk.Button({
       icon_name: 'list-add-symbolic',
-      tooltip_text: 'New Chat (ctrl+n)'
+      tooltip_text: 'New chat (Ctrl+N)'
     })
     newChatButton.connect('clicked', () => {
       this.createNewConversation()
@@ -110,7 +110,7 @@ export class Sidebar {
 
     this._searchButton = new Gtk.ToggleButton({
       icon_name: 'system-search-symbolic',
-      tooltip_text: 'Search Chats (ctrl+f)'
+      tooltip_text: 'Search chats (Ctrl+F)'
     })
     this._searchButton.connect('toggled', () => {
       searchBar.search_mode_enabled = this._searchButton.active
