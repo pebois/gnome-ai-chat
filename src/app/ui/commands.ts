@@ -6,6 +6,7 @@ import type { AppInterface } from '@/lib/app.js'
 import { type Command, COMMANDS, type SubCommand } from '@/lib/commands/index.js'
 import { parseCommandLine } from '@/lib/commands/parse.js'
 import { pangoEscape } from '@/lib/parser.js'
+import { isCommandAvailable } from '@/lib/tools/groups.js'
 
 type Match = { name: string; title: string; description: string; icon: string }
 
@@ -289,7 +290,7 @@ export class Commands {
       const baseCmdName = parts[0]
       const subFilter = parts.slice(1).join(' ')
       const baseCmd = COMMANDS.find((c) => {
-        return c.name === baseCmdName && c.visible !== false
+        return c.name === baseCmdName && isCommandAvailable(c, this._app.settings)
       })
       if (baseCmd?.requiresArgument && !baseCmd.subCommands) {
         this._currentCommand = baseCmd
@@ -328,7 +329,7 @@ export class Commands {
       }
     } else {
       const visible = COMMANDS.filter((cmd) => {
-        return cmd.visible !== false
+        return isCommandAvailable(cmd, this._app.settings)
       })
       const byName = visible.filter((cmd) => {
         return cmd.name.startsWith(filterText)

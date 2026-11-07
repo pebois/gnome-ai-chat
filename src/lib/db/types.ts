@@ -53,6 +53,7 @@ export interface Settings {
   debug: boolean
   options: Record<string, number>
   permissions: Record<PermissionCategory, PermissionTier>
+  disabledTools: string[]
 }
 
 export interface Conversation {

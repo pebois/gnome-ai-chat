@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Manage Built-in Tools**: A new Tools page in Settings lists the 28 built-in tools in groups (Memory, Files, Shell, Web, Time, Math, System, Applications, Preview). Turn a whole group or a single tool off to hide it from the model, for example after replacing it with an MCP server. Turned-off tools are refused if a model still calls them, and slash commands that rely on them are hidden (`/memory` without the memory read tools, `/hn` without Fetch Rss Feed); typing one shows a toast pointing to Settings → Tools. The `@Memory`, `@Files` and `@Canvas` skills are likewise hidden and not applied while their tools are off. The Skills window shows each of these skills' linked tools and whether it is currently hidden. `/deepsearch` keeps working with the web tools off.
+- **MCP Server Catalog**: The "+" button in the MCP Servers window now opens a menu with "New Server" and "Add from Catalog" (also offered on the empty page). The catalog lists public servers that need no API key and run with `npx` or over HTTP: alternatives to built-in tools (Memory, Filesystem, Fetch, Exa Search, Desktop Commander) and new capabilities (DeepWiki, Context7, Microsoft Learn, Sequential Thinking, Git, Everything). Picking one adds it pre-filled and disabled, ready to review and turn on.
+
 ### Changed
 - **Settings and About as Dialogs**: Settings (`Adw.PreferencesDialog`, with search) and About (`Adw.AboutDialog`) now open as dialogs attached to the main window instead of separate windows. They adapt to narrow windows, and indexing errors raised in Settings appear inside it rather than behind it. Both replace widgets deprecated in Libadwaita 1.6.
 - **Pull Model Dialog**: Pull Model is now an `Adw.Dialog` laid out like the other dialogs, with a single Pull button that turns into Stop during a download. It becomes a bottom sheet on narrow windows instead of a fixed 400 px window, and closing it stops a running download. Progress text uses the standard caption and numeric styles.

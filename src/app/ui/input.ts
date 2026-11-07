@@ -13,6 +13,7 @@ import type { AppInterface } from '@/lib/app.js'
 import { COMMANDS } from '@/lib/commands/index.js'
 import { resolveCommandInput } from '@/lib/commands/parse.js'
 import { matchSkill } from '@/lib/skills/index.js'
+import { availableSkills } from '@/lib/tools/groups.js'
 
 export class Input {
   private _app: AppInterface
@@ -304,7 +305,7 @@ export class Input {
 
   private _updateSkillChip(buffer: Gtk.TextBuffer): void {
     const text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false)
-    const skill = matchSkill(text, this._app.skills ?? [])
+    const skill = matchSkill(text, availableSkills(this._app.skills ?? [], this._app.settings))
     if (skill) {
       this._skillChipLabel.set_label(`Skill: ${skill.name}`)
     }

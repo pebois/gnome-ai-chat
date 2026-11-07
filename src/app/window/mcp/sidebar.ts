@@ -10,6 +10,7 @@ import { createMenuItem, createSimpleAction, setupContextMenu } from '@/lib/ui.j
 export interface McpSidebarCallbacks {
   onServerSelected: (id: string | null) => void
   onNewServer: () => void
+  onOpenCatalog: () => void
   onDeleteServer: (id: string) => void
 }
 
@@ -49,16 +50,7 @@ export class McpSidebar {
     const header = new Adw.HeaderBar()
     header.add_css_class('flat')
 
-    const addBtn = new Gtk.Button({
-      icon_name: 'list-add-symbolic',
-      tooltip_text: 'New server (ctrl+n)',
-      valign: Gtk.Align.CENTER
-    })
-    addBtn.add_css_class('flat')
-    addBtn.connect('clicked', () => {
-      return this._callbacks.onNewServer()
-    })
-    header.pack_start(addBtn)
+    header.pack_start(this._createAddMenuButton())
 
     this._searchBtn = new Gtk.ToggleButton({
       icon_name: 'system-search-symbolic',
@@ -89,6 +81,30 @@ export class McpSidebar {
     this._widget.set_content(box)
 
     this._setupSignals()
+  }
+
+  private _createAddMenuButton(): Gtk.MenuButton {
+    const actionGroup = new Gio.SimpleActionGroup()
+    actionGroup.add_action(createSimpleAction('new', () => {
+      this._callbacks.onNewServer()
+    }))
+    actionGroup.add_action(createSimpleAction('catalog', () => {
+      this._callbacks.onOpenCatalog()
+    }))
+    this._widget.insert_action_group('sidebar', actionGroup)
+
+    const menu = new Gio.Menu()
+    menu.append_item(createMenuItem('New Server', 'sidebar.new', 'list-add-symbolic'))
+    menu.append_item(createMenuItem('Add from Catalog', 'sidebar.catalog', 'view-grid-symbolic'))
+
+    const addBtn = new Gtk.MenuButton({
+      icon_name: 'list-add-symbolic',
+      tooltip_text: 'Add server',
+      valign: Gtk.Align.CENTER,
+      menu_model: menu
+    })
+    addBtn.add_css_class('flat')
+    return addBtn
   }
 
   private _setupSignals(): void {

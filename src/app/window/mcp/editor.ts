@@ -11,6 +11,7 @@ export interface McpEditorCallbacks {
   onDelete: () => void
   onTest: McpTestHandler
   onNewServer: () => void
+  onOpenCatalog: () => void
   onToggleSidebar: () => void
 }
 
@@ -96,7 +97,15 @@ export class McpServerEditor {
     addBtn.connect('clicked', () => {
       return this._callbacks.onNewServer()
     })
-    page.set_child(addBtn)
+    const catalogBtn = new Gtk.Button({ label: 'Browse Catalog', halign: Gtk.Align.CENTER })
+    catalogBtn.add_css_class('pill')
+    catalogBtn.connect('clicked', () => {
+      return this._callbacks.onOpenCatalog()
+    })
+    const buttons = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 12, halign: Gtk.Align.CENTER })
+    buttons.append(addBtn)
+    buttons.append(catalogBtn)
+    page.set_child(buttons)
     return page
   }
 

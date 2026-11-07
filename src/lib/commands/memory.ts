@@ -7,6 +7,7 @@ export const memory: Command = {
   name: 'memory',
   description: 'Manage knowledge graph memory',
   icon: 'note-symbolic',
+  requiredTools: ['read_graph', 'search_nodes', 'open_nodes'],
   subCommands: [
     { name: 'summarize', description: 'Summarize stored facts and user history', icon: 'format-justify-left-symbolic' },
     { name: 'clean', description: 'Identify and suggest deletions for redundant data', icon: 'edit-clear-symbolic' },

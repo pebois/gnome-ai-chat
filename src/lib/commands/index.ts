@@ -22,6 +22,7 @@ export interface Command {
   description: string
   icon: string
   visible?: boolean
+  requiredTools?: string[]
   subCommands?: SubCommand[]
   parameterType?: GLib.VariantType
   getInitialState?: (app: AppInterface) => GLib.Variant | undefined

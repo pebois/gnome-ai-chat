@@ -25,7 +25,8 @@ export class SettingsStore {
       permissions: {
         ...DEFAULT_SETTINGS.permissions,
         ...(data?.permissions || {})
-      }
+      },
+      disabledTools: Array.isArray(data?.disabledTools) ? data.disabledTools : []
     })
     db.setDebug(this._settings.debug)
   }
