@@ -8,12 +8,11 @@ import Pango from 'gi://Pango'
 import { Attachments } from '@/app/ui/attachments.js'
 import { Commands } from '@/app/ui/commands.js'
 import { Models } from '@/app/ui/models.js'
+import { SkillPicker } from '@/app/ui/skillpicker.js'
 import { Skills } from '@/app/ui/skills.js'
 import type { AppInterface } from '@/lib/app.js'
 import { COMMANDS } from '@/lib/commands/index.js'
 import { resolveCommandInput } from '@/lib/commands/parse.js'
-import { matchSkill } from '@/lib/skills/index.js'
-import { availableSkills } from '@/lib/tools/groups.js'
 
 export class Input {
   private _app: AppInterface
@@ -25,8 +24,7 @@ export class Input {
   private _models!: Models
   private _sendButton!: Gtk.Button
   private _sendButtonContent!: Adw.ButtonContent
-  private _skillChip!: Gtk.Box
-  private _skillChipLabel!: Gtk.Label
+  private _skillPicker!: SkillPicker
   private _hint!: Gtk.Label
   private _hintIdle = 0
 
@@ -103,7 +101,7 @@ export class Input {
     const buffer = this._messageInput.get_buffer()
     buffer.connect('changed', () => {
       placeholder.set_visible(buffer.get_char_count() === 0)
-      this._updateSkillChip(buffer)
+      this._skillPicker.sync(buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false))
     })
     placeholder.set_visible(buffer.get_char_count() === 0)
 
@@ -155,24 +153,8 @@ export class Input {
     actionBox.append(this._attachments.attachButton)
     actionBox.append(this._attachments.attachmentsGroup)
 
-    this._skillChip = new Gtk.Box({
-      orientation: Gtk.Orientation.HORIZONTAL,
-      spacing: 4,
-      valign: Gtk.Align.CENTER,
-      visible: false
-    })
-    this._skillChip.add_css_class('skill-chip')
-    const skillChipIcon = new Gtk.Image({
-      icon_name: 'avatar-default-symbolic',
-      pixel_size: 12,
-      valign: Gtk.Align.CENTER
-    })
-    this._skillChipLabel = new Gtk.Label({
-      valign: Gtk.Align.CENTER
-    })
-    this._skillChip.append(skillChipIcon)
-    this._skillChip.append(this._skillChipLabel)
-    actionBox.append(this._skillChip)
+    this._skillPicker = new SkillPicker(this._app, this._messageInput)
+    actionBox.append(this._skillPicker.widget)
 
     const spacer = new Gtk.Box({
       hexpand: true
@@ -301,14 +283,5 @@ export class Input {
 
   public getBuffer(): Gtk.TextBuffer {
     return this._messageInput.get_buffer()
-  }
-
-  private _updateSkillChip(buffer: Gtk.TextBuffer): void {
-    const text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), false)
-    const skill = matchSkill(text, availableSkills(this._app.skills ?? [], this._app.settings))
-    if (skill) {
-      this._skillChipLabel.set_label(`Skill: ${skill.name}`)
-    }
-    this._skillChip.set_visible(!!skill)
   }
 }

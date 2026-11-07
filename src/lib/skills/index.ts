@@ -31,6 +31,11 @@ export const stripSkillMention = (content: string): string => {
   return content.replace(/^@\S+\s*/, '')
 }
 
+export const applySkillMention = (text: string, skills: { name: string }[], name: string | null): string => {
+  const rest = matchSkill(text, skills) ? stripSkillMention(text) : text
+  return name ? `@${name} ${rest}` : rest
+}
+
 export const buildSkillPrompt = (skill: { name: string; description?: string; prompt: string }): string => {
   return [
     `## Active Skill: ${skill.name}`,
