@@ -38,7 +38,7 @@ export class Attachments {
 
     this._attachButton = new Gtk.MenuButton({
       icon_name: 'list-add-symbolic',
-      tooltip_text: 'Attach',
+      tooltip_text: 'Attach files or a screenshot',
       valign: Gtk.Align.CENTER
     })
     this._attachButton.add_css_class('circular')
@@ -98,7 +98,7 @@ export class Attachments {
 
     this._attachmentsListButton = new Gtk.MenuButton({
       icon_name: 'mail-attachment-symbolic',
-      tooltip_text: 'View Attachments',
+      tooltip_text: 'View attachments',
       valign: Gtk.Align.CENTER,
       always_show_arrow: true
     })
@@ -275,7 +275,7 @@ export class Attachments {
     }
 
     this._attachmentsGroup.set_visible(true)
-    this._attachmentsListButton.set_tooltip_text(`${this._attachments.length} Attachment(s)`)
+    this._attachmentsListButton.set_tooltip_text(`${this._attachments.length} attachment${this._attachments.length === 1 ? '' : 's'}`)
 
     const menu = new Gio.Menu()
     const imagesSection = new Gio.Menu()

@@ -58,7 +58,7 @@ export class SkillEditor {
 
     this._toggleSidebarBtn = new Gtk.ToggleButton({
       icon_name: 'sidebar-show-symbolic',
-      tooltip_text: 'Toggle Sidebar (ctrl+b)',
+      tooltip_text: 'Toggle sidebar (Ctrl+B)',
       active: true
     })
     this._toggleSidebarBtn.connect('toggled', () => {

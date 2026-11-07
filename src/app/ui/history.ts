@@ -166,7 +166,7 @@ export class History {
 
     const prevButton = new Gtk.Button({
       icon_name: 'go-up-symbolic',
-      tooltip_text: 'Previous Match (shift+enter)',
+      tooltip_text: 'Previous match (Shift+Enter)',
       valign: Gtk.Align.CENTER
     })
     prevButton.add_css_class('flat')
@@ -175,7 +175,7 @@ export class History {
     })
     const nextButton = new Gtk.Button({
       icon_name: 'go-down-symbolic',
-      tooltip_text: 'Next Match (enter)',
+      tooltip_text: 'Next match (Enter)',
       valign: Gtk.Align.CENTER
     })
     nextButton.add_css_class('flat')

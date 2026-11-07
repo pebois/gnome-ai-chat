@@ -55,7 +55,7 @@ export class SkillsSidebar {
 
     const addBtn = new Gtk.Button({
       icon_name: 'list-add-symbolic',
-      tooltip_text: 'New skill (ctrl+n)',
+      tooltip_text: 'New skill (Ctrl+N)',
       valign: Gtk.Align.CENTER
     })
     addBtn.add_css_class('flat')
@@ -66,7 +66,7 @@ export class SkillsSidebar {
 
     this._searchBtn = new Gtk.ToggleButton({
       icon_name: 'system-search-symbolic',
-      tooltip_text: 'Search skills (ctrl+f)',
+      tooltip_text: 'Search skills (Ctrl+F)',
       valign: Gtk.Align.CENTER
     })
     this._searchBtn.add_css_class('flat')
@@ -190,7 +190,7 @@ export class SkillsSidebar {
     if (builtins.length > 0 || (!this._searchText && this._callbacks.hasModifiedBuiltins?.())) {
       this._resetBtn = new Gtk.Button({
         icon_name: 'edit-undo-symbolic',
-        tooltip_text: 'Reset all built-ins',
+        tooltip_text: 'Reset all built-in skills',
         valign: Gtk.Align.CENTER
       })
       this._resetBtn.add_css_class('flat')
