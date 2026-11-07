@@ -1,12 +1,15 @@
 import Adw from 'gi://Adw?version=1'
 import Gdk from 'gi://Gdk'
+import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
+import { showMcpCatalogDialog } from '@/app/window/mcp/catalog.js'
 import { McpServerEditor } from '@/app/window/mcp/editor.js'
 import { McpSidebar } from '@/app/window/mcp/sidebar.js'
 import type { AppInterface } from '@/lib/app.js'
 import { mcpStore } from '@/lib/db/mcp.js'
 import type { McpServer } from '@/lib/db/types.js'
+import { createServerFromCatalog, type McpCatalogEntry } from '@/lib/mcp/catalog.js'
 import { createServer, validateServerName } from '@/lib/mcp/config.js'
 import { errorMessage } from '@/lib/mcp/transport.js'
 import { debounce } from '@/lib/timeout.js'
@@ -45,6 +48,9 @@ export class McpWindow {
       onNewServer: () => {
         void this._createNew()
       },
+      onOpenCatalog: () => {
+        this._openCatalog()
+      },
       onDeleteServer: (id) => {
         this._delete(id)
       }
@@ -64,6 +70,9 @@ export class McpWindow {
       },
       onNewServer: () => {
         void this._createNew()
+      },
+      onOpenCatalog: () => {
+        this._openCatalog()
       },
       onToggleSidebar: () => {
         this._splitView.show_sidebar = this._editor.toggleSidebarButton.active
@@ -179,15 +188,34 @@ export class McpWindow {
   }
 
   private async _createNew(): Promise<void> {
-    const server = createServer(this._servers.map((s) => {
+    await this._addServer(createServer(this._serverNames()))
+    this._editor.showSettings()
+    this._editor.grabFocus()
+  }
+
+  private _serverNames(): string[] {
+    return this._servers.map((s) => {
       return s.name
-    }))
+    })
+  }
+
+  private _openCatalog(): void {
+    showMcpCatalogDialog(this._win, (entry) => {
+      void this._addFromCatalog(entry)
+    })
+  }
+
+  private async _addFromCatalog(entry: McpCatalogEntry): Promise<void> {
+    const server = createServerFromCatalog(entry, this._serverNames(), GLib.get_home_dir())
+    await this._addServer(server)
+    this._app.showToast(`Added "${server.name}", turn it on in Settings to connect`)
+  }
+
+  private async _addServer(server: McpServer): Promise<void> {
     await mcpStore.saveServer(server)
     this._servers.push(server)
     this._selectedId = server.id
     this._sidebar.refresh(this._servers, this._app.mcp.status, this._selectedId)
-    this._editor.showSettings()
-    this._editor.grabFocus()
   }
 
   private _delete(id: string): void {
