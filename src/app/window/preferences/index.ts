@@ -10,16 +10,15 @@ import type { AppInterface } from '@/lib/app.js'
 
 export class Preferences {
   private _app: AppInterface
-  private _window: Adw.PreferencesWindow
+  private _window: Adw.PreferencesDialog
 
   constructor(app: AppInterface) {
     this._app = app
-    this._window = new Adw.PreferencesWindow({
+    this._window = new Adw.PreferencesDialog({
       title: 'Settings',
-      modal: true,
-      transient_for: app.window,
-      default_width: 600,
-      default_height: 600
+      content_width: 600,
+      content_height: 600,
+      search_enabled: true
     })
 
     this._window.add(createGeneralPage(this._app))
@@ -31,7 +30,7 @@ export class Preferences {
   }
 
   public show(): void {
-    this._window.present()
+    this._window.present(this._app.window)
   }
 }
 

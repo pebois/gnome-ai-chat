@@ -69,10 +69,6 @@ export const css = /* css */`
   margin: 12px;
 }
 
-.pull-caption {
-  font-size: 12px;
-}
-
 .message-sources button.small {
   min-height: 24px;
   padding: 2px 10px;

@@ -2,6 +2,7 @@ import Adw from 'gi://Adw?version=1'
 import Gio from 'gi://Gio'
 import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
+import Pango from 'gi://Pango'
 
 import type { AppInterface } from '@/lib/app.js'
 import { parseModelReference } from '@/lib/registry.js'
@@ -12,77 +13,45 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
   let cancellable: Gio.Cancellable | null = null
   let startTime = 0
 
-  const window = new Adw.Window({
+  const dialog = new Adw.Dialog({
     title: 'Pull Model',
-    modal: true,
-    transient_for: app.window,
-    width_request: 400,
-    resizable: false
+    content_width: 450
   })
 
-  window.connect('close-request', () => {
+  dialog.connect('closed', () => {
     if (isPulling && cancellable) {
       cancellable.cancel()
     }
-    return false
   })
 
   const toolbarView = new Adw.ToolbarView()
-  window.set_content(toolbarView)
+  dialog.set_child(toolbarView)
 
   const headerBar = new Adw.HeaderBar()
+  headerBar.add_css_class('flat')
   toolbarView.add_top_bar(headerBar)
 
-  const footer = new Gtk.ActionBar()
-  toolbarView.add_bottom_bar(footer)
-
-  const footerBox = new Gtk.Box({
-    spacing: 12,
-    homogeneous: true,
-    hexpand: true,
+  const clamp = new Adw.Clamp({
+    maximum_size: 400,
     margin_top: 12,
-    margin_bottom: 12,
+    margin_bottom: 24,
     margin_start: 12,
     margin_end: 12
-  })
-  footer.set_center_widget(footerBox)
-
-  const cancelButton = new Gtk.Button({
-    label: 'Cancel',
-    hexpand: true,
-    css_classes: ['pill', 'flat']
-  })
-  cancelButton.connect('clicked', () => {
-    if (isPulling && cancellable) {
-      cancellable.cancel()
-      resetState()
-    } else {
-      window.close()
-    }
-  })
-  footerBox.append(cancelButton)
-
-  const pullButton = new Gtk.Button({
-    label: 'Pull',
-    hexpand: true,
-    css_classes: ['suggested-action', 'pill']
-  })
-  footerBox.append(pullButton)
-
-  const clamp = new Adw.Clamp({
-    maximum_size: 360,
-    margin_top: 24,
-    margin_bottom: 24,
-    margin_start: 24,
-    margin_end: 24
   })
   toolbarView.set_content(clamp)
 
   const box = new Gtk.Box({
     orientation: Gtk.Orientation.VERTICAL,
-    spacing: 16
+    spacing: 24
   })
   clamp.set_child(box)
+
+  const pullButton = new Gtk.Button({
+    label: 'Pull',
+    halign: Gtk.Align.CENTER,
+    sensitive: !!defaultModel,
+    css_classes: ['suggested-action', 'pill']
+  })
 
   const inputGroup = new Adw.PreferencesGroup()
   const modelEntry = new Adw.EntryRow({
@@ -99,16 +68,13 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
 
   modelEntry.connect('changed', () => {
     modelEntry.remove_css_class('error')
+    pullButton.sensitive = isPulling || modelEntry.text.trim() !== ''
   })
 
   const progressBox = new Gtk.Box({
     orientation: Gtk.Orientation.VERTICAL,
-    spacing: 8,
-    visible: false,
-    margin_top: 12,
-    margin_bottom: 12,
-    margin_start: 12,
-    margin_end: 12
+    spacing: 6,
+    visible: false
   })
 
   const titleBox = new Gtk.Box({
@@ -119,13 +85,14 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
   const statusLabel = new Gtk.Label({
     halign: Gtk.Align.START,
     hexpand: true,
+    ellipsize: Pango.EllipsizeMode.END,
     css_classes: ['caption-heading']
   })
   titleBox.append(statusLabel)
 
   const percentageLabel = new Gtk.Label({
     halign: Gtk.Align.END,
-    css_classes: ['dim-label', 'caption', 'monospace', 'pull-caption']
+    css_classes: ['dim-label', 'caption', 'numeric']
   })
   titleBox.append(percentageLabel)
 
@@ -146,34 +113,36 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
   const sizeLabel = new Gtk.Label({
     halign: Gtk.Align.START,
     hexpand: true,
-    css_classes: ['dim-label', 'caption', 'monospace', 'pull-caption']
+    css_classes: ['dim-label', 'caption', 'numeric']
   })
   detailsBox.append(sizeLabel)
 
   const remainingTimeLabel = new Gtk.Label({
     halign: Gtk.Align.END,
-    css_classes: ['dim-label', 'caption', 'monospace', 'pull-caption']
+    css_classes: ['dim-label', 'caption', 'numeric']
   })
   detailsBox.append(remainingTimeLabel)
 
   progressBox.append(detailsBox)
 
   box.append(progressBox)
+  box.append(pullButton)
 
   const resetState = () => {
     isPulling = false
     cancellable = null
     startTime = 0
     modelEntry.sensitive = true
-    pullButton.sensitive = true
+    pullButton.sensitive = modelEntry.text.trim() !== ''
+    pullButton.label = 'Pull'
+    pullButton.remove_css_class('destructive-action')
+    pullButton.add_css_class('suggested-action')
     progressBox.visible = false
     progressBar.fraction = 0.0
     statusLabel.label = ''
     sizeLabel.label = ''
     percentageLabel.label = ''
     remainingTimeLabel.label = ''
-    cancelButton.label = 'Cancel'
-    cancelButton.add_css_class('flat')
   }
 
   const refreshModels = async (modelName: string, knownModels: string[]) => {
@@ -198,10 +167,10 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
 
     isPulling = true
     modelEntry.sensitive = false
-    pullButton.sensitive = false
+    pullButton.label = 'Stop'
+    pullButton.remove_css_class('suggested-action')
+    pullButton.add_css_class('destructive-action')
     progressBox.visible = true
-    cancelButton.label = 'Stop'
-    cancelButton.remove_css_class('flat')
     startTime = GLib.get_monotonic_time()
 
     cancellable = new Gio.Cancellable()
@@ -251,7 +220,7 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
       GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
         try {
           void refreshModels(modelName, knownModels)
-          window.close()
+          dialog.close()
         } catch (e) {
           console.error('Error on pull success UI update:', e)
         }
@@ -276,8 +245,13 @@ export function showPullDialog(app: AppInterface, defaultModel?: string): void {
   }
 
   pullButton.connect('clicked', () => {
+    if (isPulling && cancellable) {
+      cancellable.cancel()
+      return
+    }
     startPull()
   })
 
-  window.present()
+  dialog.present(app.window)
+  modelEntry.grab_focus()
 }

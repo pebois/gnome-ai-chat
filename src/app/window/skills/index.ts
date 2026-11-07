@@ -111,6 +111,7 @@ export class SkillsWindow {
 
     this._win.connect('close-request', () => {
       this._editor.destroy()
+      current = null
       return false
     })
   }
@@ -330,7 +331,11 @@ export class SkillsWindow {
   }
 }
 
+let current: SkillsWindow | null = null
+
 export function showSkillsWindow(app: AppInterface): void {
-  const skillsWin = new SkillsWindow(app)
-  skillsWin.show()
+  if (!current) {
+    current = new SkillsWindow(app)
+  }
+  current.show()
 }
