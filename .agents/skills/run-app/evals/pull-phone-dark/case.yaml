@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: pull-phone-dark
+expected_outcome: |
+  A PNG of the Pull Model dialog rendered at phone width (about 360 px) in dark mode, produced from the built app code, with no changes to tracked files.

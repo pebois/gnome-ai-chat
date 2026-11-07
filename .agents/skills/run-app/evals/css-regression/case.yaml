@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: css-regression
+expected_outcome: |
+  The check loads the CSS at runtime and reports both GTK theme parser errors (unknown property colour, invalid unit 6pxx) instead of declaring the change fine after lint and build.

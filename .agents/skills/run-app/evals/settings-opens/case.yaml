@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: settings-opens
+expected_outcome: |
+  Settings is opened in an isolated instance of the built app (own data dir and bus, not the user's running instance), the log is checked for JS/GTK errors and the result reported, and the test instance is stopped afterwards.
