@@ -38,11 +38,15 @@ export function downloadImage(parent: Gtk.Window, base64: string): void {
   })
 }
 
-export function setupContextMenu(widget: Gtk.Widget, popover: Gtk.PopoverMenu, onBeforeShow?: () => void): void {
+export function setupContextMenu(widget: Gtk.Widget, popover: Gtk.PopoverMenu, onBeforeShow?: () => void, overrideChildMenus: boolean = false): void {
   const gesture = new Gtk.GestureClick({
-    button: 3
+    button: 3,
+    propagation_phase: overrideChildMenus ? Gtk.PropagationPhase.CAPTURE : Gtk.PropagationPhase.BUBBLE
   })
-  gesture.connect('pressed', (_gesture: Gtk.GestureClick, _n_press: number, x: number, y: number) => {
+  gesture.connect('pressed', (pressed: Gtk.GestureClick, _n_press: number, x: number, y: number) => {
+    if (overrideChildMenus) {
+      pressed.set_state(Gtk.EventSequenceState.CLAIMED)
+    }
     onBeforeShow?.()
     const rect = new Gdk.Rectangle({ x: Math.round(x), y: Math.round(y), width: 1, height: 1 })
     popover.set_pointing_to(rect)
