@@ -23,7 +23,7 @@ export class ArtifactWindow extends Adw.Window {
 
     const manager = Adw.StyleManager.get_default()
     this._syncTheme(manager.dark)
-    manager.connect('notify::dark', () => {
+    const darkSignalId = manager.connect('notify::dark', () => {
       this._syncTheme(manager.dark)
     })
 
@@ -36,6 +36,7 @@ export class ArtifactWindow extends Adw.Window {
     this.set_content(toolbarView)
 
     this.connect('close-request', () => {
+      manager.disconnect(darkSignalId)
       this._app.activeArtifacts.delete(this._title)
       return false
     })

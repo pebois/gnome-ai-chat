@@ -10,7 +10,7 @@ import { showDestructiveConfirmation } from '@/lib/ui.js'
 
 export class DataPage {
   private _app: AppInterface
-  private _window: Adw.PreferencesWindow
+  private _window: Adw.PreferencesDialog
   private _page: Adw.PreferencesPage
   private _convIndexingCancellable: Gio.Cancellable | null = null
   private _skillsIndexingCancellable: Gio.Cancellable | null = null
@@ -20,7 +20,7 @@ export class DataPage {
     return this._page
   }
 
-  constructor(app: AppInterface, window: Adw.PreferencesWindow) {
+  constructor(app: AppInterface, window: Adw.PreferencesDialog) {
     this._app = app
     this._window = window
     this._page = new Adw.PreferencesPage({
@@ -116,11 +116,10 @@ export class DataPage {
       filesProgressBar.set_fraction(fraction)
     })
 
-    this._window.connect('close-request', () => {
+    this._window.connect('closed', () => {
       if (this._indexingSignalId) {
         this._app.disconnect(this._indexingSignalId)
       }
-      return false
     })
 
     filesIndexBtn.connect('clicked', () => {
@@ -199,7 +198,7 @@ export class DataPage {
     } catch (err) {
       if (!(err instanceof GLib.Error && err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED))) {
         console.error('Failed to index conversations:', err)
-        this._app.showToast('Conversations indexing failed', true)
+        this._window.add_toast(new Adw.Toast({ title: 'Conversations indexing failed' }))
       }
     } finally {
       btn.set_label(oldLabel ?? '')
@@ -222,7 +221,7 @@ export class DataPage {
     } catch (err) {
       if (!(err instanceof GLib.Error && err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED))) {
         console.error('Failed to index skills:', err)
-        this._app.showToast('Skills indexing failed', true)
+        this._window.add_toast(new Adw.Toast({ title: 'Skills indexing failed' }))
       }
     } finally {
       btn.set_label(oldLabel ?? '')

@@ -6,7 +6,7 @@ import { createResetButton } from '@/app/window/preferences/utils.js'
 import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_SYNTAX_THEME, DEFAULT_SYSTEM_PROMPT } from '@/lib/constants.js'
 
-export function createPromptPage(app: AppInterface, window: Adw.PreferencesWindow): Adw.PreferencesPage {
+export function createPromptPage(app: AppInterface, window: Adw.PreferencesDialog): Adw.PreferencesPage {
   const page = new Adw.PreferencesPage({
     title: 'Prompt',
     icon_name: 'text-x-generic-symbolic'
@@ -60,9 +60,8 @@ export function createPromptPage(app: AppInterface, window: Adw.PreferencesWindo
     }
   })
 
-  window.connect('close-request', () => {
+  window.connect('closed', () => {
     app.disconnect(syntaxSignalId)
-    return false
   })
 
   const resetBtn = createResetButton(() => {

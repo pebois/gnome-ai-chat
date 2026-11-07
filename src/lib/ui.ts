@@ -149,7 +149,7 @@ export function createBoxedExpanderRow(title: string, iconName: string): [Gtk.Li
 }
 
 export function showDestructiveConfirmation(
-  parent: Gtk.Window,
+  parent: Gtk.Widget,
   heading: string,
   body: string,
   onConfirm: () => void | Promise<void>
