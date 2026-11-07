@@ -1,4 +1,4 @@
-import { buildSkillPrompt, matchSkill, stripSkillMention } from '@/lib/skills/index.js'
+import { applySkillMention, buildSkillPrompt, matchSkill, stripSkillMention } from '@/lib/skills/index.js'
 
 describe('matchSkill', () => {
   const skills = [
@@ -76,5 +76,32 @@ describe('buildSkillPrompt', () => {
   it('does not include the trigger-text note', () => {
     const result = buildSkillPrompt({ name: 'Coder', prompt: 'Be concise.' })
     expect(result).not.toContain('activated')
+  })
+})
+
+describe('applySkillMention', () => {
+  const skills = [{ name: 'Coder' }, { name: 'Writer' }, { name: 'Memory' }]
+
+  it('adds a mention to plain text', () => {
+    expect(applySkillMention('hello', skills, 'Memory')).toBe('@Memory hello')
+  })
+
+  it('replaces an existing skill mention', () => {
+    expect(applySkillMention('@Coder fix this', skills, 'Writer')).toBe('@Writer fix this')
+    expect(applySkillMention('@coder fix this', skills, 'Writer')).toBe('@Writer fix this')
+  })
+
+  it('removes the mention when no skill is chosen', () => {
+    expect(applySkillMention('@Coder fix this', skills, null)).toBe('fix this')
+  })
+
+  it('keeps a leading mention that is not a skill', () => {
+    expect(applySkillMention('@john hi', skills, 'Coder')).toBe('@Coder @john hi')
+    expect(applySkillMention('@john hi', skills, null)).toBe('@john hi')
+  })
+
+  it('handles empty text', () => {
+    expect(applySkillMention('', skills, 'Coder')).toBe('@Coder ')
+    expect(applySkillMention('', skills, null)).toBe('')
   })
 })

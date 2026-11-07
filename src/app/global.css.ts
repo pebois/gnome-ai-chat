@@ -128,14 +128,6 @@ export const css = /* css */`
   margin-top: 6px;
 }
 
-.skill-chip {
-  background-color: alpha(@accent_bg_color, 0.15);
-  color: @accent_color;
-  border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 0.85em;
-}
-
 .settings-text-view {
   padding: 12px;
 }
