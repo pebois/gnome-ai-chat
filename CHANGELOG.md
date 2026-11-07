@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Settings and About as Dialogs**: Settings (`Adw.PreferencesDialog`, with search) and About (`Adw.AboutDialog`) now open as dialogs attached to the main window instead of separate windows. They adapt to narrow windows, and indexing errors raised in Settings appear inside it rather than behind it. Both replace widgets deprecated in Libadwaita 1.6.
+- **Pull Model Dialog**: Pull Model is now an `Adw.Dialog` laid out like the other dialogs, with a single Pull button that turns into Stop during a download. It becomes a bottom sheet on narrow windows instead of a fixed 400 px window, and closing it stops a running download. Progress text uses the standard caption and numeric styles.
+- **File Picker**: Attaching pictures or text files uses `Gtk.FileDialog` instead of the deprecated `Gtk.FileChooserNative`.
+
+### Fixed
+- **About License**: The About dialog showed the Artistic License; it now shows MIT, matching the project.
+- **One Skills Window**: Opening Skills while the editor is already open focuses it instead of opening a second editor on the same skills.
+- **Refresh Ran Twice**: The Refresh button on the "No Models Found" page started loading twice.
+- **Stop Button Tooltip**: The Stop button no longer keeps the "Send (Enter)" tooltip while a reply is generating.
+- **Artifact Window Leak**: Closing an artifact preview window now disconnects its dark-mode listener.
+- **MCP Spinners**: The MCP Servers window uses `Adw.Spinner` like the rest of the app.
+
 ## [1.14.0] - 2026-11-06
 
 ### Added

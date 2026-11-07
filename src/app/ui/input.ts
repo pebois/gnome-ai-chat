@@ -245,11 +245,13 @@ export class Input {
     if (mode === 'stop') {
       this._sendButtonContent.label = 'Stop'
       this._sendButtonContent.icon_name = 'media-playback-stop-symbolic'
+      this._sendButton.tooltip_text = 'Stop'
       this._sendButton.remove_css_class('suggested-action')
       this._sendButton.add_css_class('destructive-action')
     } else {
       this._sendButtonContent.label = 'Send'
       this._sendButtonContent.icon_name = 'paper-plane-symbolic'
+      this._sendButton.tooltip_text = 'Send (Enter)'
       this._sendButton.remove_css_class('destructive-action')
       this._sendButton.add_css_class('suggested-action')
     }

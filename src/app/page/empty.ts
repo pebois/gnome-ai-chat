@@ -19,8 +19,6 @@ export class EmptyPage {
       refreshBtn.halign = Gtk.Align.CENTER
       refreshBtn.connect('clicked', () => {
         onRefresh()
-        app.window.setState('loading')
-        void app.init()
       })
       statusPage.set_child(refreshBtn)
     }

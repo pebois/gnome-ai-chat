@@ -178,28 +178,27 @@ export class Attachments {
   }
 
   private _openFileChooser(title: string, filter: Gtk.FileFilter): void {
-    const dialog = new Gtk.FileChooserNative({
+    const filters = new Gio.ListStore({ item_type: Gtk.FileFilter.$gtype })
+    filters.append(filter)
+    const dialog = new Gtk.FileDialog({
       title,
-      transient_for: this._app.window,
-      action: Gtk.FileChooserAction.OPEN,
       accept_label: 'Attach',
-      cancel_label: 'Cancel',
-      select_multiple: true
+      filters,
+      default_filter: filter
     })
-    dialog.add_filter(filter)
-    dialog.connect('response', (_dialog, responseId) => {
-      if (responseId === Gtk.ResponseType.ACCEPT) {
-        const files = dialog.get_files()
+    dialog.open_multiple(this._app.window, null, (_obj, res) => {
+      try {
+        const files = dialog.open_multiple_finish(res)
         for (let i = 0; i < files.get_n_items(); i++) {
           const file = files.get_item(i) as Gio.File
           if (file) {
             this.addFile(file)
           }
         }
+      } catch {
+        return
       }
-      dialog.destroy()
     })
-    dialog.show()
   }
 
   private _handleAttachPicture(): void {

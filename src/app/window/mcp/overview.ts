@@ -10,10 +10,9 @@ import { errorMessage } from '@/lib/mcp/transport.js'
 
 const STATUS_CLASSES = ['success', 'error']
 
-function applyStatusDot(dot: Gtk.Widget, spinner: Gtk.Spinner, server: McpServer, status?: McpServerStatus): void {
+function applyStatusDot(dot: Gtk.Widget, spinner: Adw.Spinner, server: McpServer, status?: McpServerStatus): void {
   const connecting = status?.state === 'connecting'
   spinner.visible = connecting
-  spinner.spinning = connecting
   dot.visible = !connecting
   for (const cls of STATUS_CLASSES) {
     dot.remove_css_class(cls)
@@ -41,10 +40,10 @@ export class McpServerOverview {
   private _widget: Gtk.ScrolledWindow
   private _statusRow: Adw.ActionRow
   private _statusDot: Gtk.Box
-  private _statusSpinner: Gtk.Spinner
+  private _statusSpinner: Adw.Spinner
   private _testRow: Adw.ActionRow
   private _testBtn: Gtk.Button
-  private _testSpinner: Gtk.Spinner
+  private _testSpinner: Adw.Spinner
   private _toolsGroup: Adw.PreferencesGroup
   private _toolRows: Gtk.Widget[] = []
   private _testResults = new Map<string, TestResult>()
@@ -59,11 +58,11 @@ export class McpServerOverview {
     this._onTest = onTest
 
     this._statusDot = new Gtk.Box({ valign: Gtk.Align.CENTER, css_classes: ['mcp-status-dot'] })
-    this._statusSpinner = new Gtk.Spinner({ visible: false })
+    this._statusSpinner = new Adw.Spinner({ visible: false })
     this._statusRow = new Adw.ActionRow({ title: 'Status' })
     this._testRow = new Adw.ActionRow({ title: 'Test connection', subtitle: 'Not tested' })
     this._testBtn = new Gtk.Button({ label: 'Test', valign: Gtk.Align.CENTER })
-    this._testSpinner = new Gtk.Spinner({ visible: false, valign: Gtk.Align.CENTER })
+    this._testSpinner = new Adw.Spinner({ visible: false, valign: Gtk.Align.CENTER })
     this._toolsGroup = new Adw.PreferencesGroup({ title: 'Tools' })
 
     this._widget = this._createContent()
@@ -128,7 +127,6 @@ export class McpServerOverview {
     const result = this._currentTest(server)
     const running = result?.running ?? false
     this._testSpinner.visible = running
-    this._testSpinner.spinning = running
     this._testBtn.sensitive = !running
     this._testRow.remove_css_class('error')
     if (!result) {
