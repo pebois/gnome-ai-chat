@@ -4,7 +4,9 @@ import sys
 import time
 
 USAGE = '''usage: DISPLAY=:N python3 xinput.py <command> [...]
+  move X Y             move the pointer (reveals hover-only buttons)
   click X Y            left click at screen coordinates
+  rclick X Y           right click (context menus)
   key NAME [NAME...]   press keys in order; join modifiers with +, e.g. ctrl+comma Escape Tab Return
   type TEXT            type ASCII text'''
 
@@ -47,13 +49,15 @@ def main(argv):
         sys.exit(USAGE)
     display = open_display()
     command, args = argv[1], argv[2:]
-    if command == 'click' and len(args) == 2:
+    if command in ('move', 'click', 'rclick') and len(args) == 2:
         xtst.XTestFakeMotionEvent(display, -1, int(args[0]), int(args[1]), 0)
         x11.XFlush(display)
         time.sleep(0.2)
-        xtst.XTestFakeButtonEvent(display, 1, 1, 0)
-        xtst.XTestFakeButtonEvent(display, 1, 0, 0)
-        x11.XFlush(display)
+        if command != 'move':
+            button = 1 if command == 'click' else 3
+            xtst.XTestFakeButtonEvent(display, button, 1, 0)
+            xtst.XTestFakeButtonEvent(display, button, 0, 0)
+            x11.XFlush(display)
     elif command == 'key' and args:
         for combo in args:
             press(display, combo)

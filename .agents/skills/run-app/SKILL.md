@@ -104,12 +104,15 @@ For what actions can't reach, such as typing, shortcuts, popovers and tabs insid
 ```bash
 X=.agents/skills/run-app/scripts/xinput.py
 python3 $X click 400 400
+python3 $X move 300 250
+python3 $X rclick 300 250
 python3 $X type "/se"
 python3 $X key Escape ctrl+comma Tab Return
 import -window root "$S/step1.png"
 ```
 
 - `import -window root` (ImageMagick) captures the whole virtual screen. Read the PNG to see the state and to find the coordinates of the next click.
+- Message actions (Copy, Regenerate, ⓘ) only appear on hover: `move` over the message before you click them. `rclick` opens context menus.
 - `xinput.py` sends US keysyms. The user types on AZERTY, so for shortcuts on digits or symbols, check the keysym the app binds rather than the key position.
 - To wait between steps, use `python3 -c 'import time; time.sleep(2)'`. A plain `sleep` may be blocked by the agent harness, and `timeout 2 tail -f /dev/null` returns at once when inotify watches run out.
 

@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **File Picker**: Attaching pictures or text files uses `Gtk.FileDialog` instead of the deprecated `Gtk.FileChooserNative`.
 
 ### Fixed
+- **Regenerate Button**: Regenerate did nothing on a reply that had just been generated; it only worked after reopening the conversation. The message actions now use the reply as saved once streaming ends.
+- **Message Context Menu**: Right-clicking a message opened the text's Cut/Copy/Paste menu, so "Copy message", "Regenerate response" and "Restart from here" were unreachable. Right-click now always opens the message menu; selected text still copies with Ctrl+C.
 - **About License**: The About dialog showed the Artistic License; it now shows MIT, matching the project.
 - **One Skills Window**: Opening Skills while the editor is already open focuses it instead of opening a second editor on the same skills.
 - **Refresh Ran Twice**: The Refresh button on the "No Models Found" page started loading twice.
