@@ -682,7 +682,7 @@ export class Message {
       this._reloadButton.add_css_class('flat')
       this._reloadButton.add_css_class('dim-label')
       this._reloadButton.connect('clicked', () => {
-        return onReload(message)
+        return onReload(this._currentMessage)
       })
       buttonsBox.append(this._reloadButton)
     }
@@ -697,7 +697,7 @@ export class Message {
       this._regenerateButton.add_css_class('flat')
       this._regenerateButton.add_css_class('dim-label')
       this._regenerateButton.connect('clicked', () => {
-        return props.onRegenerate(message)
+        return props.onRegenerate(this._currentMessage)
       })
       buttonsBox.append(this._regenerateButton)
     }
@@ -791,12 +791,12 @@ export class Message {
 
     if (message.role === 'user') {
       this._reloadAction = createSimpleAction('reload_message', () => {
-        return onReload(message)
+        return onReload(this._currentMessage)
       })
       actionGroup.add_action(this._reloadAction)
     } else {
       this._regenerateAction = createSimpleAction('regenerate_message', () => {
-        return props.onRegenerate(message)
+        return props.onRegenerate(this._currentMessage)
       })
       actionGroup.add_action(this._regenerateAction)
     }
@@ -808,7 +808,7 @@ export class Message {
     popover.set_position(Gtk.PositionType.BOTTOM)
     this._messageGroup.insert_action_group('chat', actionGroup)
 
-    setupContextMenu(this._messageGroup, popover)
+    setupContextMenu(this._messageGroup, popover, undefined, true)
   }
 
   private _updateToolCalls(calls?: ToolCall[]): void {
