@@ -52,6 +52,20 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.15.0" date="2026-11-07">
+      <description>
+        <p>This release adds control over built-in tools, a catalog of MCP servers, and modern dialogs that adapt to narrow windows.</p>
+        <ul>
+          <li>Added a Tools page in Settings to turn built-in tools on or off, one by one or by group.</li>
+          <li>Added a catalog of ready-to-use MCP servers that need no API key.</li>
+          <li>Skills are now picked with a round Skill button next to the attach button.</li>
+          <li>Settings, About and Pull Model now open as dialogs that adapt to narrow windows.</li>
+          <li>Tooltips are clearer and more consistent.</li>
+          <li>Fixed Regenerate on a reply that had just been generated, and the message menu on right-click.</li>
+          <li>Fixed the license shown in the About dialog and several smaller issues.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.14.0" date="2026-11-06">
       <description>
         <p>This release adds deep web research, clearer answers with their sources and details, and a reworked find in conversation.</p>
