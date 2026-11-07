@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-11-07
+
 ### Added
 - **Manage Built-in Tools**: A new Tools page in Settings lists the 28 built-in tools in groups (Memory, Files, Shell, Web, Time, Math, System, Applications, Preview). Turn a whole group or a single tool off to hide it from the model, for example after replacing it with an MCP server. Turned-off tools are refused if a model still calls them, and slash commands that rely on them are hidden (`/memory` without the memory read tools, `/hn` without Fetch Rss Feed); typing one shows a toast pointing to Settings → Tools. The `@Memory`, `@Files` and `@Canvas` skills are likewise hidden and not applied while their tools are off. The Skills window shows each of these skills' linked tools and whether it is currently hidden. `/deepsearch` keeps working with the web tools off.
 - **MCP Server Catalog**: The "+" button in the MCP Servers window now opens a menu with "New Server" and "Add from Catalog" (also offered on the empty page). The catalog lists public servers that need no API key and run with `npx` or over HTTP: alternatives to built-in tools (Memory, Filesystem, Fetch, Exa Search, Desktop Commander) and new capabilities (DeepWiki, Context7, Microsoft Learn, Sequential Thinking, Git, Everything). Picking one adds it pre-filled and disabled, ready to review and turn on.
 - **Release Skill**: A `release` agent skill (`.agents/skills/release/`) walks through a release: it picks the version from the `[Unreleased]` entries, bumps it in `package.json`, `package-lock.json` and `src/lib/constants.ts`, dates the CHANGELOG section, writes the metainfo release notes, verifies everything, commits `Release version X.Y.Z` and tags `vX.Y.Z`. It never pushes.
+- **Adwaita UI Skill**: An `adwaita-ui` agent skill (`.agents/skills/adwaita-ui/`) gives GNOME HIG and Libadwaita 1.9 guidance for UI work: which Adw widget fits which pattern, deprecated widgets and their replacements, adaptive breakpoints, dialogs, toasts and banners, boxed lists and CSS, plus this codebase's own UI idioms.
+- **Run App Skill**: A `run-app` agent skill (`.agents/skills/run-app/`) proves changes work at runtime: it renders dialogs and widgets to PNG at phone or desktop width in light or dark, launches an isolated instance on a virtual display, triggers app actions over D-Bus, clicks and types into it, seeds its database and checks the log for GTK/JS errors.
 
 ### Changed
 - **Tooltips**: Tooltips use sentence case and one shortcut format ("New chat (Ctrl+N)", "Next match (Enter)"). The scroll-to-bottom button has a tooltip, the attachments count uses a real plural ("1 attachment", "3 attachments"), the MCP "+" mentions Ctrl+N again, and a few labels are clearer ("Attach files or a screenshot", "Stop generating", "Choose a skill (@)", "Reset all built-in skills").
