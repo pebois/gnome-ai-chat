@@ -96,6 +96,7 @@ export const hn: Command = {
   name: 'hn',
   description: 'Get Hacker News headlines',
   icon: 'newspaper-symbolic',
+  requiredTools: ['fetch_rss_feed'],
   subCommands: [
     { name: 'best', description: 'Get the best stories from Hacker News', icon: 'view-paged-symbolic' },
     { name: 'newest', description: 'Get the newest stories from Hacker News', icon: 'view-list-bullet-symbolic' },

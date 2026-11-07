@@ -26,6 +26,7 @@ import { pangoEscape } from '@/lib/parser.js'
 import type { ChatMessage } from '@/lib/providers/index.js'
 import { OllamaProvider } from '@/lib/providers/ollama.js'
 import { debounce } from '@/lib/timeout.js'
+import { areToolsEnabled } from '@/lib/tools/groups.js'
 import { Tracker } from '@/lib/tracker.js'
 import { createSimpleAction } from '@/lib/ui.js'
 import { convertMessageToTitle } from '@/lib/utils.js'
@@ -577,6 +578,10 @@ export class App extends Adw.Application implements AppInterface {
       const action = createSimpleAction(
         cmd.name,
         (_action, parameter) => {
+          if (!areToolsEnabled(this.settings, cmd.requiredTools ?? [])) {
+            this.showToast(`/${cmd.name} needs built-in tools that are turned off in Settings → Tools`)
+            return
+          }
           return cmd.activate(this, parameter ?? undefined)
         },
         cmd.parameterType,

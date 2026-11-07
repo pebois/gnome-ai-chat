@@ -5,6 +5,7 @@ import GtkSource from 'gi://GtkSource?version=5'
 import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
 import type { Skill } from '@/lib/db/types.js'
+import { formatToolTitle, skillToolStatus } from '@/lib/tools/groups.js'
 
 export interface EditorCallbacks {
   onChanged: () => void
@@ -19,6 +20,8 @@ export class SkillEditor {
   private _widget: Adw.ToolbarView
   private _nameRow: Adw.EntryRow
   private _descRow: Adw.EntryRow
+  private _toolsRow: Adw.ActionRow
+  private _toolsStatus: Gtk.Label
   private _buffer: GtkSource.Buffer
   private _sourceView: GtkSource.View
   private _deleteBtn: Gtk.Button
@@ -102,6 +105,11 @@ export class SkillEditor {
     this._descRow = new Adw.EntryRow({ title: 'Description' })
     metaGroup.add(this._nameRow)
     metaGroup.add(this._descRow)
+    this._toolsRow = new Adw.ActionRow({ title: 'Linked Tools', visible: false })
+    this._toolsStatus = new Gtk.Label({ valign: Gtk.Align.CENTER })
+    this._toolsStatus.add_css_class('caption')
+    this._toolsRow.add_suffix(this._toolsStatus)
+    metaGroup.add(this._toolsRow)
     contentBox.append(metaGroup)
 
     const lm = GtkSource.LanguageManager.get_default()
@@ -183,6 +191,7 @@ export class SkillEditor {
     }
 
     const active = skill !== null
+    this._updateLinkedTools(skill)
     this._nameRow.sensitive = active
     this._descRow.sensitive = active
     this._sourceView.sensitive = active
@@ -190,6 +199,20 @@ export class SkillEditor {
     this.updateActions(active && isBuiltin, differsFromDefault)
     this._deleteBtn.visible = active && !isBuiltin
     this._deleteBtn.sensitive = active && !isBuiltin
+  }
+
+  private _updateLinkedTools(skill: Skill | null): void {
+    const { disabled, required } = skill ? skillToolStatus(skill, this._app.settings) : { disabled: [], required: [] }
+    this._toolsRow.visible = required.length > 0
+    if (required.length === 0) {
+      return
+    }
+    this._toolsRow.subtitle = required.map(formatToolTitle).join(', ')
+    const hidden = disabled.length > 0
+    this._toolsStatus.label = hidden ? `Hidden: ${disabled.length} tool${disabled.length === 1 ? '' : 's'} turned off` : 'Available'
+    this._toolsStatus.tooltip_text = hidden ? `Turned off in Settings → Tools: ${disabled.map(formatToolTitle).join(', ')}` : 'All linked tools are on'
+    this._toolsStatus.remove_css_class(hidden ? 'success' : 'warning')
+    this._toolsStatus.add_css_class(hidden ? 'warning' : 'success')
   }
 
   public updateActions(isBuiltin: boolean, differsFromDefault: boolean): void {

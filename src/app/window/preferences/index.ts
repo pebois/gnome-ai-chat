@@ -6,6 +6,7 @@ import { DataPage } from '@/app/window/preferences/data.js'
 import { createGeneralPage } from '@/app/window/preferences/general.js'
 import { createPermissionsPage } from '@/app/window/preferences/permissions.js'
 import { createPromptPage } from '@/app/window/preferences/prompt.js'
+import { createToolsPage } from '@/app/window/preferences/tools.js'
 import type { AppInterface } from '@/lib/app.js'
 
 export class Preferences {
@@ -24,6 +25,7 @@ export class Preferences {
     this._window.add(createGeneralPage(this._app))
     this._window.add(createAppearancePage(this._app))
     this._window.add(createPromptPage(this._app, this._window))
+    this._window.add(createToolsPage(this._app))
     this._window.add(createPermissionsPage(this._app))
     this._window.add(createAdvancedPage(this._app))
     this._window.add(new DataPage(this._app, this._window).page)

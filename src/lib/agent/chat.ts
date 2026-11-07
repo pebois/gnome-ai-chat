@@ -12,6 +12,7 @@ import { debug } from '@/lib/debug.js'
 import type { ChatMessage, ChatProps, ToolCall } from '@/lib/providers/index.js'
 import { buildSkillPrompt, matchSkill, stripSkillMention } from '@/lib/skills/index.js'
 import { RecursiveCharacterTextSplitter } from '@/lib/splitter.js'
+import { availableSkills } from '@/lib/tools/groups.js'
 import { canRunInParallel, getAvailableTools, onToolCall } from '@/lib/tools/index.js'
 import { defaultSearchLanguage, fetchPageText, searchWeb } from '@/lib/tools/web.js'
 import type { SearchResult } from '@/lib/tools/websearch.js'
@@ -84,7 +85,7 @@ export class ChatService {
       const lastUserMessage = [...conversation.messages].reverse().find((m) => {
         return m.role === 'user'
       })
-      const skill = lastUserMessage ? matchSkill(lastUserMessage.content, this._app.skills ?? []) : undefined
+      const skill = lastUserMessage ? matchSkill(lastUserMessage.content, availableSkills(this._app.skills ?? [], this._app.settings)) : undefined
       const model = this._app.model ?? DEFAULT_CHAT_MODEL
       const system = [this._app.settings.system, skill ? buildSkillPrompt(skill) : ''].filter(Boolean).join('\n\n')
       const numCtx = this._app.settings.options.num_ctx ?? DEFAULT_OPTIONS.num_ctx

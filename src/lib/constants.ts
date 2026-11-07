@@ -137,7 +137,8 @@ export const DEFAULT_SETTINGS = {
     reads: 'auto-accept',
     apps: 'ask',
     mcp: 'ask'
-  }
+  },
+  disabledTools: []
 } as Settings
 
 export const DEFAULT_STATS = {
