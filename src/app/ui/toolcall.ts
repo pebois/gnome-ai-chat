@@ -62,7 +62,7 @@ export class ToolCallRow {
     if (call.function.name === 'render_html') {
       const previewButton = new Gtk.Button({
         icon_name: 'web-browser-symbolic',
-        tooltip_text: 'Open Preview',
+        tooltip_text: 'Open preview',
         valign: Gtk.Align.CENTER
       })
       previewButton.add_css_class('flat')

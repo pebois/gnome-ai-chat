@@ -20,7 +20,7 @@ export function showImageDialog(app: AppInterface, images: string[], startIndex:
 
   const downloadBtn = new Gtk.Button({
     icon_name: 'document-save-symbolic',
-    tooltip_text: 'Download Image'
+    tooltip_text: 'Download image'
   })
 
   downloadBtn.connect('clicked', () => {

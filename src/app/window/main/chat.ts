@@ -68,7 +68,7 @@ export class Chat {
 
     const toggleSidebarBtn = new Gtk.ToggleButton({
       icon_name: 'sidebar-show-symbolic',
-      tooltip_text: 'Toggle Sidebar (ctrl+b)',
+      tooltip_text: 'Toggle sidebar (Ctrl+B)',
       active: true
     })
     toggleSidebarBtn.connect('toggled', () => {
@@ -102,7 +102,7 @@ export class Chat {
     const menuBtn = new Gtk.MenuButton({
       icon_name: 'open-menu-symbolic',
       menu_model: menu,
-      tooltip_text: 'Main Menu'
+      tooltip_text: 'Main menu'
     })
     this._contentHeader.pack_end(menuBtn)
     this._box.append(this._contentHeader)
@@ -141,7 +141,7 @@ export class Chat {
 
     const findButton = new Gtk.ToggleButton({
       icon_name: 'system-search-symbolic',
-      tooltip_text: 'Find in Conversation (ctrl+shift+f)'
+      tooltip_text: 'Find in conversation (Ctrl+Shift+F)'
     })
     findButton.connect('toggled', () => {
       if (findButton.active === this._history.findBar.search_mode_enabled) {
@@ -215,6 +215,7 @@ export class Chat {
     })
     this._scrollButton = new Gtk.Button({
       icon_name: 'go-down-symbolic',
+      tooltip_text: 'Scroll to bottom',
       css_classes: ['circular', 'osd', 'scroll-button'],
       halign: Gtk.Align.CENTER,
       valign: Gtk.Align.CENTER,

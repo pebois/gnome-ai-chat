@@ -228,7 +228,7 @@ export class Input {
     if (mode === 'stop') {
       this._sendButtonContent.label = 'Stop'
       this._sendButtonContent.icon_name = 'media-playback-stop-symbolic'
-      this._sendButton.tooltip_text = 'Stop'
+      this._sendButton.tooltip_text = 'Stop generating'
       this._sendButton.remove_css_class('suggested-action')
       this._sendButton.add_css_class('destructive-action')
     } else {

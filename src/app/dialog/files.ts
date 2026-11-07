@@ -24,7 +24,7 @@ export function showFilesDialog(app: AppInterface): void {
 
   const addBtn = new Gtk.Button({
     icon_name: 'folder-new-symbolic',
-    tooltip_text: 'Add Folder',
+    tooltip_text: 'Add folder',
     valign: Gtk.Align.CENTER
   })
   addBtn.connect('clicked', () => {

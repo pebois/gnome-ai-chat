@@ -54,7 +54,7 @@ export class McpSidebar {
 
     this._searchBtn = new Gtk.ToggleButton({
       icon_name: 'system-search-symbolic',
-      tooltip_text: 'Search servers (ctrl+f)',
+      tooltip_text: 'Search servers (Ctrl+F)',
       valign: Gtk.Align.CENTER
     })
     this._searchBtn.add_css_class('flat')
@@ -99,7 +99,7 @@ export class McpSidebar {
 
     const addBtn = new Gtk.MenuButton({
       icon_name: 'list-add-symbolic',
-      tooltip_text: 'Add server',
+      tooltip_text: 'Add server (Ctrl+N for a blank one)',
       valign: Gtk.Align.CENTER,
       menu_model: menu
     })
