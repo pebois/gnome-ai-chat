@@ -8,7 +8,7 @@ export const APPLICATION_NAME = 'Gnome AI Chat'
 
 export const APPLICATION_ID = DBUS_BUS_NAME
 
-export const VERSION = '1.14.0'
+export const VERSION = '1.15.0'
 
 export const DEFAULT_OLLAMA_URL = 'http://localhost:11434'
 
