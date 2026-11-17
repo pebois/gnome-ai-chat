@@ -52,6 +52,21 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.16.0" date="2026-11-17">
+      <description>
+        <p>This release adds agent profiles, skills that run as sub-agents, and finer control over tools.</p>
+        <ul>
+          <li>Added Main Agent and Sub-agents profiles in Settings, under Tools, to choose which built-in tools, MCP servers and skills each one gets.</li>
+          <li>The model can now hand a task to a skill that works in its own context and returns only its answer, which keeps long conversations lighter.</li>
+          <li>A skill can use its own set of built-in tools and MCP servers instead of the agent's.</li>
+          <li>Skills can be turned off without deleting them.</li>
+          <li>Each tool of an MCP server can be turned off from the server's Overview tab.</li>
+          <li>Built-in skills added by an update now appear in existing installations.</li>
+          <li>The Skills and MCP Servers windows share the same layout and shortcuts.</li>
+          <li>Fixed tool results being sent to the model twice.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.15.0" date="2026-11-07">
       <description>
         <p>This release adds control over built-in tools, a catalog of MCP servers, and modern dialogs that adapt to narrow windows.</p>
