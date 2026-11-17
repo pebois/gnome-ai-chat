@@ -20,6 +20,7 @@ This is a GNOME desktop application built with TypeScript, GJS, GTK4, and Libadw
 - **Auto-Attach Screenshots**: Effortlessly capture and include screen contents directly in the chat input for visual analysis.
 - **Semantic History Search**: Locate past conversations conceptually using local vector embeddings, grouped chronologically, with seamless background indexing.
 - **Resource Monitoring**: Track active models and their hardware footprint (VRAM, CPU, Total Memory, and TTL) through the 'Running Models' view.
+- **Chat Import and Export**: Export all chats (or one) to JSON and import them back with a merge that never duplicates: missing chats are added and an existing chat is replaced only by a newer version.
 - **Privacy-First Storage**: 100% local, private data persistence using a robust SQLite database to prevent data loss and support efficient, centralized state management.
 
 ## Technologies
@@ -188,6 +189,7 @@ src/
     splitter.ts         # text chunking for vector embeddings
     timeout.ts          # async utilities (debounce, poll, sleep)
     tracker.ts          # performance and usage tracking logic
+    transfer.ts         # pure chat import/export: file format, parsing, merge plan (newest wins, no duplicates)
     ui.ts               # UI utility helpers (actions, widgets, confirmation dialogs)
     utils.ts            # markdown→Pango, formatting, and general helpers
   test/

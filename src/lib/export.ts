@@ -7,6 +7,7 @@ import type { AppInterface } from '@/lib/app.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
 import type { Conversation } from '@/lib/db/types.js'
 import { markdownToHtml } from '@/lib/parser.js'
+import { buildExport, describeImport, parseImport, toTransferConversation, type TransferFile } from '@/lib/transfer.js'
 
 const activeWebViews = new Set<WebKit.WebView>()
 
@@ -136,6 +137,76 @@ p { margin-top: 0; margin-bottom: 1rem; }
 p:last-child { margin-bottom: 0; }
 `
 
+function isDismissed(err: unknown): boolean {
+  return err instanceof GLib.Error && err.matches(Gtk.dialog_error_quark(), Gtk.DialogError.DISMISSED)
+}
+
+function jsonFilters(): Gio.ListStore<Gtk.FileFilter> {
+  const filter = new Gtk.FileFilter({ name: 'JSON files' })
+  filter.add_pattern('*.json')
+  const filters = new Gio.ListStore<Gtk.FileFilter>({ item_type: Gtk.FileFilter.$gtype })
+  filters.append(filter)
+  return filters
+}
+
+async function writeTransferFile(file: PromisifiedFile, data: TransferFile): Promise<void> {
+  const bytes = new GLib.Bytes(new TextEncoder().encode(JSON.stringify(data, null, 2)))
+  await file.replace_contents_bytes_async(bytes, null, false, Gio.FileCreateFlags.NONE, null)
+}
+
+export function exportAllConversations(app: AppInterface, parent: Gtk.Widget = app.window): void {
+  if (app.conversations.length === 0) {
+    app.showToast('There are no chats to export')
+    return
+  }
+  const exportedAt = new Date().toISOString()
+  const fileDialog = new Gtk.FileDialog({
+    title: 'Export All Chats',
+    initial_name: `gnome-ai-chat-conversations-${exportedAt.slice(0, 10)}.json`,
+    filters: jsonFilters()
+  })
+  fileDialog.save(parent.get_root() as Gtk.Window, null, async (_source, result) => {
+    try {
+      const file = fileDialog.save_finish(result) as PromisifiedFile | null
+      if (!file) {
+        return
+      }
+      const conversations = []
+      for (const conversation of app.conversations) {
+        conversations.push(toTransferConversation(conversation, await conversationsStore.getMessages(conversation.id)))
+      }
+      await writeTransferFile(file, buildExport(conversations, exportedAt))
+      app.showToast(`Exported ${conversations.length} chat${conversations.length === 1 ? '' : 's'}`)
+    } catch (err) {
+      if (!isDismissed(err)) {
+        app.reportError('Failed to export chats', err)
+      }
+    }
+  })
+}
+
+export function importConversations(app: AppInterface, parent: Gtk.Widget = app.window): void {
+  const fileDialog = new Gtk.FileDialog({
+    title: 'Import Chats',
+    filters: jsonFilters()
+  })
+  fileDialog.open(parent.get_root() as Gtk.Window, null, async (_source, result) => {
+    try {
+      const file = fileDialog.open_finish(result) as PromisifiedFile | null
+      if (!file) {
+        return
+      }
+      const [contents] = await file.load_contents_async(null)
+      const plan = await app.importConversations(parseImport(new TextDecoder().decode(contents)))
+      app.showToast(describeImport(plan))
+    } catch (err) {
+      if (!isDismissed(err)) {
+        app.reportError('Failed to import chats', err)
+      }
+    }
+  })
+}
+
 export function exportConversation(app: AppInterface, conversation: Conversation, format: 'json' | 'pdf'): void {
   const fileDialog = new Gtk.FileDialog({
     title: `Export as ${format.toUpperCase()}`,
@@ -151,23 +222,8 @@ export function exportConversation(app: AppInterface, conversation: Conversation
 
       const messages = await conversationsStore.getMessages(conversation.id)
       if (format === 'json') {
-        const exportData = {
-          conversation: { ...conversation },
-          messages
-        }
-        delete exportData.conversation.embeddings
-
-        const data = JSON.stringify(exportData, null, 2)
-        const bytes = new GLib.Bytes(new TextEncoder().encode(data))
-
         try {
-          await file.replace_contents_bytes_async(
-            bytes,
-            null,
-            false,
-            Gio.FileCreateFlags.NONE,
-            null
-          )
+          await writeTransferFile(file, buildExport([toTransferConversation(conversation, messages)], new Date().toISOString()))
           app.showToast('Conversation exported successfully')
         } catch (err) {
           console.error('Failed to save JSON:', err)
@@ -255,7 +311,7 @@ export function exportConversation(app: AppInterface, conversation: Conversation
         webView.load_html(html, null)
       }
     } catch (err) {
-      if (!(err instanceof Error) || !err.message.includes('Dismissed by user')) {
+      if (!isDismissed(err)) {
         console.error('Failed to handle export:', err)
         app.showToast('Failed to export conversation', true)
       }

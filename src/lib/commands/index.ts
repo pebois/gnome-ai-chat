@@ -36,6 +36,8 @@ export const COMMANDS: Command[] = [
   chat.newConversation,
   chat.openConversation,
   chat.compress,
+  chat.exportChats,
+  chat.importChats,
   chat.deepsearch,
   chat.hn,
   ui.toggleSidebar,
