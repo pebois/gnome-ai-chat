@@ -52,6 +52,17 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.17.0" date="2026-11-17">
+      <description>
+        <p>This release adds import and export of chats, with a merge that never creates duplicates.</p>
+        <ul>
+          <li>Added an export of all chats to a single file, from the Data page in Settings or with /export.</li>
+          <li>Added an import that merges chats: missing chats are added, and a chat you already have is replaced only by a more recent version.</li>
+          <li>The JSON export of a single chat can now be imported back, and files exported by earlier versions still work.</li>
+          <li>Fixed an error message shown when cancelling an export.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.16.0" date="2026-11-17">
       <description>
         <p>This release adds agent profiles, skills that run as sub-agents, and finer control over tools.</p>
