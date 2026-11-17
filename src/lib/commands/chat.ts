@@ -3,6 +3,7 @@ import GLib from 'gi://GLib?version=2.0'
 import { compressMessages } from '@/lib/agent/compress.js'
 import type { Command } from '@/lib/commands/index.js'
 import { commandArguments, DEEPSEARCH_COMMAND } from '@/lib/commands/parse.js'
+import { exportAllConversations, importConversations } from '@/lib/export.js'
 import { ACTION_NEW_CONVERSATION } from '@/lib/ipc.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
 
@@ -120,5 +121,23 @@ export const hn: Command = {
     }
     const command = ['hn', subCommand, subCommand === 'custom' ? subArgs : ''].filter(Boolean).join(' ')
     return app.chat.sendPrompt(`Use fetch_rss_feed on ${url} to get the latest Hacker News headlines. Please summarize all of the headlines and present them with an informative tone.`, command)
+  }
+}
+
+export const exportChats: Command = {
+  name: 'export',
+  description: 'Export all chats to a file',
+  icon: 'document-save-symbolic',
+  activate: (app) => {
+    exportAllConversations(app)
+  }
+}
+
+export const importChats: Command = {
+  name: 'import',
+  description: 'Import chats from a file',
+  icon: 'document-open-symbolic',
+  activate: (app) => {
+    importConversations(app)
   }
 }
