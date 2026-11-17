@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-11-17
+
 ### Added
 - **Import and Export Chats**: Export every chat to one JSON file and import it back from Settings → Data, or with `/export` and `/import`. Importing merges: a chat that is missing is added, a chat you already have is replaced only when the file holds a more recent version (by last update), and anything else is left alone, so importing the same file twice never creates duplicates. A chat stays pinned if it is pinned on either side, and a chat that is generating is never replaced. Chats are matched by id and creation date; the search index is rebuilt for imported chats.
 - **License File**: The repository now ships the MIT `LICENSE` file and declares the license in `package.json`.
