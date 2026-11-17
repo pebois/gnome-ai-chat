@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-11-17
+
 ### Added
 - **Skills as Sub-agents**: The model can delegate a task to a skill with the new `run_skill` tool. The skill runs in its own context, with its own instructions and tools and only the task it was given, and just its final answer comes back into the conversation, so intermediate tool calls and tool definitions no longer fill the main context. Only skill names and descriptions are sent with each message. The tool call shows as "Delegating to a skill" with the task; a sub-agent cannot delegate further. Typing `@Name` still applies the skill directly. Delegation is offered as long as at least one skill is attached to the sub-agents.
 - **Agent Profiles**: Settings → Tools has a Main Agent / Sub-agents switch. Each profile lists the same switches: built-in tools, enabled MCP servers and enabled skills. The main agent profile decides what the model gets in the chat and which skills appear in the skill button and `@` completion; the sub-agents profile decides what a delegated skill gets and which skills the model can delegate to. An MCP server can stay connected and be attached to sub-agents only, so its tools never enter the main context. New tools, servers and skills are attached to both. Tools turned off before this version stay off in both profiles.
