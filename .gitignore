@@ -7,3 +7,4 @@ node_modules/
 .eslintcache
 /extension/extension.js
 /extension/schemas/gschemas.compiled
+gnome-ai-chat-conversations-*.json

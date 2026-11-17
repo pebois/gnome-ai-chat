@@ -30,6 +30,7 @@ import { areToolsEnabled } from '@/lib/tools/groups.js'
 import { BUILTIN_TOOLS } from '@/lib/tools/index.js'
 import { ToolRegistry } from '@/lib/tools/registry.js'
 import { Tracker } from '@/lib/tracker.js'
+import { type ImportPlan, planImport, type TransferConversation } from '@/lib/transfer.js'
 import { createSimpleAction } from '@/lib/ui.js'
 import { convertMessageToTitle } from '@/lib/utils.js'
 
@@ -481,6 +482,36 @@ export class App extends Adw.Application implements AppInterface {
     this.conversations = []
     this.sidebar.clearList()
     await this.sidebar.createNewConversation()
+  }
+
+  public async importConversations(entries: TransferConversation[]): Promise<ImportPlan> {
+    const plan = planImport(this.conversations, entries, (id) => {
+      return this.isGeneratingMessage(id) || this.isSummarizing(id)
+    })
+    if (plan.added.length === 0 && plan.replaced.length === 0) {
+      return plan
+    }
+    for (const { conversation } of plan.added) {
+      this.conversations.push(conversation)
+    }
+    for (const { conversation } of plan.replaced) {
+      const local = this.conversations.find((c) => {
+        return c.id === conversation.id
+      })
+      if (local) {
+        Object.assign(local, conversation, { embeddings: undefined })
+      }
+    }
+    await conversationsStore.saveConversations(this.conversations)
+    for (const { conversation, messages } of [...plan.added, ...plan.replaced]) {
+      await conversationsStore.saveMessages(conversation.id, messages)
+    }
+    this.sidebar.populateList()
+    if (this.conversation) {
+      await this.sidebar.selectConversationById(this.conversation.id)
+    }
+    this._indexConversationsLater()
+    return plan
   }
 
   public cancelFilesIndexing(): void {

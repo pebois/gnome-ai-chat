@@ -5,6 +5,7 @@ import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/lib/app.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
+import { exportAllConversations, importConversations } from '@/lib/export.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
 
 export class DataPage {
@@ -137,6 +138,36 @@ export class DataPage {
       title: 'Chat History'
     })
     this._page.add(group)
+
+    const exportRow = new Adw.ActionRow({
+      title: 'Export All Chats',
+      subtitle: 'Save every chat to a JSON file'
+    })
+    const exportBtn = new Gtk.Button({
+      label: 'Export',
+      valign: Gtk.Align.CENTER
+    })
+    exportBtn.add_css_class('row-button')
+    exportBtn.connect('clicked', () => {
+      exportAllConversations(this._app, this._window)
+    })
+    exportRow.add_suffix(exportBtn)
+    group.add(exportRow)
+
+    const importRow = new Adw.ActionRow({
+      title: 'Import Chats',
+      subtitle: 'Merge chats from an exported file. Chats you already have are updated only when the file is newer.'
+    })
+    const importBtn = new Gtk.Button({
+      label: 'Import',
+      valign: Gtk.Align.CENTER
+    })
+    importBtn.add_css_class('row-button')
+    importBtn.connect('clicked', () => {
+      importConversations(this._app, this._window)
+    })
+    importRow.add_suffix(importBtn)
+    group.add(importRow)
 
     const clearRow = new Adw.ActionRow({
       title: 'Clear All Chats'

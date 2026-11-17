@@ -47,5 +47,6 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.1"
   },
-  "author": "Pierre-Emmanuel Bois"
+  "author": "Pierre-Emmanuel Bois",
+  "license": "MIT"
 }

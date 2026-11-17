@@ -12,6 +12,7 @@ import type { Provider } from '@/lib/providers/index.js'
 import type { SkillsManager } from '@/lib/skills/manager.js'
 import type { ToolRegistry } from '@/lib/tools/registry.js'
 import type { Tracker } from '@/lib/tracker.js'
+import type { ImportPlan, TransferConversation } from '@/lib/transfer.js'
 
 export interface ToastAction {
   label: string
@@ -42,6 +43,7 @@ export interface AppInterface {
   activateAction(action_name: string, parameter?: GLib.Variant): void
   cancelFilesIndexing(): void
   clearAllConversations(): Promise<void>
+  importConversations(entries: TransferConversation[]): Promise<ImportPlan>
   connect(sigName: 'busy-changed', callback: (_: number, isBusy: boolean) => void): number
   connect(sigName: 'capabilities-changed', callback: (_: number) => void): number
   connect(sigName: 'files-indexing-changed', callback: (_: number, active: boolean, fraction: number) => void): number
