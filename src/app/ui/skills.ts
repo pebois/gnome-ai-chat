@@ -4,7 +4,7 @@ import Gtk from 'gi://Gtk?version=4.0'
 import type { AppInterface } from '@/lib/app.js'
 import type { Skill } from '@/lib/db/types.js'
 import { pangoEscape } from '@/lib/parser.js'
-import { availableSkills } from '@/lib/tools/groups.js'
+import { availableSkills } from '@/lib/skills/index.js'
 
 export class Skills {
   private _app: AppInterface
@@ -183,7 +183,7 @@ export class Skills {
   }
 
   private _updateList(filterText: string): void {
-    const skills = availableSkills(this._app.skills || [], this._app.settings).sort((a, b) => {
+    const skills = availableSkills(this._app.skills || [], this._app.settings.agents.main, this._app.mcp.servers).sort((a, b) => {
       return a.name.localeCompare(b.name)
     })
     const matches = skills.filter((skill) => {

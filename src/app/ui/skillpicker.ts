@@ -3,8 +3,7 @@ import GLib from 'gi://GLib?version=2.0'
 import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/lib/app.js'
-import { applySkillMention, matchSkill } from '@/lib/skills/index.js'
-import { availableSkills } from '@/lib/tools/groups.js'
+import { applySkillMention, availableSkills, matchSkill } from '@/lib/skills/index.js'
 
 const NO_SKILL_TOOLTIP = 'Choose a skill (@)'
 
@@ -48,7 +47,7 @@ export class SkillPicker {
   }
 
   private _availableSkills() {
-    return availableSkills(this._app.skills ?? [], this._app.settings)
+    return availableSkills(this._app.skills ?? [], this._app.settings.agents.main, this._app.mcp.servers)
   }
 
   private _buildMenu(): Gio.Menu {

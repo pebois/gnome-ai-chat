@@ -138,7 +138,10 @@ export const DEFAULT_SETTINGS = {
     apps: 'ask',
     mcp: 'ask'
   },
-  disabledTools: []
+  agents: {
+    main: { disabledTools: [], disabledServers: [], disabledSkills: [] },
+    sub: { disabledTools: [], disabledServers: [], disabledSkills: [] }
+  }
 } as Settings
 
 export const DEFAULT_STATS = {

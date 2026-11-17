@@ -5,33 +5,23 @@ import { MCP_RECONNECT_DELAYS_MS, MCP_STABLE_CONNECTION_MS } from '@/lib/constan
 import { mcpStore } from '@/lib/db/mcp.js'
 import type { McpServer, McpServerStatus } from '@/lib/db/types.js'
 import { debug } from '@/lib/debug.js'
+import type { ItemSource } from '@/lib/items.js'
 import { McpClient } from '@/lib/mcp/client.js'
-import { buildMcpToolName, commandLine, connectionKey, formatMcpToolLabel, parseMcpToolName, resolveMcpTier, validateServer } from '@/lib/mcp/config.js'
+import { buildMcpToolName, commandLine, connectionKey, formatMcpToolLabel, parseMcpToolName, validateServer } from '@/lib/mcp/config.js'
 import { HttpTransport } from '@/lib/mcp/http.js'
 import { type McpToolDefinition, mcpToolToOllamaTool, toolResultToString } from '@/lib/mcp/jsonrpc.js'
 import { checkMcpPermission } from '@/lib/mcp/permissions.js'
 import { StdioTransport } from '@/lib/mcp/stdio.js'
 import { errorMessage, type McpTransport } from '@/lib/mcp/transport.js'
-import type { Tool } from '@/lib/providers/index.js'
 import { sleep } from '@/lib/timeout.js'
-
-interface IndexedTool {
-  serverId: string
-  client: McpClient
-  definition: McpToolDefinition
-}
-
-export interface McpToolInfo {
-  server: McpServer
-  definition: McpToolDefinition
-}
+import type { ToolEntry } from '@/lib/tools/registry.js'
 
 export interface McpToolLabel {
   label: string
   description?: string
 }
 
-export class McpManager {
+export class McpManager implements ItemSource<McpServer> {
   public servers: McpServer[] = []
   public status: Map<string, McpServerStatus> = new Map()
   public onChanged?: () => void
@@ -42,38 +32,52 @@ export class McpManager {
   private _keys: Map<string, string> = new Map()
   private _retries: Map<string, number> = new Map()
   private _connectedAt: Map<string, number> = new Map()
-  private _toolIndex: Map<string, IndexedTool> = new Map()
   private _shuttingDown = false
 
   constructor(app: AppInterface) {
     this._app = app
   }
 
+  public get items(): McpServer[] {
+    return this.servers
+  }
+
   public async start(): Promise<void> {
-    this.servers = await mcpStore.getServers()
+    this.servers = await mcpStore.list()
     await Promise.allSettled(this.servers.map((server) => {
       return this._sync(server, false)
     }))
   }
 
-  public async reload(id?: string): Promise<void> {
-    this.servers = await mcpStore.getServers()
-    for (const existingId of new Set([...this._clients.keys(), ...this.status.keys()])) {
-      if (!this._server(existingId)) {
-        this._retries.delete(existingId)
-        await this._disconnect(existingId)
-      }
+  public async save(server: McpServer): Promise<void> {
+    if (!this.servers.includes(server)) {
+      this.servers.push(server)
     }
-    const targets = id
-      ? this.servers.filter((s) => {
-          return s.id === id
-        })
-      : this.servers
-    for (const server of targets) {
+    await mcpStore.save(server)
+    this._retries.delete(server.id)
+    await this._sync(server, false)
+    this.onChanged?.()
+  }
+
+  public async remove(id: string): Promise<void> {
+    const index = this.servers.findIndex((s) => {
+      return s.id === id
+    })
+    if (index === -1) {
+      return
+    }
+    this.servers.splice(index, 1)
+    await mcpStore.remove(id)
+    this._retries.delete(id)
+    await this._disconnect(id)
+  }
+
+  public async reload(): Promise<void> {
+    for (const server of this.servers) {
       this._retries.delete(server.id)
     }
-    await Promise.allSettled(targets.map((server) => {
-      return this._sync(server, !id)
+    await Promise.allSettled(this.servers.map((server) => {
+      return this._sync(server, true)
     }))
   }
 
@@ -95,54 +99,45 @@ export class McpManager {
     return this._clients.get(id)?.tools ?? []
   }
 
-  public getToolInfo(name: string): McpToolInfo | null {
-    const entry = this._toolIndex.get(name)
-    const server = entry ? this._server(entry.serverId) : undefined
-    return entry && server ? { server, definition: entry.definition } : null
-  }
-
-  public getTools(): Tool[] {
-    const tools: Tool[] = []
-    for (const entry of this._toolIndex.values()) {
-      const server = this._server(entry.serverId)
-      if (server && resolveMcpTier(this._app.settings, server) !== 'deny') {
-        tools.push(mcpToolToOllamaTool(server.name, entry.definition))
-      }
-    }
-    return tools
-  }
-
-  public hasTool(name: string): boolean {
-    return this._toolIndex.has(name)
-  }
-
   public getToolLabel(name: string): McpToolLabel | null {
-    const info = this.getToolInfo(name)
-    if (info) {
-      return { label: formatMcpToolLabel(info.server.name, info.definition.name), description: info.definition.description?.trim() || undefined }
+    const source = this._app.tools.get(name)?.source
+    if (source?.kind === 'mcp') {
+      return { label: formatMcpToolLabel(source.serverName, source.toolName), description: source.description }
     }
     const parsed = parseMcpToolName(name)
     return parsed ? { label: formatMcpToolLabel(parsed.server, parsed.tool) } : null
   }
 
-  public async callTool(name: string, args: Record<string, unknown>, cancellable?: Gio.Cancellable): Promise<string> {
-    const entry = this._toolIndex.get(name)
-    const server = entry ? this._server(entry.serverId) : undefined
-    if (!entry || !server) {
-      return `Error: MCP tool "${name}" is not available.`
+  public isToolEnabled(server: McpServer, toolName: string): boolean {
+    return !server.disabledTools.includes(toolName)
+  }
+
+  public async setToolsEnabled(server: McpServer, toolNames: string[], enabled: boolean): Promise<void> {
+    const disabled = new Set(server.disabledTools)
+    for (const name of toolNames) {
+      if (enabled) {
+        disabled.delete(name)
+      } else {
+        disabled.add(name)
+      }
     }
-    const denied = await checkMcpPermission(this._app, server, entry.definition.name, args, entry.definition.description)
+    server.disabledTools = [...disabled].sort()
+    await this.save(server)
+  }
+
+  private async _callTool(name: string, server: McpServer, client: McpClient, definition: McpToolDefinition, args: Record<string, unknown>, cancellable?: Gio.Cancellable): Promise<string> {
+    const denied = await checkMcpPermission(this._app, name, server.name, definition.name, args, definition.description)
     if (denied) {
       return denied
     }
     try {
-      const result = await entry.client.callTool(entry.definition.name, args, server.timeoutSec * 1000, cancellable)
+      const result = await client.callTool(definition.name, args, server.timeoutSec * 1000, cancellable)
       const text = toolResultToString(result)
-      this._log(server.name, `${entry.definition.name} → ${text.slice(0, 200)}`)
+      this._log(server.name, `${definition.name} → ${text.slice(0, 200)}`)
       return text
     } catch (err) {
       const message = errorMessage(err)
-      this._log(server.name, `${entry.definition.name} failed: ${message}`)
+      this._log(server.name, `${definition.name} failed: ${message}`)
       return message.startsWith('Error') ? message : `Error: ${message}`
     }
   }
@@ -155,7 +150,7 @@ export class McpManager {
     this._clients.clear()
     this._keys.clear()
     this._connectedAt.clear()
-    this._toolIndex.clear()
+    this._app.tools.setMcp([])
     this.status.clear()
   }
 
@@ -207,7 +202,8 @@ export class McpManager {
   }
 
   private _rebuildIndex(): void {
-    this._toolIndex.clear()
+    const entries: ToolEntry[] = []
+    const names = new Set<string>()
     for (const [id, client] of this._clients) {
       const server = this._server(id)
       if (!server) {
@@ -215,13 +211,27 @@ export class McpManager {
       }
       for (const definition of client.tools) {
         const name = buildMcpToolName(server.name, definition.name)
-        if (this._toolIndex.has(name)) {
+        if (names.has(name)) {
           this._log(server.name, `duplicate tool name ${name} ignored`)
           continue
         }
-        this._toolIndex.set(name, { serverId: id, client, definition })
+        names.add(name)
+        entries.push({
+          name,
+          source: { kind: 'mcp', serverId: id, serverName: server.name, toolName: definition.name, description: definition.description?.trim() || undefined },
+          tool: mcpToolToOllamaTool(server.name, definition),
+          handler: (_app, args, cancellable) => {
+            return this._callTool(name, server, client, definition, args, cancellable)
+          },
+          category: 'mcp',
+          prompts: true,
+          tier: server.permission === 'inherit' ? undefined : server.permission,
+          disabled: !this.isToolEnabled(server, definition.name),
+          parallelSafe: false
+        })
       }
     }
+    this._app.tools.setMcp(entries)
   }
 
   private async _sync(server: McpServer, force: boolean): Promise<void> {

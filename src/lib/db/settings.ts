@@ -1,3 +1,4 @@
+import { normalizeAgents } from '@/lib/agent/profiles.js'
 import { DEFAULT_SETTINGS } from '@/lib/constants.js'
 import { db } from '@/lib/db/index.js'
 import type { PerformanceStats, Settings } from '@/lib/db/types.js'
@@ -14,19 +15,20 @@ export class SettingsStore {
   }
 
   public async loadSettings(): Promise<void> {
-    const data = await db.getKv<Partial<Settings>>('settings')
+    const stored = await db.getKv<Partial<Settings> & { disabledTools?: unknown }>('settings')
+    const { disabledTools, ...data } = stored ?? {}
     Object.assign(this._settings, {
       ...DEFAULT_SETTINGS,
       ...data,
       options: {
         ...DEFAULT_SETTINGS.options,
-        ...(data?.options || {})
+        ...(data.options || {})
       },
       permissions: {
         ...DEFAULT_SETTINGS.permissions,
-        ...(data?.permissions || {})
+        ...(data.permissions || {})
       },
-      disabledTools: Array.isArray(data?.disabledTools) ? data.disabledTools : []
+      agents: normalizeAgents(data.agents, disabledTools)
     })
     db.setDebug(this._settings.debug)
   }

@@ -1,6 +1,6 @@
 import type { AppInterface } from '@/lib/app.js'
 import type { PermissionCategory } from '@/lib/db/types.js'
-import type { Tool } from '@/lib/providers/index.js'
+import { resolveToolTier } from '@/lib/tools/registry.js'
 
 interface ToolPermission {
   category: PermissionCategory
@@ -25,30 +25,16 @@ export async function checkToolPermission(
   title = '',
   body = ''
 ): Promise<string | null> {
-  const perm = TOOL_PERMISSIONS[toolName]
-  if (!perm) {
-    return null
-  }
-
-  const tier = app.settings.permissions?.[perm.category] ?? 'ask'
+  const entry = app.tools.get(toolName)
+  const tier = entry ? resolveToolTier(entry, app.settings) : null
   if (tier === 'deny') {
     return 'Error: denied by user settings.'
   }
-  if (tier === 'ask' && perm.prompts) {
+  if (tier === 'ask' && entry?.prompts) {
     const allowed = await app.requestToolPermission(title, body)
     if (!allowed) {
       return 'Error: User denied permission.'
     }
   }
   return null
-}
-
-export function filterToolsByPermissions(app: AppInterface, allTools: Tool[]): Tool[] {
-  return allTools.filter((tool) => {
-    const perm = TOOL_PERMISSIONS[tool.function.name]
-    if (!perm) {
-      return true
-    }
-    return (app.settings.permissions?.[perm.category] ?? 'ask') !== 'deny'
-  })
 }

@@ -1,61 +1,32 @@
 import Adw from 'gi://Adw?version=1'
 
+import { type AccessToggle, createAccessGroups } from '@/app/window/preferences/access.js'
+import { setProfileItems } from '@/lib/agent/profiles.js'
 import type { AppInterface } from '@/lib/app.js'
-import { formatToolTitle, isGroupEnabled, isToolEnabled, setGroupEnabled, setToolEnabled, TOOL_GROUPS, type ToolGroup } from '@/lib/tools/groups.js'
-import { tools } from '@/lib/tools/index.js'
+import type { AgentKind, AgentProfile } from '@/lib/db/types.js'
 
-function toolDescription(name: string): string {
-  return tools.find((tool) => {
-    return tool.function.name === name
-  })?.function.description ?? ''
+const PROFILE_LABELS: Record<AgentKind, { label: string; description: string }> = {
+  main: {
+    label: 'Main Agent',
+    description: 'Tools and MCP servers offered to the model in the chat. Skills listed here appear in the skill picker and @-mentions.'
+  },
+  sub: {
+    label: 'Sub-agents',
+    description: 'Tools and MCP servers offered to a skill running as a sub-agent. Skills listed here can be delegated to by the model.'
+  }
 }
 
-function createGroupRow(app: AppInterface, group: ToolGroup): Adw.ExpanderRow {
-  const expander = new Adw.ExpanderRow({
-    title: group.title,
-    subtitle: `${group.tools.length} tool${group.tools.length === 1 ? '' : 's'}`,
-    icon_name: group.icon,
-    show_enable_switch: true,
-    enable_expansion: isGroupEnabled(app.settings, group),
-    expanded: false
-  })
-
-  let syncing = false
-  const switches = group.tools.map((name) => {
-    const row = new Adw.SwitchRow({
-      title: formatToolTitle(name),
-      subtitle: toolDescription(name),
-      subtitle_lines: 2,
-      active: isToolEnabled(app.settings, name)
-    })
-    row.connect('notify::active', () => {
-      if (syncing) {
-        return
-      }
-      setToolEnabled(app.settings, name, row.active)
+function profileToggle(app: AppInterface, kind: AgentKind, key: keyof AgentProfile): AccessToggle {
+  return {
+    isOn: (id) => {
+      return !app.settings.agents[kind][key].includes(id)
+    },
+    set: (ids, on) => {
+      const profile = app.settings.agents[kind]
+      profile[key] = setProfileItems(profile[key], ids, on)
       app.saveSettings()
-      syncing = true
-      expander.enable_expansion = isGroupEnabled(app.settings, group)
-      syncing = false
-    })
-    expander.add_row(row)
-    return { name, row }
-  })
-
-  expander.connect('notify::enable-expansion', () => {
-    if (syncing) {
-      return
     }
-    setGroupEnabled(app.settings, group, expander.enable_expansion)
-    app.saveSettings()
-    syncing = true
-    for (const { name, row } of switches) {
-      row.active = isToolEnabled(app.settings, name)
-    }
-    syncing = false
-  })
-
-  return expander
+  }
 }
 
 export function createToolsPage(app: AppInterface): Adw.PreferencesPage {
@@ -64,14 +35,34 @@ export function createToolsPage(app: AppInterface): Adw.PreferencesPage {
     icon_name: 'applications-engineering-symbolic'
   })
 
-  const group = new Adw.PreferencesGroup({
-    title: 'Built-in Tools',
-    description: 'Turn off built-in tools you don\'t need or have replaced with an MCP server. Turned-off tools are hidden from the model.'
-  })
-  for (const toolGroup of TOOL_GROUPS) {
-    group.add(createGroupRow(app, toolGroup))
+  const toggleGroup = new Adw.ToggleGroup({ homogeneous: true })
+  for (const kind of Object.keys(PROFILE_LABELS) as AgentKind[]) {
+    toggleGroup.add(new Adw.Toggle({ name: kind, label: PROFILE_LABELS[kind].label }))
   }
-  page.add(group)
+  const header = new Adw.PreferencesGroup()
+  header.add(toggleGroup)
+  page.add(header)
+
+  let groups: Adw.PreferencesGroup[] = []
+  const show = (kind: AgentKind): void => {
+    for (const group of groups) {
+      page.remove(group)
+    }
+    header.description = PROFILE_LABELS[kind].description
+    groups = createAccessGroups(app, {
+      tools: profileToggle(app, kind, 'disabledTools'),
+      servers: profileToggle(app, kind, 'disabledServers'),
+      skills: profileToggle(app, kind, 'disabledSkills')
+    })
+    for (const group of groups) {
+      page.add(group)
+    }
+  }
+  toggleGroup.connect('notify::active-name', () => {
+    show(toggleGroup.active_name === 'sub' ? 'sub' : 'main')
+  })
+  toggleGroup.active_name = 'main'
+  show('main')
 
   return page
 }
