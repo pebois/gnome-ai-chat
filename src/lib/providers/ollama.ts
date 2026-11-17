@@ -23,7 +23,6 @@ import type {
   ToolCall
 } from '@/lib/providers/index.js'
 import { isModelOutdated, registryManifestUrl } from '@/lib/registry.js'
-import { buildSkillPrompt } from '@/lib/skills/index.js'
 import type { Tracker } from '@/lib/tracker.js'
 
 Gio._promisify(Soup.Session.prototype, 'send_async', 'send_finish')
@@ -318,19 +317,12 @@ export class OllamaProvider implements Provider {
       return processed
     })
 
-    let skillPrompt = ''
-    if (props.skill) {
-      this._debug(`Using skill: ${props.skill.name}`)
-      skillPrompt = buildSkillPrompt(props.skill)
-    }
-
     const finalMessages = processedMessages.filter((m) => {
       return m.role !== 'system'
     })
 
-    const systemContent = [props.system, skillPrompt].filter(Boolean).join('\n\n')
-    if (systemContent) {
-      finalMessages.unshift({ role: 'system', content: systemContent })
+    if (props.system) {
+      finalMessages.unshift({ role: 'system', content: props.system })
     }
 
     const req: ChatRequest = {

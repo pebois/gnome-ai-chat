@@ -1,6 +1,6 @@
 import GLib from 'gi://GLib?version=2.0'
 
-import { showMcpWindow } from '@/app/window/mcp/index.js'
+import { showManageWindow } from '@/app/window/manage/index.js'
 import type { AppInterface } from '@/lib/app.js'
 import type { Command } from '@/lib/commands/index.js'
 import { commandArguments } from '@/lib/commands/parse.js'
@@ -27,7 +27,7 @@ async function reload(app: AppInterface): Promise<void> {
     app.showToast(message, true, {
       label: 'Manage',
       onClick: () => {
-        showMcpWindow(app)
+        showManageWindow(app, { section: 'mcp' })
       }
     })
   } else {
@@ -48,7 +48,7 @@ export const mcp: Command = {
   activate: async (app, parameter) => {
     const subCommand = parseSubCommand(parameter)
     if (subCommand === 'manage') {
-      showMcpWindow(app)
+      showManageWindow(app, { section: 'mcp' })
     } else if (subCommand === 'reload') {
       await reload(app)
     } else {

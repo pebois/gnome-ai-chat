@@ -1,28 +1,15 @@
 import { DEFAULT_MCP_TIMEOUT_SEC, MCP_MAX_TOOL_NAME_LENGTH, MCP_TOOL_PREFIX } from '@/lib/constants.js'
 import type { McpServer, McpServerStatus, PermissionTier, Settings } from '@/lib/db/types.js'
+import { generateId, isValidItemName, type NameRules, uniqueName, validateItemName } from '@/lib/naming.js'
 
-export const MCP_SERVER_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
+export const SERVER_NAME_RULES: NameRules = {
+  noun: 'server',
+  invalidMessage: 'Server name must start with a letter or digit, contain only letters, digits, hyphens or single underscores, and not end with an underscore',
+  isValid: isValidServerName
+}
 
 export function isValidServerName(name: string): boolean {
-  return MCP_SERVER_NAME_PATTERN.test(name) && !name.includes('__') && !name.endsWith('_')
-}
-
-export function uniqueServerName(base: string, existing: string[]): string {
-  const taken = new Set(existing.map((n) => {
-    return n.toLowerCase()
-  }))
-  if (!taken.has(base.toLowerCase())) {
-    return base
-  }
-  let index = 2
-  while (taken.has(`${base}-${index}`.toLowerCase())) {
-    index++
-  }
-  return `${base}-${index}`
-}
-
-export function generateServerId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  return isValidItemName(name) && !name.includes('__') && !name.endsWith('_')
 }
 
 function asRecord(value: unknown): Record<string, string> {
@@ -60,29 +47,20 @@ export function normalizeServer(partial: Partial<McpServer> & { id: string }): M
     url: typeof partial.url === 'string' ? partial.url : '',
     headers: asRecord(partial.headers),
     permission: partial.permission === 'ask' || partial.permission === 'auto-accept' || partial.permission === 'deny' ? partial.permission : 'inherit',
-    timeoutSec: Number.isFinite(timeout) && timeout >= 1 ? Math.floor(timeout) : DEFAULT_MCP_TIMEOUT_SEC
+    timeoutSec: Number.isFinite(timeout) && timeout >= 1 ? Math.floor(timeout) : DEFAULT_MCP_TIMEOUT_SEC,
+    disabledTools: asStringArray(partial.disabledTools)
   }
 }
 
 export function createServer(existingNames: string[]): McpServer {
   return normalizeServer({
-    id: generateServerId(),
-    name: uniqueServerName('new-server', existingNames)
+    id: generateId(),
+    name: uniqueName('new-server', existingNames)
   })
 }
 
 export function validateServerName(name: string, id: string, others: McpServer[]): string | null {
-  if (!isValidServerName(name)) {
-    return 'Server name must start with a letter or digit, contain only letters, digits, hyphens or single underscores, and not end with an underscore'
-  }
-  const lower = name.toLowerCase()
-  const duplicate = others.some((o) => {
-    return o.id !== id && o.name.toLowerCase() === lower
-  })
-  if (duplicate) {
-    return `A server named "${name}" already exists`
-  }
-  return null
+  return validateItemName(name, id, others, SERVER_NAME_RULES)
 }
 
 export function validateServer(server: McpServer, others: McpServer[]): string | null {

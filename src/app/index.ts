@@ -11,7 +11,7 @@ import { ArtifactWindow } from '@/app/window/artifact.js'
 import { Chat } from '@/app/window/main/chat.js'
 import { AppWindow } from '@/app/window/main/index.js'
 import { Sidebar } from '@/app/window/main/sidebar.js'
-import { isMcpWindowOpen, showMcpWindow } from '@/app/window/mcp/index.js'
+import { closeManageWindow, isManageSectionVisible, showManageWindow } from '@/app/window/manage/index.js'
 import type { AppInterface, ToastAction } from '@/lib/app.js'
 import { COMMANDS } from '@/lib/commands/index.js'
 import { APPLICATION_ID, CONVERSATION_INDEX_DELAY_MS, DEFAULT_CHAT_MODEL } from '@/lib/constants.js'
@@ -19,14 +19,16 @@ import { conversationsStore } from '@/lib/db/conversations.js'
 import { filesStore } from '@/lib/db/files.js'
 import { db } from '@/lib/db/index.js'
 import { settingsStore } from '@/lib/db/settings.js'
-import { skillsStore } from '@/lib/db/skills.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
 import { McpManager } from '@/lib/mcp/manager.js'
 import { pangoEscape } from '@/lib/parser.js'
 import type { ChatMessage } from '@/lib/providers/index.js'
 import { OllamaProvider } from '@/lib/providers/ollama.js'
+import { SkillsManager } from '@/lib/skills/manager.js'
 import { debounce } from '@/lib/timeout.js'
 import { areToolsEnabled } from '@/lib/tools/groups.js'
+import { BUILTIN_TOOLS } from '@/lib/tools/index.js'
+import { ToolRegistry } from '@/lib/tools/registry.js'
 import { Tracker } from '@/lib/tracker.js'
 import { createSimpleAction } from '@/lib/ui.js'
 import { convertMessageToTitle } from '@/lib/utils.js'
@@ -57,9 +59,10 @@ export class App extends Adw.Application implements AppInterface {
   public mcp: McpManager
   public models: string[]
   public provider!: OllamaProvider
-  public skills: Skill[] = []
+  public skillsManager: SkillsManager
   public supportsVision = true
   public toolModels: string[] = []
+  public tools: ToolRegistry
   public tracker: Tracker
   public window!: AppWindow
   public activeArtifacts: Map<string, ArtifactWindow> = new Map()
@@ -75,13 +78,21 @@ export class App extends Adw.Application implements AppInterface {
     this.conversations = []
     this.tracker = new Tracker()
     this.provider = new OllamaProvider(this.settings, this.tracker)
+    this.tools = new ToolRegistry()
+    this.tools.setBuiltins(BUILTIN_TOOLS)
+    this.skillsManager = new SkillsManager(() => {
+      return this.provider
+    })
+    this.skillsManager.onChanged = () => {
+      this.emit('skills-changed')
+    }
     this.mcp = new McpManager(this)
     this.mcp.onError = (server, message) => {
-      if (!isMcpWindowOpen()) {
+      if (!isManageSectionVisible('mcp')) {
         this.showToast(`${server.name}: ${message}`, true, {
           label: 'Manage',
           onClick: () => {
-            showMcpWindow(this, server.id)
+            showManageWindow(this, { section: 'mcp', itemId: server.id })
           }
         })
       }
@@ -89,6 +100,10 @@ export class App extends Adw.Application implements AppInterface {
     this.mcp.onChanged = () => {
       this.emit('mcp-changed')
     }
+  }
+
+  public get skills(): Skill[] {
+    return this.skillsManager.items
   }
 
   public get chat(): Chat {
@@ -250,6 +265,7 @@ export class App extends Adw.Application implements AppInterface {
 
     this._isExiting = true
     this._indexConversationsLater.cancel()
+    closeManageWindow()
 
     this.window.hide()
     this.hold()
@@ -266,8 +282,7 @@ export class App extends Adw.Application implements AppInterface {
     if (this._settingsLoaded) {
       try {
         await settingsStore.saveSettings(this.settings)
-        await skillsStore.saveSkills(this.skills)
-        await skillsStore.indexSkills(this.provider, this.skills, false)
+        await this.skillsManager.index()
       } catch (err) {
         console.error('Failed to save settings on quit:', err)
       }
@@ -317,14 +332,6 @@ export class App extends Adw.Application implements AppInterface {
     this.provider.url = this.settings.url
     this.window.updateCssClass()
     this._persistSettings()
-  }
-
-  public saveSkills(): void {
-    void skillsStore.saveSkills(this.skills).then(() => {
-      return skillsStore.indexSkills(this.provider, this.skills, false)
-    }).catch((err) => {
-      this.reportError('Could not save skills', err)
-    })
   }
 
   public saveConversations(): void {
@@ -578,7 +585,7 @@ export class App extends Adw.Application implements AppInterface {
       const action = createSimpleAction(
         cmd.name,
         (_action, parameter) => {
-          if (!areToolsEnabled(this.settings, cmd.requiredTools ?? [])) {
+          if (!areToolsEnabled(this.settings.agents.main, cmd.requiredTools ?? [])) {
             this.showToast(`/${cmd.name} needs built-in tools that are turned off in Settings → Tools`)
             return
           }
@@ -606,7 +613,7 @@ export class App extends Adw.Application implements AppInterface {
 
   private async _loadSettings(): Promise<void> {
     await settingsStore.loadSettings()
-    this.skills = await skillsStore.getSkills()
+    await this.skillsManager.load()
     this.provider.url = this.settings.url
     this._settingsLoaded = true
   }
@@ -662,6 +669,9 @@ GObject.registerClass({
       param_types: []
     },
     'mcp-changed': {
+      param_types: []
+    },
+    'skills-changed': {
       param_types: []
     },
     'syntax-changed': {

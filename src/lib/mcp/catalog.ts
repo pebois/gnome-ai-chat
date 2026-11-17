@@ -1,5 +1,6 @@
 import type { McpServer } from '@/lib/db/types.js'
-import { generateServerId, normalizeServer, uniqueServerName } from '@/lib/mcp/config.js'
+import { normalizeServer } from '@/lib/mcp/config.js'
+import { generateId, uniqueName } from '@/lib/naming.js'
 
 export type McpCatalogCategory = 'replacement' | 'addition'
 
@@ -135,8 +136,8 @@ export function catalogEntrySubtitle(entry: McpCatalogEntry, home: string): stri
 
 export function createServerFromCatalog(entry: McpCatalogEntry, existingNames: string[], home: string): McpServer {
   return normalizeServer({
-    id: generateServerId(),
-    name: uniqueServerName(entry.name, existingNames),
+    id: generateId(),
+    name: uniqueName(entry.name, existingNames),
     enabled: false,
     transport: entry.transport,
     command: entry.command ?? '',

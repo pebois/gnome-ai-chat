@@ -25,13 +25,14 @@ const ACTIVITY_LABELS: Record<string, string> = {
   render_html: 'Rendering preview',
   roll_die: 'Rolling dice',
   run_shell_command: 'Running command',
+  run_skill: 'Delegating to a skill',
   search_files: 'Searching files',
   search_nodes: 'Searching memory',
   search_vector_index: 'Searching indexed files',
   web_search: 'Searching the web'
 }
 
-const DETAIL_KEYS = ['question', 'query', 'url', 'path', 'command', 'expression', 'name', 'app_id']
+const DETAIL_KEYS = ['question', 'query', 'url', 'path', 'command', 'expression', 'name', 'app_id', 'task']
 const DETAIL_MAX_CHARS = 60
 
 export function toolActivityDetail(args?: Record<string, unknown>): string {

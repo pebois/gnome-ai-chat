@@ -25,6 +25,7 @@ export interface McpServer {
   headers: Record<string, string>
   permission: McpPermission
   timeoutSec: number
+  disabledTools: string[]
 }
 
 export type McpServerState = 'connecting' | 'connected' | 'error'
@@ -35,12 +36,27 @@ export interface McpServerStatus {
   toolCount: number
 }
 
+export interface SkillTools {
+  builtin?: string[]
+  mcp?: string[]
+}
+
 export interface Skill {
   id: string
   name: string
   description?: string
   prompt: string
+  enabled: boolean
+  tools?: SkillTools
   embeddings?: number[]
+}
+
+export type AgentKind = 'main' | 'sub'
+
+export interface AgentProfile {
+  disabledTools: string[]
+  disabledServers: string[]
+  disabledSkills: string[]
 }
 
 export interface Settings {
@@ -53,7 +69,7 @@ export interface Settings {
   debug: boolean
   options: Record<string, number>
   permissions: Record<PermissionCategory, PermissionTier>
-  disabledTools: string[]
+  agents: Record<AgentKind, AgentProfile>
 }
 
 export interface Conversation {

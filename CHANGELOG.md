@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Skills as Sub-agents**: The model can delegate a task to a skill with the new `run_skill` tool. The skill runs in its own context, with its own instructions and tools and only the task it was given, and just its final answer comes back into the conversation, so intermediate tool calls and tool definitions no longer fill the main context. Only skill names and descriptions are sent with each message. The tool call shows as "Delegating to a skill" with the task; a sub-agent cannot delegate further. Typing `@Name` still applies the skill directly. Delegation is offered as long as at least one skill is attached to the sub-agents.
+- **Agent Profiles**: Settings → Tools has a Main Agent / Sub-agents switch. Each profile lists the same switches: built-in tools, enabled MCP servers and enabled skills. The main agent profile decides what the model gets in the chat and which skills appear in the skill button and `@` completion; the sub-agents profile decides what a delegated skill gets and which skills the model can delegate to. An MCP server can stay connected and be attached to sub-agents only, so its tools never enter the main context. New tools, servers and skills are attached to both. Tools turned off before this version stay off in both profiles.
+- **Custom Tools per Skill**: A skill can turn on "Use Custom Tools" in its editor and pick its own built-in tools and MCP servers from the same list. The custom list replaces the agent profile while the skill runs, inline or as a sub-agent. `@Memory`, `@Files` and `@Canvas` ship with their own built-in lists (the memory tools; the file search and read tools; preview, file read and web tools). A tool that is not offered is refused if the model still calls it.
+- **Turn Skills Off**: Skills have an Enabled switch. A turned-off skill is dimmed in the list and hidden from every agent.
+- **Turn Single MCP Tools Off**: Each tool of an MCP server has a switch in the server's Overview tab. Turned-off tools are hidden from every agent and refused if called. The choice is stored with the server and survives renaming it.
+
+### Changed
+- **Skills and MCP Windows**: The Skills (`/skills`, Ctrl+Shift+S) and MCP Servers (`/mcp`, Ctrl+Shift+M) windows keep their own window each and now share the same layout: sidebar with search, Ctrl+B, Ctrl+F and Ctrl+N. The "Manage" button of MCP error toasts selects the failing server.
+- **New Built-in Skills Reach Existing Users**: Built-in skills missing from the database are added at startup, so skills introduced by an update appear without resetting. Edited built-ins are kept and can still be reset. The `skills` table gains `enabled` and `tools` columns (migration 4).
+- **Skill Saving**: Skill edits are saved half a second after the last change and only the edited skill is written, instead of rewriting every skill on each keystroke. An invalid name is outlined in red, as for MCP servers.
+- **Shared Tool Registry**: Built-in and MCP tools are registered in one place (`app.tools`) with their handler, permission category and parallel-safety, and go through the same profile, permission and skill checks. The system prompt and skill prompt are assembled once (`lib/agent/request.ts`) instead of in both the chat service and the Ollama provider.
+- **Shared Management Code**: The Skills and MCP windows share one window class, sidebar, editor shell and save logic (`src/app/window/manage/`), name validation and id helpers (`lib/naming.ts`), and a `skills-changed` signal next to `mcp-changed`. The MCP manager is now the only owner of the server list.
+
+### Fixed
+- **Tool Results Sent Twice**: After the first round of tool calls in a reply, the tool calls and their results were sent to the model twice on the next request. They are now sent once.
+- **MCP Reload While Editing**: `/mcp reload` no longer re-reads servers from the database, so it cannot discard edits made in the window during the last half second.
+
 ## [1.15.0] - 2026-11-07
 
 ### Added

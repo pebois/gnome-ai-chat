@@ -4,6 +4,7 @@ export const writer: Skill = {
   id: 'writer',
   name: 'Writer',
   description: 'Expert copywriter. Clear, persuasive, and engaging writing.',
+  enabled: true,
   prompt: /* md */`
 ## Identity
 You are an expert copywriter, editor, and content strategist.

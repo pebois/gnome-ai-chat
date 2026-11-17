@@ -38,7 +38,7 @@ export class McpServerSettings {
     this._onChanged = onChanged
 
     this._nameRow = new Adw.EntryRow({ title: 'Name' })
-    this._enabledRow = new Adw.SwitchRow({ title: 'Enabled', subtitle: 'Connect at startup and expose tools to the model' })
+    this._enabledRow = new Adw.SwitchRow({ title: 'Enabled', subtitle: 'Connect at startup' })
     this._transportRow = new Adw.ComboRow({
       title: 'Transport',
       model: Gtk.StringList.new(['Stdio (local process)', 'Streamable HTTP'])

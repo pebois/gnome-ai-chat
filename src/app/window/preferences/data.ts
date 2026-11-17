@@ -5,7 +5,6 @@ import Gtk from 'gi://Gtk?version=4.0'
 
 import type { AppInterface } from '@/lib/app.js'
 import { conversationsStore } from '@/lib/db/conversations.js'
-import { skillsStore } from '@/lib/db/skills.js'
 import { showDestructiveConfirmation } from '@/lib/ui.js'
 
 export class DataPage {
@@ -215,7 +214,7 @@ export class DataPage {
     this._skillsIndexingCancellable = new Gio.Cancellable()
 
     try {
-      await skillsStore.indexSkills(this._app.provider, this._app.skills, true, this._skillsIndexingCancellable, (fraction) => {
+      await this._app.skillsManager.index(true, this._skillsIndexingCancellable, (fraction) => {
         progressBar.set_fraction(fraction)
       })
     } catch (err) {

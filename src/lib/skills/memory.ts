@@ -4,6 +4,10 @@ export const memory: Skill = {
   id: 'memory',
   name: 'Memory',
   description: 'Knowledge Graph expert. Persists facts and relationships about the user.',
+  enabled: true,
+  tools: {
+    builtin: ['add_observations', 'create_entities', 'create_relations', 'delete_entities', 'delete_observations', 'delete_relations', 'open_nodes', 'read_graph', 'search_nodes']
+  },
   prompt: /* md */`
 ## Identity
 You are a persistent memory specialist who builds and maintains a structured knowledge graph about the user, their environment, and their projects.

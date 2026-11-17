@@ -1,4 +1,4 @@
-import type { Settings } from '@/lib/db/types.js'
+import type { AgentProfile } from '@/lib/db/types.js'
 
 export interface ToolGroup {
   id: string
@@ -64,14 +64,14 @@ export const TOOL_GROUPS: ToolGroup[] = [
   }
 ]
 
-type ToolSettings = Pick<Settings, 'disabledTools'>
+type ToolSettings = Pick<AgentProfile, 'disabledTools'>
 
 export function isToolEnabled(settings: ToolSettings, name: string): boolean {
-  return !(settings.disabledTools ?? []).includes(name)
+  return !settings.disabledTools.includes(name)
 }
 
 export function setToolEnabled(settings: ToolSettings, name: string, enabled: boolean): void {
-  const disabled = new Set(settings.disabledTools ?? [])
+  const disabled = new Set(settings.disabledTools)
   if (enabled) {
     disabled.delete(name)
   } else {
@@ -100,32 +100,6 @@ export function areToolsEnabled(settings: ToolSettings, names: string[]): boolea
 
 export function isCommandAvailable(command: { visible?: boolean; requiredTools?: string[] }, settings: ToolSettings): boolean {
   return command.visible !== false && areToolsEnabled(settings, command.requiredTools ?? [])
-}
-
-export const SKILL_REQUIRED_TOOLS: Record<string, string[]> = {
-  memory: ['read_graph', 'search_nodes', 'open_nodes'],
-  files: ['search_vector_index'],
-  canvas: ['render_html']
-}
-
-export function isSkillAvailable(skill: { id: string }, settings: ToolSettings): boolean {
-  return areToolsEnabled(settings, SKILL_REQUIRED_TOOLS[skill.id] ?? [])
-}
-
-export function availableSkills<T extends { id: string }>(skills: T[], settings: ToolSettings): T[] {
-  return skills.filter((skill) => {
-    return isSkillAvailable(skill, settings)
-  })
-}
-
-export function skillToolStatus(skill: { id: string }, settings: ToolSettings): { required: string[]; disabled: string[] } {
-  const required = SKILL_REQUIRED_TOOLS[skill.id] ?? []
-  return {
-    required,
-    disabled: required.filter((name) => {
-      return !isToolEnabled(settings, name)
-    })
-  }
 }
 
 export function formatToolTitle(name: string): string {

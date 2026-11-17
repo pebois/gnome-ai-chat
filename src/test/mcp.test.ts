@@ -20,7 +20,6 @@ import {
   sanitizeToolName,
   serverSubtitle,
   splitArgs,
-  uniqueServerName,
   validateServer
 } from '@/lib/mcp/config.js'
 import {
@@ -110,14 +109,6 @@ describe('mcp config', () => {
     })
   })
 
-  describe('uniqueServerName', () => {
-    it('returns the base when free and suffixes otherwise', () => {
-      expect(uniqueServerName('new-server', [])).toBe('new-server')
-      expect(uniqueServerName('new-server', ['new-server'])).toBe('new-server-2')
-      expect(uniqueServerName('new-server', ['New-Server', 'new-server-2'])).toBe('new-server-3')
-    })
-  })
-
   describe('createServer', () => {
     it('creates a disabled stdio server with defaults', () => {
       const created = createServer(['new-server'])
@@ -143,7 +134,8 @@ describe('mcp config', () => {
         url: '',
         headers: {},
         permission: 'inherit',
-        timeoutSec: 30
+        timeoutSec: 30,
+        disabledTools: []
       })
     })
 

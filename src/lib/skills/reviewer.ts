@@ -4,6 +4,7 @@ export const reviewer: Skill = {
   id: 'reviewer',
   name: 'Reviewer',
   description: 'Strict code reviewer. Focuses on bugs, security, and best practices.',
+  enabled: true,
   prompt: /* md */`
 ## Identity
 You are a strict, senior code reviewer focused on correctness, security, and maintainability.

@@ -46,6 +46,9 @@ export class McpServerOverview {
   private _testSpinner: Adw.Spinner
   private _toolsGroup: Adw.PreferencesGroup
   private _toolRows: Gtk.Widget[] = []
+  private _toolSwitches = new Map<string, Adw.SwitchRow>()
+  private _toolsKey = ''
+  private _syncingTools = false
   private _testResults = new Map<string, TestResult>()
   private _server: McpServer | null = null
 
@@ -143,15 +146,25 @@ export class McpServerOverview {
   }
 
   private _refreshTools(server: McpServer, status?: McpServerStatus): void {
-    for (const row of this._toolRows) {
-      this._toolsGroup.remove(row)
-    }
-    this._toolRows = []
-
     const live = status?.state === 'connected' ? this._app.mcp.getServerTools(server.id) : []
     const test = this._currentTest(server)
     const tools = live.length > 0 || status?.state === 'connected' ? live : test && !test.running ? test.tools : []
     const source = status?.state === 'connected' ? 'Live' : test && !test.running && !test.error ? 'From last test' : ''
+
+    const key = JSON.stringify([server.id, source, tools.map((tool) => {
+      return [tool.name, tool.description ?? '']
+    })])
+    if (key === this._toolsKey) {
+      this._syncToolSwitches(server)
+      return
+    }
+    this._toolsKey = key
+
+    for (const row of this._toolRows) {
+      this._toolsGroup.remove(row)
+    }
+    this._toolRows = []
+    this._toolSwitches.clear()
 
     this._toolsGroup.description = source ? `${source} · ${describeToolList(tools.length).toLowerCase()}` : ''
     if (!source) {
@@ -166,16 +179,34 @@ export class McpServerOverview {
     }
     for (const tool of tools) {
       const description = tool.description?.trim() ?? ''
-      const row = new Adw.ActionRow({
+      const row = new Adw.SwitchRow({
         title: tool.name,
         subtitle: description,
         subtitle_lines: 2,
         tooltip_text: description,
-        use_markup: false
+        use_markup: false,
+        active: this._app.mcp.isToolEnabled(server, tool.name)
+      })
+      row.connect('notify::active', () => {
+        if (this._syncingTools || row.active === this._app.mcp.isToolEnabled(server, tool.name)) {
+          return
+        }
+        this._app.mcp.setToolsEnabled(server, [tool.name], row.active).catch((err: unknown) => {
+          this._app.reportError('Failed to save MCP server', err)
+        })
       })
       this._toolsGroup.add(row)
       this._toolRows.push(row)
+      this._toolSwitches.set(tool.name, row)
     }
+  }
+
+  private _syncToolSwitches(server: McpServer): void {
+    this._syncingTools = true
+    for (const [name, row] of this._toolSwitches) {
+      row.active = this._app.mcp.isToolEnabled(server, name)
+    }
+    this._syncingTools = false
   }
 
   private async _runTest(): Promise<void> {

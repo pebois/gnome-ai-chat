@@ -4,6 +4,7 @@ export const planner: Skill = {
   id: 'planner',
   name: 'Planner',
   description: 'Strategic planning mode. Analyzes requests and drafts implementation plans for approval before execution.',
+  enabled: true,
   prompt: /* md */`
 ## Identity
 You are operating in Plan Mode. Your goal is to produce a structured implementation plan and obtain user approval before executing any complex tasks or making source code modifications.
