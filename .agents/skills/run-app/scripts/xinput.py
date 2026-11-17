@@ -8,6 +8,7 @@ USAGE = '''usage: DISPLAY=:N python3 xinput.py <command> [...]
   click X Y            left click at screen coordinates
   rclick X Y           right click (context menus)
   key NAME [NAME...]   press keys in order; join modifiers with +, e.g. ctrl+comma Escape Tab Return
+  scroll X Y STEPS     scroll the wheel at screen coordinates, down for positive steps
   type TEXT            type ASCII text'''
 
 x11 = ctypes.cdll.LoadLibrary('libX11.so.6')
@@ -58,6 +59,17 @@ def main(argv):
             xtst.XTestFakeButtonEvent(display, button, 1, 0)
             xtst.XTestFakeButtonEvent(display, button, 0, 0)
             x11.XFlush(display)
+    elif command == 'scroll' and len(args) == 3:
+        xtst.XTestFakeMotionEvent(display, -1, int(args[0]), int(args[1]), 0)
+        x11.XFlush(display)
+        time.sleep(0.2)
+        steps = int(args[2])
+        for _ in range(abs(steps)):
+            button = 5 if steps > 0 else 4
+            xtst.XTestFakeButtonEvent(display, button, 1, 0)
+            xtst.XTestFakeButtonEvent(display, button, 0, 0)
+            x11.XFlush(display)
+            time.sleep(0.05)
     elif command == 'key' and args:
         for combo in args:
             press(display, combo)

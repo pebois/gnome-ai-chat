@@ -1,59 +1,46 @@
 import type Gio from 'gi://Gio'
 
-import { DEFAULT_EMBEDDING_MODEL, DEFAULT_SKILLS } from '@/lib/constants.js'
+import { DEFAULT_EMBEDDING_MODEL } from '@/lib/constants.js'
 import { DatabaseError, db } from '@/lib/db/index.js'
 import type { Skill } from '@/lib/db/types.js'
+import type { ItemStore } from '@/lib/items.js'
 import type { Provider } from '@/lib/providers/index.js'
+import { skillFromRow, type SkillRow } from '@/lib/skills/index.js'
 
-export class SkillsStore {
-  public async getSkills(): Promise<Skill[]> {
-    const stdout = await db.execSql(`SELECT id, name, description, prompt, embeddings FROM skills ORDER BY name ASC;`, ['-json'])
+function nullable(value: string | undefined): string {
+  return value ? `'${db.escape(value)}'` : 'NULL'
+}
+
+export class SkillsStore implements ItemStore<Skill> {
+  public async list(): Promise<Skill[]> {
+    const stdout = await db.execSql(`SELECT id, name, description, prompt, enabled, tools, embeddings FROM skills ORDER BY name ASC;`, ['-json'])
     if (!stdout) {
-      return JSON.parse(JSON.stringify(DEFAULT_SKILLS)) as Skill[]
+      return []
     }
     try {
-      const rows = JSON.parse(stdout) as { id: string; name: string; description?: string; prompt: string; embeddings?: string }[]
-      if (rows.length === 0) {
-        return JSON.parse(JSON.stringify(DEFAULT_SKILLS)) as Skill[]
-      }
-      return rows.map((r) => {
-        return {
-          id: r.id,
-          name: r.name,
-          description: r.description,
-          prompt: r.prompt,
-          embeddings: r.embeddings ? JSON.parse(r.embeddings) as number[] : undefined
-        }
-      })
+      return (JSON.parse(stdout) as SkillRow[]).map(skillFromRow)
     } catch (e) {
       throw new DatabaseError(`Invalid skills data: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 
-  public async saveSkills(skills: Skill[]): Promise<void> {
-    const sqls: string[] = []
-    sqls.push(`DELETE FROM skills;`)
+  public async save(skill: Skill): Promise<void> {
+    await this.saveMany([skill])
+  }
 
+  public async saveMany(skills: Skill[]): Promise<void> {
     if (skills.length === 0) {
-      await db.execSql(sqls)
       return
     }
+    await db.execSql(skills.map((s) => {
+      const tools = s.tools ? JSON.stringify(s.tools) : undefined
+      const embeddings = s.embeddings ? JSON.stringify(s.embeddings) : undefined
+      return `INSERT OR REPLACE INTO skills (id, name, description, prompt, enabled, tools, embeddings) VALUES ('${db.escape(s.id)}', '${db.escape(s.name)}', ${nullable(s.description)}, '${db.escape(s.prompt)}', ${s.enabled ? 1 : 0}, ${nullable(tools)}, ${nullable(embeddings)});`
+    }))
+  }
 
-    const values = skills.map((s) => {
-      const id = db.escape(s.id)
-      const name = db.escape(s.name)
-      const desc = s.description ? `'${db.escape(s.description)}'` : 'NULL'
-      const prompt = db.escape(s.prompt)
-      const embeddings = s.embeddings ? `'${db.escape(JSON.stringify(s.embeddings))}'` : 'NULL'
-      return `('${id}', '${name}', ${desc}, '${prompt}', ${embeddings})`
-    })
-
-    for (let i = 0; i < values.length; i += 500) {
-      const chunk = values.slice(i, i + 500)
-      sqls.push(`INSERT INTO skills (id, name, description, prompt, embeddings) VALUES ${chunk.join(',')};`)
-    }
-
-    await db.execSql(sqls)
+  public async remove(id: string): Promise<void> {
+    await db.execSql(`DELETE FROM skills WHERE id = '${db.escape(id)}';`)
   }
 
   public async indexSkills(provider: Provider, skills: Skill[], force: boolean = false, cancellable?: Gio.Cancellable, onProgress?: (fraction: number) => void): Promise<void> {

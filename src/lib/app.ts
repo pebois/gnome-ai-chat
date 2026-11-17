@@ -9,6 +9,8 @@ import type { Sidebar } from '@/app/window/main/sidebar.js'
 import type { Conversation, Settings, Skill } from '@/lib/db/types.js'
 import type { McpManager } from '@/lib/mcp/manager.js'
 import type { Provider } from '@/lib/providers/index.js'
+import type { SkillsManager } from '@/lib/skills/manager.js'
+import type { ToolRegistry } from '@/lib/tools/registry.js'
 import type { Tracker } from '@/lib/tracker.js'
 
 export interface ToastAction {
@@ -29,8 +31,10 @@ export interface AppInterface {
   readonly settings: Settings
   readonly sidebar: Sidebar
   readonly skills: Skill[]
+  readonly skillsManager: SkillsManager
   readonly supportsVision: boolean
   readonly toolModels: string[]
+  readonly tools: ToolRegistry
   readonly tracker: Tracker
   readonly window: AppWindow
   readonly activeArtifacts: Map<string, ArtifactWindow>
@@ -42,6 +46,7 @@ export interface AppInterface {
   connect(sigName: 'capabilities-changed', callback: (_: number) => void): number
   connect(sigName: 'files-indexing-changed', callback: (_: number, active: boolean, fraction: number) => void): number
   connect(sigName: 'mcp-changed', callback: (_: number) => void): number
+  connect(sigName: 'skills-changed', callback: (_: number) => void): number
   connect(sigName: 'syntax-changed', callback: (_: number, theme: string) => void): number
   connect(sigName: string, callback: (...args: unknown[]) => void): number
   disconnect(id: number): void
@@ -57,7 +62,6 @@ export interface AppInterface {
   isGeneratingMessage(id: number): boolean
   isSummarizing(id: number): boolean
   saveSettings(): void
-  saveSkills(): void
   saveConversations(): void
   persistConversation(conversation: ChatConversation): Promise<boolean>
   sendNotification(id: string, notification: Gio.Notification): void

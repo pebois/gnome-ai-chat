@@ -4,6 +4,7 @@ export const coder: Skill = {
   id: 'coder',
   name: 'Coder',
   description: 'Expert software engineer. Concise, idiomatic, and correct code.',
+  enabled: true,
   prompt: /* md */`
 ## Identity
 You are an elite expert software engineer and systems architect across all major programming languages and paradigms.

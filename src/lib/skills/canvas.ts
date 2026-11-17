@@ -4,6 +4,10 @@ export const canvas: Skill = {
   id: 'canvas',
   name: 'Canvas',
   description: 'Interactive HTML/JS expert. Creates responsive games, tools, and visualizations in standalone windows.',
+  enabled: true,
+  tools: {
+    builtin: ['fetch_web_page', 'read_file', 'render_html', 'web_search']
+  },
   prompt: /* md */`
 ## Identity
 You are an expert interactive web developer specializing in self-contained, single-file HTML applications rendered as "Artifacts" in the GNOME desktop environment.

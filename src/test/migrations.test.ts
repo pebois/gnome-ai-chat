@@ -1,4 +1,10 @@
 import { MIGRATIONS, migrationStatements, parseUserVersion } from '@/lib/db/migrations.js'
+import { DEFAULT_SKILLS } from '@/lib/skills/index.js'
+import { TOOL_GROUPS } from '@/lib/tools/groups.js'
+
+const BUILTIN_TOOL_NAMES = TOOL_GROUPS.flatMap((group) => {
+  return group.tools
+})
 
 describe('migrationStatements', () => {
   const migrations = [['A;'], ['B;', 'C;']]
@@ -25,7 +31,28 @@ describe('migrationStatements', () => {
   })
 
   it('adds the message command column', () => {
-    expect(migrationStatements(2)).toEqual(['ALTER TABLE messages ADD COLUMN command TEXT;', `PRAGMA user_version = ${MIGRATIONS.length};`])
+    expect(migrationStatements(2)[0]).toBe('ALTER TABLE messages ADD COLUMN command TEXT;')
+  })
+
+  it('adds the skill enabled and tools columns and backfills built-in tools', () => {
+    const sqls = migrationStatements(3)
+    expect(sqls.slice(0, 2)).toEqual([
+      'ALTER TABLE skills ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1;',
+      'ALTER TABLE skills ADD COLUMN tools TEXT;'
+    ])
+    const names = new Set(BUILTIN_TOOL_NAMES)
+    for (const skill of DEFAULT_SKILLS.filter((s) => {
+      return s.tools
+    })) {
+      const sql = sqls.find((s) => {
+        return s.endsWith(`WHERE id = '${skill.id}';`)
+      })
+      const json = sql?.match(/SET tools = '(.*)' WHERE/)?.[1] ?? ''
+      expect(JSON.parse(json)).toEqual(skill.tools)
+      for (const name of skill.tools?.builtin ?? []) {
+        expect(names.has(name)).toBe(true)
+      }
+    }
   })
 })
 

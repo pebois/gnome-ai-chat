@@ -3,17 +3,21 @@ import GLib from 'gi://GLib?version=2.0'
 
 import type { ChatConversation } from '@/app/ui/history.js'
 import { buildContext, type ContextResult } from '@/lib/agent/context.js'
+import { buildSubAgentSystem, resolveDelegation } from '@/lib/agent/delegate.js'
+import { planTurn } from '@/lib/agent/request.js'
 import type { Passage, ResearchSource } from '@/lib/agent/research.js'
 import { buildFollowUpPrompt, buildPlanPrompt, buildReportPrompt, CANCELLED_RESULT, describeSearchResults, describeSources, FOLLOW_UP_FORMAT, mapWithConcurrency, NOT_CITED_RESULT, parseFollowUps, parsePlan, PLAN_FORMAT, queryTerms, recentContext, REPORT_SYSTEM_PROMPT, researchBudget, scorePassage, selectPassages } from '@/lib/agent/research.js'
 import { summarizeConversation } from '@/lib/agent/summarize.js'
 import type { AppInterface } from '@/lib/app.js'
 import { DEEPSEARCH_CHUNK_CHARS, DEEPSEARCH_CHUNKS_PER_PAGE, DEEPSEARCH_EMBED_BATCH, DEEPSEARCH_FETCH_CONCURRENCY, DEEPSEARCH_FOLLOWUP_PAGES, DEEPSEARCH_MAX_PAGES, DEFAULT_CHAT_MODEL, DEFAULT_EMBEDDING_MODEL, DEFAULT_OPTIONS, MAX_TOOL_ROUNDS } from '@/lib/constants.js'
+import type { AgentKind, Skill } from '@/lib/db/types.js'
 import { debug } from '@/lib/debug.js'
 import type { ChatMessage, ChatProps, ToolCall } from '@/lib/providers/index.js'
-import { buildSkillPrompt, matchSkill, stripSkillMention } from '@/lib/skills/index.js'
+import { availableSkills } from '@/lib/skills/index.js'
 import { RecursiveCharacterTextSplitter } from '@/lib/splitter.js'
-import { availableSkills } from '@/lib/tools/groups.js'
 import { canRunInParallel, getAvailableTools, onToolCall } from '@/lib/tools/index.js'
+import { advertisedEntries, type ToolAccess } from '@/lib/tools/registry.js'
+import { RUN_SKILL_TOOL } from '@/lib/tools/skills.js'
 import { defaultSearchLanguage, fetchPageText, searchWeb } from '@/lib/tools/web.js'
 import type { SearchResult } from '@/lib/tools/websearch.js'
 import { mergeResults } from '@/lib/tools/websearch.js'
@@ -82,12 +86,7 @@ export class ChatService {
   ): Promise<void> {
     return this._runSession(conversationId, isFirstMessage, callbacks, async (session) => {
       const { cancellable, conversation } = session
-      const lastUserMessage = [...conversation.messages].reverse().find((m) => {
-        return m.role === 'user'
-      })
-      const skill = lastUserMessage ? matchSkill(lastUserMessage.content, availableSkills(this._app.skills ?? [], this._app.settings)) : undefined
       const model = this._app.model ?? DEFAULT_CHAT_MODEL
-      const system = [this._app.settings.system, skill ? buildSkillPrompt(skill) : ''].filter(Boolean).join('\n\n')
       const numCtx = this._app.settings.options.num_ctx ?? DEFAULT_OPTIONS.num_ctx
 
       await this._warnMissingCapabilities(model, conversation.messages)
@@ -97,24 +96,30 @@ export class ChatService {
           return
         }
 
-        const outgoingMessages = skill
-          ? messages.map((m) => {
-              return m === lastUserMessage ? { ...m, content: stripSkillMention(m.content) } : m
-            })
-          : messages
+        const plan = planTurn({
+          system: this._app.settings.system,
+          messages,
+          skills: this._availableSkills('main'),
+          delegable: this._availableSkills('sub'),
+          profile: this._app.settings.agents.main,
+          entries: this._app.tools.list(),
+          settings: this._app.settings
+        })
+        if (plan.skill) {
+          debug('ChatService', `Using skill: ${plan.skill.name}`)
+        }
 
-        const tools = round < MAX_TOOL_ROUNDS ? getAvailableTools(this._app) : undefined
-        const context = buildContext({ system, messages: outgoingMessages, tools: tools ?? [], numCtx })
+        const tools = round < MAX_TOOL_ROUNDS ? plan.tools : undefined
+        const context = buildContext({ system: plan.system, messages: plan.messages, tools: tools ?? [], numCtx })
         this._reportContext(conversation.id, context, numCtx)
 
         const response = await this._streamReply(session, callbacks, {
           model,
-          system: this._app.settings.system,
+          system: plan.system,
           stream: this._app.settings.stream,
           think: this._app.settings.think,
           options: this._app.settings.options,
           messages: context.messages,
-          skill,
           tools
         })
 
@@ -123,7 +128,7 @@ export class ChatService {
         }
 
         const startToolTime = GLib.get_monotonic_time()
-        const toolMessages = await this._runToolCalls(response.tool_calls, cancellable, callbacks)
+        const toolMessages = await this._runToolCalls(response.tool_calls, cancellable, callbacks, plan.access)
         this._app.tracker.recordToolCall((GLib.get_monotonic_time() - startToolTime) / 1000)
 
         session.generated.push(...toolMessages)
@@ -132,7 +137,7 @@ export class ChatService {
         await recursiveChat([...messages, response, ...toolMessages], round + 1)
       }
 
-      await recursiveChat(conversation.messages, 0)
+      await recursiveChat([...conversation.messages], 0)
     })
   }
 
@@ -493,23 +498,23 @@ export class ChatService {
     return response
   }
 
-  private async _runToolCalls(toolCalls: ToolCall[], cancellable: Gio.Cancellable, callbacks: ChatSessionCallbacks): Promise<ChatMessage[]> {
+  private async _runToolCalls(toolCalls: ToolCall[], cancellable: Gio.Cancellable, callbacks: ChatSessionCallbacks, access: ToolAccess, nested = false): Promise<ChatMessage[]> {
     const run = async (tc: ToolCall): Promise<ChatMessage> => {
       callbacks.onToolStart?.(tc)
       const start = GLib.get_monotonic_time()
       const result: ChatMessage = {
         role: 'tool',
         tool_name: tc.function.name,
-        content: await onToolCall(this._app, tc.function.name, tc.function.arguments, cancellable) || ''
+        content: await this._callTool(tc, cancellable, access, nested) || ''
       }
       callbacks.onToolEnd?.(tc, result, (GLib.get_monotonic_time() - start) / 1000)
       return result
     }
 
-    const names = toolCalls.map((tc) => {
-      return tc.function.name
+    const entries = toolCalls.map((tc) => {
+      return this._app.tools.get(tc.function.name)
     })
-    if (canRunInParallel(names)) {
+    if (canRunInParallel(entries)) {
       return Promise.all(toolCalls.map(run))
     }
 
@@ -522,6 +527,72 @@ export class ChatService {
       results.push(await run(tc))
     }
     return results
+  }
+
+  private _callTool(tc: ToolCall, cancellable: Gio.Cancellable, access: ToolAccess, nested: boolean): Promise<string> {
+    if (tc.function.name !== RUN_SKILL_TOOL) {
+      return onToolCall(this._app, tc.function.name, tc.function.arguments, cancellable, access)
+    }
+    if (nested) {
+      return Promise.resolve('Error: A skill running as a sub-agent cannot delegate to another skill.')
+    }
+    const delegation = resolveDelegation(tc.function.arguments, this._availableSkills('sub'))
+    if ('error' in delegation) {
+      return Promise.resolve(delegation.error)
+    }
+    return this._runSubAgent(delegation.skill, delegation.task, cancellable)
+  }
+
+  private _availableSkills(kind: AgentKind): Skill[] {
+    return availableSkills(this._app.skills ?? [], this._app.settings.agents[kind], this._app.mcp.servers)
+  }
+
+  private async _runSubAgent(skill: Skill, task: string, cancellable: Gio.Cancellable): Promise<string> {
+    const model = this._app.model ?? DEFAULT_CHAT_MODEL
+    const numCtx = this._app.settings.options.num_ctx ?? DEFAULT_OPTIONS.num_ctx
+    const system = buildSubAgentSystem(this._app.settings.system, skill)
+    const messages: ChatMessage[] = [{ role: 'user', content: task }]
+    const access: ToolAccess = { profile: this._app.settings.agents.sub, custom: skill.tools }
+    debug('ChatService', `Delegating to skill ${skill.name}: ${task.slice(0, 200)}`)
+
+    try {
+      for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+        if (cancellable.is_cancelled()) {
+          return 'Error: Cancelled by user.'
+        }
+        const entries = this._app.tools.list().filter((entry) => {
+          return entry.name !== RUN_SKILL_TOOL
+        })
+        const tools = round < MAX_TOOL_ROUNDS
+          ? advertisedEntries(entries, this._app.settings, access).map((entry) => {
+              return entry.tool
+            })
+          : undefined
+        const context = buildContext({ system, messages, tools: tools ?? [], numCtx })
+        const response = await this._app.provider.chat({
+          model,
+          system,
+          stream: false,
+          think: this._app.settings.think,
+          options: this._app.settings.options,
+          messages: context.messages,
+          tools,
+          cancellable
+        })
+        if (!response) {
+          return 'Error: Cancelled by user.'
+        }
+        if (!response.tool_calls?.length) {
+          debug('ChatService', `Skill ${skill.name} finished after ${round} tool round${round === 1 ? '' : 's'}`)
+          return response.content.trim() || 'Error: The skill returned no answer.'
+        }
+        const toolMessages = await this._runToolCalls(response.tool_calls, cancellable, {}, access, true)
+        messages.push({ role: 'assistant', content: response.content, tool_calls: response.tool_calls }, ...toolMessages)
+      }
+      return 'Error: The skill did not finish within the tool round limit.'
+    } catch (err) {
+      return `Error: ${err instanceof Error ? err.message : String(err)}`
+    }
   }
 
   private async _warnMissingCapabilities(model: string, messages: ChatMessage[]): Promise<void> {

@@ -1,9 +1,10 @@
 import { db } from '@/lib/db/index.js'
 import type { McpServer } from '@/lib/db/types.js'
+import type { ItemStore } from '@/lib/items.js'
 import { normalizeServer } from '@/lib/mcp/config.js'
 
-export class McpStore {
-  public async getServers(): Promise<McpServer[]> {
+export class McpStore implements ItemStore<McpServer> {
+  public async list(): Promise<McpServer[]> {
     const stdout = await db.execSql('SELECT id, config FROM mcp_servers ORDER BY rowid ASC;', ['-json'])
     if (!stdout) {
       return []
@@ -19,12 +20,12 @@ export class McpStore {
     }
   }
 
-  public async saveServer(server: McpServer): Promise<void> {
+  public async save(server: McpServer): Promise<void> {
     const { id, ...config } = server
     await db.execSql(`INSERT OR REPLACE INTO mcp_servers (id, config) VALUES ('${db.escape(id)}', '${db.escape(JSON.stringify(config))}');`)
   }
 
-  public async removeServer(id: string): Promise<void> {
+  public async remove(id: string): Promise<void> {
     await db.execSql(`DELETE FROM mcp_servers WHERE id = '${db.escape(id)}';`)
   }
 }

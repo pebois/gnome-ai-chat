@@ -290,7 +290,7 @@ export class Commands {
       const baseCmdName = parts[0]
       const subFilter = parts.slice(1).join(' ')
       const baseCmd = COMMANDS.find((c) => {
-        return c.name === baseCmdName && isCommandAvailable(c, this._app.settings)
+        return c.name === baseCmdName && isCommandAvailable(c, this._app.settings.agents.main)
       })
       if (baseCmd?.requiresArgument && !baseCmd.subCommands) {
         this._currentCommand = baseCmd
@@ -329,7 +329,7 @@ export class Commands {
       }
     } else {
       const visible = COMMANDS.filter((cmd) => {
-        return isCommandAvailable(cmd, this._app.settings)
+        return isCommandAvailable(cmd, this._app.settings.agents.main)
       })
       const byName = visible.filter((cmd) => {
         return cmd.name.startsWith(filterText)

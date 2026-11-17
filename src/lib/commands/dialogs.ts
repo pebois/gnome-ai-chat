@@ -3,8 +3,8 @@ import { showPullDialog } from '@/app/dialog/pull.js'
 import { showShortcutsDialog } from '@/app/dialog/shortcuts.js'
 import { showStatsDialog } from '@/app/dialog/stats.js'
 import { showAboutWindow } from '@/app/window/about.js'
+import { showManageWindow } from '@/app/window/manage/index.js'
 import { showPreferencesWindow } from '@/app/window/preferences/index.js'
-import { showSkillsWindow } from '@/app/window/skills/index.js'
 import type { Command } from '@/lib/commands/index.js'
 
 export const settings: Command = {
@@ -63,7 +63,7 @@ export const skills: Command = {
   icon: 'avatar-default-symbolic',
   accels: ['<Primary><Shift>s'],
   activate: (app) => {
-    return showSkillsWindow(app)
+    return showManageWindow(app, { section: 'skills' })
   }
 }
 

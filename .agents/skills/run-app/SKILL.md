@@ -53,7 +53,7 @@ gjs -m .agents/skills/run-app/scripts/render.js app/dialog/pull.mjs showPullDial
 | Statistics | `app/dialog/stats.mjs` | `showStatsDialog` |
 | About | `app/window/about.mjs` | `showAboutWindow` |
 | Settings | `app/window/preferences/index.mjs` | `showPreferencesWindow` |
-| Skills | `app/window/skills/index.mjs` | `showSkillsWindow` |
+| Skills / MCP | `app/window/manage/index.mjs` | `showManageWindow` (args `[{"section":"skills"}]` or `"mcp"`) |
 
 ## 2. Headless instance
 
@@ -106,6 +106,7 @@ X=.agents/skills/run-app/scripts/xinput.py
 python3 $X click 400 400
 python3 $X move 300 250
 python3 $X rclick 300 250
+python3 $X scroll 400 400 12
 python3 $X type "/se"
 python3 $X key Escape ctrl+comma Tab Return
 import -window root "$S/step1.png"

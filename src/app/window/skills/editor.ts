@@ -2,81 +2,50 @@ import Adw from 'gi://Adw?version=1'
 import Gtk from 'gi://Gtk?version=4.0'
 import GtkSource from 'gi://GtkSource?version=5'
 
+import type { ItemPanel } from '@/app/window/manage/section.js'
+import { createAccessGroups } from '@/app/window/preferences/access.js'
 import type { AppInterface } from '@/lib/app.js'
 import { DEFAULT_SYNTAX_THEME } from '@/lib/constants.js'
 import type { Skill } from '@/lib/db/types.js'
-import { formatToolTitle, skillToolStatus } from '@/lib/tools/groups.js'
+import { describeSkillTools } from '@/lib/skills/index.js'
+import { TOOL_GROUPS } from '@/lib/tools/groups.js'
 
-export interface EditorCallbacks {
+export interface SkillPanelCallbacks {
   onChanged: () => void
-  onDelete: () => void
   onReset: () => void
-  onToggleSidebar: () => void
 }
 
-export class SkillEditor {
+export class SkillPanel implements ItemPanel<Skill> {
   private _app: AppInterface
-  private _callbacks: EditorCallbacks
-  private _widget: Adw.ToolbarView
+  private _callbacks: SkillPanelCallbacks
+  private _widget: Gtk.ScrolledWindow
   private _nameRow: Adw.EntryRow
   private _descRow: Adw.EntryRow
-  private _toolsRow: Adw.ActionRow
-  private _toolsStatus: Gtk.Label
+  private _enabledRow: Adw.SwitchRow
+  private _toolsRow: Adw.SwitchRow
+  private _toolsBox: Gtk.Box
+  private _loading = false
   private _buffer: GtkSource.Buffer
   private _sourceView: GtkSource.View
-  private _deleteBtn: Gtk.Button
   private _resetBtn: Gtk.Button
-  private _toggleSidebarBtn: Gtk.ToggleButton
   private _syntaxSignalId: number
+  private _skill: Skill | null = null
 
-  public get widget(): Adw.ToolbarView {
+  public get widget(): Gtk.Widget {
     return this._widget
+  }
+
+  public get resetButton(): Gtk.Button {
+    return this._resetBtn
   }
 
   public get name(): string {
     return this._nameRow.get_text().trim()
   }
 
-  public get description(): string {
-    return this._descRow.get_text().trim()
-  }
-
-  public get prompt(): string {
-    return this._buffer.get_text(this._buffer.get_start_iter(), this._buffer.get_end_iter(), false)
-  }
-
-  public get toggleSidebarButton(): Gtk.ToggleButton {
-    return this._toggleSidebarBtn
-  }
-
-  constructor(app: AppInterface, callbacks: EditorCallbacks) {
+  constructor(app: AppInterface, callbacks: SkillPanelCallbacks) {
     this._app = app
     this._callbacks = callbacks
-
-    this._widget = new Adw.ToolbarView()
-    const header = new Adw.HeaderBar()
-
-    this._toggleSidebarBtn = new Gtk.ToggleButton({
-      icon_name: 'sidebar-show-symbolic',
-      tooltip_text: 'Toggle sidebar (Ctrl+B)',
-      active: true
-    })
-    this._toggleSidebarBtn.connect('toggled', () => {
-      return this._callbacks.onToggleSidebar()
-    })
-    header.pack_start(this._toggleSidebarBtn)
-
-    this._deleteBtn = new Gtk.Button({
-      icon_name: 'user-trash-symbolic',
-      tooltip_text: 'Delete skill',
-      valign: Gtk.Align.CENTER
-    })
-    this._deleteBtn.add_css_class('flat')
-    this._deleteBtn.add_css_class('destructive-action')
-    this._deleteBtn.connect('clicked', () => {
-      return this._callbacks.onDelete()
-    })
-    header.pack_end(this._deleteBtn)
 
     this._resetBtn = new Gtk.Button({
       icon_name: 'edit-undo-symbolic',
@@ -87,9 +56,6 @@ export class SkillEditor {
     this._resetBtn.connect('clicked', () => {
       return this._callbacks.onReset()
     })
-    header.pack_end(this._resetBtn)
-
-    this._widget.add_top_bar(header)
 
     const contentBox = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
@@ -104,13 +70,18 @@ export class SkillEditor {
     this._nameRow = new Adw.EntryRow({ title: 'Name' })
     this._descRow = new Adw.EntryRow({ title: 'Description' })
     metaGroup.add(this._nameRow)
+    this._enabledRow = new Adw.SwitchRow({ title: 'Enabled', subtitle: 'Turn off to hide this skill from every agent' })
     metaGroup.add(this._descRow)
-    this._toolsRow = new Adw.ActionRow({ title: 'Linked Tools', visible: false })
-    this._toolsStatus = new Gtk.Label({ valign: Gtk.Align.CENTER })
-    this._toolsStatus.add_css_class('caption')
-    this._toolsRow.add_suffix(this._toolsStatus)
+    metaGroup.add(this._enabledRow)
+    this._toolsRow = new Adw.SwitchRow({ title: 'Use Custom Tools' })
+    this._toolsRow.connect('notify::active', () => {
+      this._onCustomToolsToggled()
+    })
     metaGroup.add(this._toolsRow)
     contentBox.append(metaGroup)
+
+    this._toolsBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 12, visible: false })
+    contentBox.append(this._toolsBox)
 
     const lm = GtkSource.LanguageManager.get_default()
     this._buffer = new GtkSource.Buffer()
@@ -138,6 +109,7 @@ export class SkillEditor {
 
     const editorScrolled = new Gtk.ScrolledWindow({
       vexpand: true,
+      min_content_height: 240,
       hscrollbar_policy: Gtk.PolicyType.NEVER
     })
     editorScrolled.add_css_class('view')
@@ -145,7 +117,10 @@ export class SkillEditor {
     editorScrolled.set_child(this._sourceView)
     contentBox.append(editorScrolled)
 
-    this._widget.set_content(contentBox)
+    this._widget = new Gtk.ScrolledWindow({
+      hscrollbar_policy: Gtk.PolicyType.NEVER,
+      child: contentBox
+    })
 
     this._setupSignals()
 
@@ -168,12 +143,15 @@ export class SkillEditor {
     this._descRow.connect('notify::text', () => {
       return this._callbacks.onChanged()
     })
+    this._enabledRow.connect('notify::active', () => {
+      return this._callbacks.onChanged()
+    })
     this._buffer.connect('changed', () => {
       return this._callbacks.onChanged()
     })
   }
 
-  public load(skill: Skill | null, isBuiltin: boolean, differsFromDefault: boolean): void {
+  public load(skill: Skill | null): void {
     const name = skill?.name ?? ''
     if (this._nameRow.get_text() !== name) {
       this._nameRow.set_text(name)
@@ -184,35 +162,108 @@ export class SkillEditor {
       this._descRow.set_text(description)
     }
 
+    this._enabledRow.active = skill?.enabled ?? true
+
     const prompt = skill?.prompt ?? ''
-    const currentPrompt = this._buffer.get_text(this._buffer.get_start_iter(), this._buffer.get_end_iter(), false)
-    if (currentPrompt !== prompt) {
+    if (this._prompt() !== prompt) {
       this._buffer.set_text(prompt, -1)
     }
 
-    const active = skill !== null
-    this._updateLinkedTools(skill)
-    this._nameRow.sensitive = active
-    this._descRow.sensitive = active
-    this._sourceView.sensitive = active
-
-    this.updateActions(active && isBuiltin, differsFromDefault)
-    this._deleteBtn.visible = active && !isBuiltin
-    this._deleteBtn.sensitive = active && !isBuiltin
+    this._skill = skill
+    this._updateTools(skill)
   }
 
-  private _updateLinkedTools(skill: Skill | null): void {
-    const { disabled, required } = skill ? skillToolStatus(skill, this._app.settings) : { disabled: [], required: [] }
-    this._toolsRow.visible = required.length > 0
-    if (required.length === 0) {
+  public applyTo(skill: Skill): void {
+    skill.description = this._descRow.get_text().trim()
+    skill.prompt = this._prompt()
+    skill.enabled = this._enabledRow.active
+  }
+
+  private _prompt(): string {
+    return this._buffer.get_text(this._buffer.get_start_iter(), this._buffer.get_end_iter(), false)
+  }
+
+  private _subProfileTools(): string[] {
+    const disabled = this._app.settings.agents.sub.disabledTools
+    return TOOL_GROUPS.flatMap((group) => {
+      return group.tools
+    }).filter((name) => {
+      return !disabled.includes(name)
+    }).sort()
+  }
+
+  private _subProfileServers(): string[] {
+    const disabled = this._app.settings.agents.sub.disabledServers
+    return this._app.mcp.servers.filter((server) => {
+      return server.enabled && !disabled.includes(server.id)
+    }).map((server) => {
+      return server.id
+    }).sort()
+  }
+
+  private _onCustomToolsToggled(): void {
+    const skill = this._skill
+    if (this._loading || !skill) {
       return
     }
-    this._toolsRow.subtitle = required.map(formatToolTitle).join(', ')
-    const hidden = disabled.length > 0
-    this._toolsStatus.label = hidden ? `Hidden: ${disabled.length} tool${disabled.length === 1 ? '' : 's'} turned off` : 'Available'
-    this._toolsStatus.tooltip_text = hidden ? `Turned off in Settings → Tools: ${disabled.map(formatToolTitle).join(', ')}` : 'All linked tools are on'
-    this._toolsStatus.remove_css_class(hidden ? 'success' : 'warning')
-    this._toolsStatus.add_css_class(hidden ? 'warning' : 'success')
+    skill.tools = this._toolsRow.active
+      ? { builtin: this._subProfileTools(), mcp: this._subProfileServers() }
+      : undefined
+    this._updateTools(skill)
+    this._callbacks.onChanged()
+  }
+
+  private _setCustom(skill: Skill, key: 'builtin' | 'mcp', ids: string[], on: boolean): void {
+    const current = new Set(skill.tools?.[key] ?? (key === 'builtin' ? this._subProfileTools() : this._subProfileServers()))
+    for (const id of ids) {
+      if (on) {
+        current.add(id)
+      } else {
+        current.delete(id)
+      }
+    }
+    skill.tools = { ...skill.tools, [key]: [...current].sort() }
+    this._toolsRow.subtitle = describeSkillTools(skill.tools)
+    this._callbacks.onChanged()
+  }
+
+  private _updateTools(skill: Skill | null): void {
+    const custom = skill?.tools !== undefined
+    this._loading = true
+    this._toolsRow.active = custom
+    this._loading = false
+    this._toolsRow.subtitle = custom ? describeSkillTools(skill.tools) : 'Replace the agent\'s tools while this skill runs'
+
+    let child = this._toolsBox.get_first_child()
+    while (child) {
+      this._toolsBox.remove(child)
+      child = this._toolsBox.get_first_child()
+    }
+    this._toolsBox.visible = custom
+    if (!skill || !custom) {
+      return
+    }
+    const groups = createAccessGroups(this._app, {
+      tools: {
+        isOn: (name) => {
+          return skill.tools?.builtin ? skill.tools.builtin.includes(name) : this._subProfileTools().includes(name)
+        },
+        set: (names, on) => {
+          this._setCustom(skill, 'builtin', names, on)
+        }
+      },
+      servers: {
+        isOn: (id) => {
+          return skill.tools?.mcp ? skill.tools.mcp.includes(id) : this._subProfileServers().includes(id)
+        },
+        set: (ids, on) => {
+          this._setCustom(skill, 'mcp', ids, on)
+        }
+      }
+    })
+    for (const group of groups) {
+      this._toolsBox.append(group)
+    }
   }
 
   public updateActions(isBuiltin: boolean, differsFromDefault: boolean): void {
@@ -220,11 +271,15 @@ export class SkillEditor {
     this._resetBtn.sensitive = isBuiltin && differsFromDefault
   }
 
-  public grabFocus(): void {
-    this._nameRow.grab_focus()
+  public setNameError(hasError: boolean): void {
+    if (hasError) {
+      this._nameRow.add_css_class('error')
+    } else {
+      this._nameRow.remove_css_class('error')
+    }
   }
 
-  public updateSyntax(scheme: GtkSource.StyleScheme): void {
-    this._buffer.set_style_scheme(scheme)
+  public grabFocus(): void {
+    this._nameRow.grab_focus()
   }
 }

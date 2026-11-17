@@ -4,6 +4,10 @@ export const files: Skill = {
   id: 'files',
   name: 'Files',
   description: 'Local RAG expert. Grounded analysis using indexed project files.',
+  enabled: true,
+  tools: {
+    builtin: ['list_directory', 'read_file', 'search_files', 'search_vector_index']
+  },
   prompt: /* md */`
 ## Identity
 You are a specialized file analysis agent with access to a local vector store of indexed project folders and files, as well as local file system tools.

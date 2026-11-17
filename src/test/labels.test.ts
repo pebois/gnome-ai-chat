@@ -5,6 +5,11 @@ describe('tool activity labels', () => {
     expect(toolActivityLabel('fetch_web_page')).toBe('Reading web page')
   })
 
+  it('labels a delegation with its task', () => {
+    expect(toolActivityLabel('run_skill')).toBe('Delegating to a skill')
+    expect(toolActivityDetail({ skill: 'Files', task: 'Find the config file' })).toBe('Find the config file')
+  })
+
   it('uses the MCP label for MCP tools', () => {
     expect(toolActivityLabel('mcp__github__search', 'GitHub: search')).toBe('Calling GitHub: search')
   })

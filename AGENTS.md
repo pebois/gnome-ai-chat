@@ -11,12 +11,12 @@ This is a GNOME desktop application built with TypeScript, GJS, GTK4, and Libadw
 - **Smart Chat Organization**: Automatically categorizes conversations with concise AI-generated titles and relevant emojis for effortless navigation.
 - **Rich Text Rendering**: Full Markdown support including code blocks, tables, headers, and text formatting, cleanly rendered natively using Pango markup and GTK widgets.
 - **Integrated System Tools**: Expand model capabilities with built-in function calling for time, math calculations, web fetching, HTML parsing, system info, file searching, app launching, code execution, and persistent memory.
-- **MCP Servers**: Register Model Context Protocol servers (stdio or Streamable HTTP) in a dedicated window; their tools are advertised to the model next to the built-in ones under the MCP permission tier with per-server overrides, and managed with the `/mcp` command.
+- **MCP Servers**: Register Model Context Protocol servers (stdio or Streamable HTTP) in the MCP Servers window; their tools are advertised to the model next to the built-in ones under the MCP permission tier with per-server overrides, and managed with the `/mcp` command.
 - **Comprehensive Analytics**: Monitor performance with detailed statistics on API latency, tool execution times, and per-model token consumption.
 - **Advanced Chat Controls**: Full-featured chat management including search, message copying, session restarting, keyboard shortcuts, and smart bottom-scrolling.
 - **Quick Slash Commands**: Execute powerful inline actions (e.g., `/hn` for Hacker News, `/compress` to optimize context) with a dynamic, filterable autocomplete interface.
 - **Local RAG (Chat with your Files)**: Index local folders into a private SQLite vector store to ground model answers in actual code and documentation without cloud uploads.
-- **Skills Editor**: Dedicated, full-size window with markdown syntax highlighting for creating and managing custom persona instructions and system prompts. Quickly apply them with @-mentions in the chat input.
+- **Skills Editor**: Skills window with markdown syntax highlighting for creating and managing custom persona instructions (a persona is a skill). Each skill can be turned off, can replace the agent's tools with its own built-in tools and MCP servers, and can be run by the model as a sub-agent (`run_skill`). Settings → Tools attaches tools, MCP servers and skills to the main agent and to sub-agents separately. Quickly apply them with @-mentions in the chat input.
 - **Auto-Attach Screenshots**: Effortlessly capture and include screen contents directly in the chat input for visual analysis.
 - **Semantic History Search**: Locate past conversations conceptually using local vector embeddings, grouped chronologically, with seamless background indexing.
 - **Resource Monitoring**: Track active models and their hardware footprint (VRAM, CPU, Total Memory, and TTL) through the 'Running Models' view.
@@ -105,16 +105,28 @@ src/
     window/
       about.ts          # about dialog
       main.ts           # AppWindow class — main window orchestrator
-      preferences/      # preferences window pages (General, Appearance, Prompt, Permissions, Advanced, Data)
+      preferences/      # preferences window pages (General, Appearance, Prompt, Tools, Permissions, Advanced, Data)
+        tools.ts        # Tools page: Main Agent / Sub-agents profiles
+        access.ts       # shared list of switches (built-in tools, MCP servers, skills) used by profiles and skills
+      manage/           # window shared by skills and MCP servers, one window per section
+        index.ts        # ManageWindow: one section, shortcuts, deep links (showManageWindow)
+        section.ts      # ManageSection<T>: selection, debounced save, name validation, create, delete
+        sidebar.ts      # ItemSidebar<T>: search, grouped list, row context menu
+        editor.ts       # EditorShell: header (sidebar toggle, delete, extras) and empty/content stack
       mcp/
-        index.ts        # MCP Servers window orchestrator (load, select, save, delete, test)
-        sidebar.ts      # server list with live status icons and tool counts
-        editor.ts       # server pane: header view switcher between the Overview and Settings tabs
-        overview.ts     # Overview tab: live status, connection test, tool list
+        section.ts      # MCP section: rows with status and tool counts, catalog, empty page
+        editor.ts       # server panel: Overview and Settings tabs
+        overview.ts     # Overview tab: live status, connection test, per-tool switches
         settings.ts     # Settings tab: transport fields, environment/headers, permission override, timeout
-      skills.ts         # Skills Editor window orchestrator
+        catalog.ts      # catalog dialog
+      skills/
+        section.ts      # Skills section: Builtins/Custom groups, reset, semantic search
+        editor.ts       # skill panel: name, description, enabled, custom tools list, prompt editor
   lib/
     agent/
+      profiles.ts       # agent profiles (main, sub): defaults, migration of the old disabledTools, attach/detach
+      delegate.ts       # run_skill helpers: delegate tool definition, delegation parsing, sub-agent system prompt
+      request.ts        # planTurn: active skill, system prompt and advertised tools for one turn
       summarize.ts      # AI agent for conversation titles
     commands/           # slash command implementations
       chat.ts           # chat-related commands (/clear, /compress, /hn)
@@ -142,17 +154,20 @@ src/
       stdio.ts          # stdio transport (child process, newline-delimited JSON)
       http.ts           # Streamable HTTP transport (Soup, JSON or SSE responses)
       client.ts         # per-server client: initialize, tools/list, tools/call, timeouts, cancellation
-      manager.ts        # McpManager (app.mcp): lifecycle, reconnect, tool index, permission-filtered tools
+      manager.ts        # McpManager (app.mcp): owns the server list, lifecycle, reconnect, registers tools in app.tools
     skills/
       canvas.ts         # default instructions for canvas rendering
       coder.ts          # default instructions for coding
       files.ts          # default instructions for file search
-      index.ts          # skill initialization logic
+      index.ts          # built-in skills, mentions, merge/reset helpers, availability
+      manager.ts        # SkillsManager (app.skillsManager): owns the skill list, save, reset, indexing
       memory.ts         # default instructions for memory management
       reviewer.ts       # default instructions for code review
       writer.ts         # default instructions for writing
     tools/
-      index.ts          # tools export and runner
+      index.ts          # BUILTIN_TOOLS table and runner (onToolCall)
+      registry.ts       # ToolRegistry (app.tools) and pure enable/permission/profile rules (ToolAccess)
+      skills.ts         # run_skill tool (delegation to a skill running as a sub-agent)
       code.ts           # code evaluation and execution tools
       desktop.ts        # app listing and launching tools
       files.ts          # file search tool
@@ -166,6 +181,8 @@ src/
     app.ts              # AppInterface definition
     constants.ts        # application-wide constants
     debug.ts            # centralized debug logging utility
+    items.ts            # ItemStore / ItemSource contracts shared by skills and MCP servers
+    naming.ts           # shared item name validation, unique names and ids
     ollama.ts           # Ollama HTTP API client
     screenshot.ts       # screenshot capture logic
     splitter.ts         # text chunking for vector embeddings
@@ -222,7 +239,7 @@ src/
 
 ### Tool Development
 - **Definition**: New tools must be defined as a `Tool` object in a relevant file under `lib/tools/`.
-- **Registration**: Export the tool and its handler, then register it in `lib/tools/index.ts` within the `onToolCall` dispatcher.
+- **Registration**: Export the tool and its handler, then add a `builtin(tool, handler, parallelSafe?)` line to `BUILTIN_TOOLS` in `lib/tools/index.ts`, its name to a group in `lib/tools/groups.ts` and, if it needs approval, an entry in `TOOL_PERMISSIONS`.
 - **Execution**: Handlers should return a `string` (or a `Promise<string>`). Web fetching utilizes a singleton `Soup.Session` with `Soup.Cache` for efficiency.
 - **Security & Permissions**: High-risk tools (like shell commands or file writes) must integrate with the Tool Execution Permissions layer to prompt users for approval before executing side effects.
 
