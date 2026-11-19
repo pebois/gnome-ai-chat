@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Agent rules at the repository root**: `AGENTS.md` moves from `.agents/` to the root, where the [agents.md](https://agents.md/) standard and the coding agents look for it. Sub-agents now have their place in `.agents/agents/`, read by Claude Code and by opencode through the links `.claude/agents` and `.opencode/agents`.
+
 ## [1.15.0] - 2026-11-07
 
 ### Added
