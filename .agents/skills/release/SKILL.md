@@ -79,9 +79,12 @@ appstreamcli validate --no-net io.github.pebois.gnome-ai-chat.metainfo.xml
 - **Changed files:** `git status` lists only `CHANGELOG.md`, the metainfo, `package.json`, `package-lock.json` and `src/lib/constants.ts`.
 - **Tests:** if `npm test` fails on a Watchman file-watch limit, rerun it with `npm test -- --watchman=false`. If a test fails for a reason unrelated to the release, report it with its output and ask before going on. Don't hide a failure.
 
-## 5. Commit and tag
+## 5. Commit on the release branch
+
+Create a `release/vX.Y.Z` branch (never commit directly to protected `main`):
 
 ```bash
+git checkout -b release/vX.Y.Z
 git commit -a -F - <<'EOF'
 Release version X.Y.Z
 
@@ -97,7 +100,6 @@ Changed:
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
-git tag vX.Y.Z
 ```
 
 - **Body:** a condensed CHANGELOG for someone scrolling `git log`, one terse fragment per bullet with no trailing period. Group the minor fixes into one bullet.
@@ -105,20 +107,23 @@ git tag vX.Y.Z
 - **Trailer:** use the attribution line given in the session, or the one above if the session doesn't give one.
 - **Example:** `git show -s v1.14.0` shows the expected shape.
 
-Every release gets a lightweight tag on its release commit, like the earlier ones. Don't use `-a`.
-
-## 6. Report
+## 6. Report and tag after PR merge
 
 Report:
-- the version, the commit hash and the tag;
-- the command to publish: `git push origin main vX.Y.Z`.
+- the version and the release branch `release/vX.Y.Z` ready for a Pull Request to `main`;
+- after the founder merges the PR into `main`, tag the merge commit with a lightweight tag (never `-a`) and push the tag:
+  ```bash
+  git checkout main && git pull --ff-only origin main
+  git tag vX.Y.Z
+  git push origin vX.Y.Z
+  ```
 
-Never push yourself: publishing is the user's call.
+Never merge or publish yourself: merging and tagging are the user's call.
 
 ## Tagging an existing release
 
-If the user says "tag" after a release that has no tag yet:
-1. Find the latest `Release version X.Y.Z` commit.
+If the user says "tag" after a release PR has merged to `main` without a tag yet:
+1. Find the merged `Release version X.Y.Z` commit on `main`.
 2. Check that `vX.Y.Z` doesn't exist.
 3. Run `git tag vX.Y.Z <hash>`.
 

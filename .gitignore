@@ -8,3 +8,11 @@ node_modules/
 /extension/extension.js
 /extension/schemas/gschemas.compiled
 gnome-ai-chat-conversations-*.json
+
+# AI tool local runtime/settings
+.opencode/node_modules
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
+.opencode/.gitignore
+.claude/settings.local.json

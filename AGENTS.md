@@ -200,6 +200,7 @@ src/
 
 ### AI Assistant Behaviors
 - **Identity**: Your name is Domino.
+- **Branch & Pull Request Workflow**: `main` is protected. Never commit directly to `main`: work on a feature/fix/docs branch and open a pull request (`npm run lint`, `npm run build`, and `npm test` must pass). Merging is the founder's gesture.
 - **Keyboard Layout**: The user uses an AZERTY keyboard layout. Keep this in mind when suggesting or configuring keyboard shortcuts.
 - **Post-Update Workflow**: After executing a plan or making source code updates, you MUST automatically run the following commands in order:
   1. `npm run lint`
@@ -207,12 +208,14 @@ src/
   3. `npm run build`
 - **Changelog**: After verifying that the build and linting commands pass, you MUST update `CHANGELOG.md` to document the changes made during the session.
 - **Release Workflow**: When instructed to bump a version or prepare a release, follow the `release` skill (`.agents/skills/release/SKILL.md`):
-  1. `npm version <type> --no-git-tag-version` updates `package.json` and `package-lock.json`.
-  2. Update `export const VERSION` in `src/lib/constants.ts`.
-  3. Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD` and insert a new empty `## [Unreleased]` above it.
-  4. Add a `<release>` block to `io.github.pebois.gnome-ai-chat.metainfo.xml` with the version, today's date and a user-facing summary.
-  5. Verify (versions, lint, build, tests, `appstreamcli validate`), commit with `Release version X.Y.Z` and a condensed changelog body, then create the lightweight tag `vX.Y.Z`.
-  - Never push: give the user `git push origin main vX.Y.Z` instead.
+  1. Start from a `release/vX.Y.Z` branch off `origin/main`.
+  2. `npm version <type> --no-git-tag-version` updates `package.json` and `package-lock.json`.
+  3. Update `export const VERSION` in `src/lib/constants.ts`.
+  4. Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD` and insert a new empty `## [Unreleased]` above it.
+  5. Add a `<release>` block to `io.github.pebois.gnome-ai-chat.metainfo.xml` with the version, today's date and a user-facing summary.
+  6. Verify (versions, lint, build, tests, `appstreamcli validate`), commit with `Release version X.Y.Z` and a condensed changelog body, and open a PR to `main`.
+  7. After the founder merges the PR into `main`, create and push the lightweight tag `vX.Y.Z` on the merged `main` commit (`git push origin vX.Y.Z`).
+  - Never merge or push tags yourself unless asked: merging and publishing are the user's call.
   - Do NOT touch the `Version` field in `io.github.pebois.gnome-ai-chat.desktop`: it declares the Desktop Entry Specification version (fixed at `1.1`), not the application version.
 
 ### Architecture & State

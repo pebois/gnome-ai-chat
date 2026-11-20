@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CI, CODEOWNERS & Domino Maintainer**: GitHub Actions CI (`lint`, `build`, `test`), `.github/CODEOWNERS`, Domino agent definition (`.agents/agents/domino.md`), `.claude/skills/` symlinks, and `.gitignore` coverage for local AI tool state.
+
 ### Changed
 
+- **Protected `main` Workflow**: Documented pull-request and `release/vX.Y.Z` release-branch flow in `AGENTS.md` and the `release` skill.
 - **Agent rules at the repository root**: `AGENTS.md` moves from `.agents/` to the root, where the [agents.md](https://agents.md/) standard and the coding agents look for it. Sub-agents now have their place in `.agents/agents/`, read by Claude Code and by opencode through the links `.claude/agents` and `.opencode/agents`.
 
 ## [1.17.0] - 2026-11-17
