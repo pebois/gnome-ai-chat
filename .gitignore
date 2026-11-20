@@ -8,3 +8,4 @@ node_modules/
 /extension/extension.js
 /extension/schemas/gschemas.compiled
 gnome-ai-chat-conversations-*.json
+
