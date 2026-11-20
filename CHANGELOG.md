@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CI & CODEOWNERS**: GitHub Actions CI (`lint`, `build`, `test`) and `.github/CODEOWNERS`.
+
 ## [1.17.0] - 2026-11-17
 
 ### Added
