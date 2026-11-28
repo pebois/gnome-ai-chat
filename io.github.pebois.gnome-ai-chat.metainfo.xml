@@ -62,6 +62,16 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.17.1" date="2026-11-28">
+      <description>
+        <p>This release updates AppStream metadata, documentation, and high-DPI screenshots.</p>
+        <ul>
+          <li>Updated the AppStream description and screenshots with dark and light @2x captures.</li>
+          <li>Refreshed README.md, CHANGELOG.md, and added a screenshots gallery.</li>
+          <li>Updated development dependencies and added GitHub Actions CI.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.17.0" date="2026-11-17">
       <description>
         <p>This release adds import and export of chats, with a merge that never creates duplicates.</p>

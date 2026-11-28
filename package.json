@@ -1,6 +1,6 @@
 {
   "name": "io.github.pebois.gnome-ai-chat",
-  "version": "1.17.0",
+  "version": "1.17.1",
   "description": "A native GNOME desktop client for chatting with local Ollama models, built with GTK 4 and Libadwaita.",
   "type": "module",
   "scripts": {
