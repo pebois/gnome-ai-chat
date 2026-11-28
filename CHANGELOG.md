@@ -4,14 +4,14 @@ All notable changes to this project are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.17.1] - 2026-11-28
 
 ### Added
 - **CI & CODEOWNERS**: Added a GitHub Actions workflow running lint, build, and tests, along with `.github/CODEOWNERS`.
 - **Screenshots Gallery & Generator**: Added a dedicated `screenshots/README.md` gallery and a reproducible `@2x` screenshot generator in `scripts/screenshots/`.
 
 ### Changed
-- **Documentation & Metadata**: Rewrote `README.md`, cleaned up `CHANGELOG.md`, and aligned AppStream metadata with the current feature set.
+- **Documentation & Metadata**: Rewrote `README.md`, cleaned up `CHANGELOG.md`, refreshed `@2x` dark/light screenshots, and aligned AppStream metadata with the current feature set.
 
 ## [1.17.0] - 2026-11-17
 
