@@ -96,6 +96,6 @@ export default tseslint.config(
     }
   },
   {
-    ignores: ['dist/**', 'node_modules/**', '.flatpak-builder/**', '.flatpak-builddir/**', '.flatpak-repo/**', 'extension/*.js']
+    ignores: ['dist/**', 'node_modules/**', '.flatpak-builder/**', '.flatpak-builddir/**', '.flatpak-repo/**', 'extension/*.js', 'scripts/**']
   }
 )
