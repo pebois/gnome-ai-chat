@@ -11,37 +11,47 @@
 
   <description>
     <p>
-      Gnome AI Chat is a simple, modern chat interface built specifically for the GNOME desktop. It communicates with your local Ollama HTTP API to interact with large language models completely offline and privately.
+      Gnome AI Chat is a native GTK 4 and Libadwaita desktop client for chatting with local language models through Ollama. Conversations, settings, memory, and search indexes stay on your machine in a local SQLite database.
     </p>
-    <p>Features include:</p>
+    <p>Key features:</p>
     <ul>
-      <li>Native GNOME experience with GTK4 and Libadwaita.</li>
-      <li>Automatic detection of local models and in-app model pulling.</li>
-      <li>Real-time streaming and deep reasoning capabilities.</li>
-      <li>Custom @ personas/skills for specific tasks with a dedicated markdown editor.</li>
-      <li>Agentic capabilities via system tools for web fetching, file searching, code execution, and desktop automation.</li>
-      <li>Semantic vector search across past conversations.</li>
-      <li>Multimodal capabilities with image and text file attachments.</li>
-      <li>Interactive HTML Canvas for rendering UIs natively.</li>
-      <li>Smart chat organization with AI-generated titles and emojis.</li>
-      <li>Local RAG to chat with your local files and documentation via a private vector store.</li>
-      <li>Rich text rendering with native Markdown tables and code blocks.</li>
-      <li>Slash commands for powerful inline actions.</li>
-      <li>Detailed resource monitoring and performance analytics.</li>
-      <li>Privacy-first 100% local SQLite database.</li>
+      <li>Native GNOME interface with GTK 4, Libadwaita, adaptive dialogs, and dark/light themes.</li>
+      <li>Local model detection, in-app model pulling with progress, running model inspection, and configurable reasoning levels.</li>
+      <li>Built-in tools (web search, page fetching, file search, shell, memory, HTML preview) and external MCP servers over stdio or Streamable HTTP, with a built-in catalog of public servers.</li>
+      <li>Granular tool controls with Ask, Auto-accept, and Deny permissions per category and per server, plus individual tool switches.</li>
+      <li>Custom @skills with a dedicated Markdown editor, separate Main Agent and Sub-agents profiles, and task delegation to skills in isolated contexts.</li>
+      <li>Offline RAG to index local folders and chat with your own code and documents, plus image, screenshot, and text file attachments.</li>
+      <li>Multi-step web research via /deepsearch with numbered citations, clickable sources, live tool call status, and per-message generation stats.</li>
+      <li>Semantic search across past conversations, in-conversation find, slash commands, pinned chats, native Markdown tables, and duplicate-free JSON import/export.</li>
     </ul>
   </description>
 
   <launchable type="desktop-id">io.github.pebois.gnome-ai-chat.desktop</launchable>
 
   <screenshots>
-    <screenshot type="default">
+    <screenshot type="default" environment="gnome:dark">
       <image>https://raw.githubusercontent.com/pebois/gnome-ai-chat/main/screenshots/main.png</image>
-      <caption>Gnome AI Chat main interface</caption>
+      <caption>Main chat window in dark mode</caption>
     </screenshot>
-    <screenshot>
+    <screenshot environment="gnome">
+      <image>https://raw.githubusercontent.com/pebois/gnome-ai-chat/main/screenshots/light/main.png</image>
+      <caption>Main chat window in light mode</caption>
+    </screenshot>
+    <screenshot environment="gnome:dark">
+      <image>https://raw.githubusercontent.com/pebois/gnome-ai-chat/main/screenshots/deepsearch.png</image>
+      <caption>Deep web research with numbered citations and clickable sources</caption>
+    </screenshot>
+    <screenshot environment="gnome:dark">
       <image>https://raw.githubusercontent.com/pebois/gnome-ai-chat/main/screenshots/skills.png</image>
-      <caption>Skills Editor</caption>
+      <caption>Skills editor with custom tool selection</caption>
+    </screenshot>
+    <screenshot environment="gnome:dark">
+      <image>https://raw.githubusercontent.com/pebois/gnome-ai-chat/main/screenshots/mcp.png</image>
+      <caption>MCP Servers management with per-tool switches</caption>
+    </screenshot>
+    <screenshot environment="gnome:dark">
+      <image>https://raw.githubusercontent.com/pebois/gnome-ai-chat/main/screenshots/tools.png</image>
+      <caption>Agent profiles and built-in tool controls in Settings</caption>
     </screenshot>
   </screenshots>
 
@@ -143,165 +153,158 @@
     </release>
     <release version="1.11.0" date="2026-06-19">
       <description>
-        <p>This release introduces a native GNOME Shell extension for seamless desktop integration.</p>
+        <p>This release introduces a native GNOME Shell extension for desktop integration.</p>
         <ul>
-          <li>Added a native GNOME Shell extension written in TypeScript supporting GNOME Shell 45 through 51.</li>
-          <li>Integrated a status indicator in the top panel and a global keyboard shortcut (default Super+i) to toggle the chat window.</li>
-          <li>Added new npm integration scripts for building, installing, and enabling the extension locally.</li>
-          <li>Incorporate GNOME Shell extension coding conventions and ambient type definitions.</li>
+          <li>Added a native GNOME Shell extension supporting GNOME Shell 45 through 51.</li>
+          <li>Added a status indicator in the top panel and a global keyboard shortcut (default Super+i) to toggle the chat window.</li>
+          <li>Added npm scripts to build, install, and enable the extension locally.</li>
+          <li>Fixed D-Bus actions so New Conversation and Quit work from the panel menu.</li>
         </ul>
       </description>
     </release>
     <release version="1.10.0" date="2026-06-19">
       <description>
-        <p>This release adds support for D-Bus activation, allowing notification clicks to launch/open the app when closed.</p>
+        <p>This release adds D-Bus activation so notifications and desktop actions can launch the app from a cold start.</p>
         <ul>
-          <li>Added D-Bus activation support to desktop launcher and Flatpak configuration.</li>
-          <li>Refactored application startup lifecycle to handle action activation cleanly on a cold start.</li>
+          <li>Added D-Bus activation support to the desktop launcher and Flatpak configuration.</li>
+          <li>Updated application startup to handle incoming actions cleanly when the app is closed.</li>
         </ul>
       </description>
     </release>
     <release version="1.9.2" date="2026-06-18">
       <description>
-        <p>This release fixes a critical database initialization race condition at startup.</p>
+        <p>This release fixes a database initialization race condition at startup.</p>
         <ul>
-          <li>Deferred loading of performance stats until after database migrations are fully complete, preventing the no-such-table error.</li>
+          <li>Deferred loading performance stats until after database tables are created, fixing a startup error in sandboxed environments.</li>
         </ul>
       </description>
     </release>
     <release version="1.9.1" date="2026-06-18">
       <description>
-        <p>This release updates Flatpak packaging for Flathub compliance, resolves desktop validation issues, and improves AppStream metadata standards.</p>
+        <p>This release updates Flatpak packaging for Flathub and fixes desktop and AppStream validation warnings.</p>
         <ul>
-          <li>Adapted Flatpak manifest and generated offline npm cache registry sources for sandboxed builds.</li>
-          <li>Replaced deprecated AppStream developer tags with the modern developer name and ID format.</li>
-          <li>Fixed desktop launcher entry category and specification version validation warnings.</li>
+          <li>Added offline npm cache support to the Flatpak manifest for sandboxed builds.</li>
+          <li>Updated AppStream developer metadata and desktop entry fields to pass validation cleanly.</li>
         </ul>
       </description>
     </release>
     <release version="1.9.0" date="2026-04-14">
       <description>
-        <p>This release optimizes code block rendering, enhances multimodal workflows with automatic tool attachments, and streamlines desktop integration.</p>
+        <p>This release improves code streaming, adds PDF export and image saving, and streamlines desktop permissions.</p>
         <ul>
-          <li>Optimized code block rendering during streaming to eliminate flickering.</li>
-          <li>Implemented automatic tool attachments for seamless multimodal sequences.</li>
-          <li>Added right-click context menu to images for quick downloading.</li>
-          <li>Streamlined desktop integration by removing autonomous agent control while preserving manual screenshot and app-launching tools.</li>
-          <li>Improved developer experience with global console types and stable file promisification.</li>
+          <li>Eliminated code block flickering while streaming responses.</li>
+          <li>Forwarded attached screenshots and files automatically during tool-call sequences.</li>
+          <li>Added PDF export for conversations and a right-click option to save chat images.</li>
+          <li>Removed autonomous desktop automation and screenshots in favor of user-initiated attachments.</li>
         </ul>
       </description>
     </release>
     <release version="1.8.0" date="2026-04-09">
       <description>
-        <p>This release introduces a new Regenerate Response action, RSS feed tools, and major enhancements to slash commands and file attachments.</p>
+        <p>This release adds a Regenerate action, RSS feed parsing, and improvements to slash commands and file attachments.</p>
         <ul>
-          <li>Added "Regenerate response" action on user messages to easily re-submit prompts.</li>
-          <li>Added RSS Feed Tool to natively parse RSS/Atom feeds for AI processing.</li>
-          <li>Enhanced Slash Commands with better argument parsing safety and dynamic feedback.</li>
-          <li>Upgraded Hacker News command (/hn) with specialized best, newest, and custom search subcommands.</li>
-          <li>Enhanced File Attachments with /files attach (fuzzy search) and /files search (semantic vector search).</li>
-          <li>Disabled smart summarization for empty conversations to prevent unnecessary API calls.</li>
+          <li>Added a Regenerate response action to re-submit prompts.</li>
+          <li>Added an RSS feed tool for parsing RSS and Atom feeds natively.</li>
+          <li>Expanded /hn with best, newest, and custom search subcommands.</li>
+          <li>Added /files attach (fuzzy path search) and /files search (local semantic search).</li>
+          <li>Fixed slash command argument parsing and disabled summarization on empty conversations.</li>
         </ul>
       </description>
     </release>
     <release version="1.7.0" date="2026-04-08">
       <description>
-        <p>This release fixes critical bugs and includes stability improvements.</p>
+        <p>This release fixes startup race conditions and speeds up local file search.</p>
         <ul>
-           <li>Fixed critical race conditions on startup preventing data loss on rapid actions.</li>
-           <li>Optimized semantic file search performance and increased result limits.</li>
+          <li>Fixed startup race conditions so rapid actions wait for the database to load and never overwrite conversations.</li>
+          <li>Improved local file search performance and raised the result limit to 50.</li>
         </ul>
       </description>
     </release>
     <release version="1.6.0" date="2026-04-07">
       <description>
-        <p>This release brings native Markdown tables, command visibility controls, unit tests, and significant performance optimizations.</p>
+        <p>This release adds native Markdown tables, cleaner slash commands, and faster database writes.</p>
         <ul>
-          <li>Implemented a robust markdown table parser that natively renders tables using Gtk.ColumnView.</li>
-          <li>Added visibility controls for slash commands to hide internal actions.</li>
-          <li>Improved database performance by wrapping bulk insert operations in SQLite atomic transactions.</li>
-          <li>Implemented automatic background vector indexing for conversations and skills.</li>
-          <li>Added robust, mock-free unit tests for pure logic modules.</li>
+          <li>Added native Markdown table rendering using Gtk.ColumnView with live updates while streaming.</li>
+          <li>Hid internal navigation shortcuts from the slash command menu.</li>
+          <li>Wrapped bulk database writes in atomic transactions and moved vector indexing to the background.</li>
+          <li>Fixed memory leaks in messages, Settings, and the Skills window.</li>
         </ul>
       </description>
     </release>
     <release version="1.5.1" date="2026-04-07">
       <description>
         <ul>
-          <li>Updated all skill prompts with detailed tool usage instructions and strategies for maximum agent orientation.</li>
-          <li>Refined Writer, Reviewer, and Automation skills to ensure proper tool usage and focus.</li>
+          <li>Refined built-in skill prompts with clearer tool usage rules for Writer, Reviewer, Canvas, Coder, Files, and Memory.</li>
         </ul>
       </description>
     </release>
     <release version="1.5.0" date="2026-04-06">
       <description>
-        <p>This release introduces a robust SQLite database migration and semantic skill discovery.</p>
+        <p>This release moves local data to SQLite and adds semantic skill search.</p>
         <ul>
-          <li>Migrated data storage from legacy JSON files to a robust SQLite database with fully asynchronous operations.</li>
-          <li>Implemented semantic matching for skills using local text embeddings.</li>
-          <li>Auto-attach screenshots directly to the chat input for visual analysis.</li>
-          <li>Optimized Ollama client for consistent persona application during complex tool-call sequences.</li>
-          <li>Improved code block parsing strategy with support for nested blocks.</li>
+          <li>Migrated conversations, settings, skills, and memory from JSON files to a local SQLite database.</li>
+          <li>Added semantic matching for skills using local text embeddings.</li>
+          <li>Auto-attached captured screenshots directly to the chat input.</li>
+          <li>Improved code block parsing and kept skill prompts consistent across multi-step tool calls.</li>
         </ul>
       </description>
     </release>
     <release version="1.4.0" date="2026-04-03">
       <description>
-        <p>This release brings Local RAG capabilities and Tool Execution Permissions.</p>
+        <p>This release adds local folder RAG and tool execution permissions.</p>
         <ul>
-          <li>Added Local RAG to chat with local folders via a private SQLite vector store using the @files skill.</li>
-          <li>Added Tool Execution Permissions security layer for shell commands and file writes.</li>
-          <li>New UI to manage, remove, and re-index local project paths for the vector store.</li>
-          <li>Moved desktop automation to native Wayland portals.</li>
+          <li>Added local RAG to index project folders in SQLite and query them with @files.</li>
+          <li>Added approval prompts and permission settings for shell commands and file edits.</li>
+          <li>Added UI in Settings to manage and re-index local folders.</li>
+          <li>Switched screenshot capture to native Wayland portals.</li>
         </ul>
       </description>
     </release>
     <release version="1.3.1" date="2026-03-31">
       <description>
-        <p>This release focuses on syntax highlighting fixes.</p>
+        <p>This release fixes syntax highlighting updates during streaming.</p>
         <ul>
-          <li>Fixed code block syntax highlighting when reusing widgets during content streaming.</li>
+          <li>Fixed code block syntax highlighting not updating when reusing widgets while streaming.</li>
         </ul>
       </description>
     </release>
     <release version="1.3.0" date="2026-03-31">
       <description>
-        <p>This release brings a dedicated Skills Editor window and skill management enhancements.</p>
+        <p>This release introduces a dedicated Skills Editor window.</p>
         <ul>
-          <li>Added dedicated Skills Editor window with GtkSource markdown editor.</li>
-          <li>Skills are grouped into Builtins and Custom sections with sidebar search.</li>
-          <li>Added /skills slash command and Keyboard Shortcut (Ctrl+E).</li>
-          <li>Auto-trigger Memory skill for /memory sub-commands.</li>
+          <li>Added a dedicated Skills Editor window with a syntax-highlighted Markdown editor and sidebar search.</li>
+          <li>Grouped skills into Built-ins and Custom sections with per-skill reset buttons.</li>
+          <li>Added the /skills slash command and auto-triggered @memory for /memory subcommands.</li>
         </ul>
       </description>
     </release>
     <release version="1.2.1" date="2026-03-30">
       <description>
         <ul>
-          <li>Fixed out-of-bounds array access in image previewer.</li>
-          <li>Wrapped skill dialog system prompt for consistent styling.</li>
+          <li>Fixed an out-of-bounds crash when navigating images with the keyboard.</li>
+          <li>Aligned system prompt editor styling and margins in the skill dialog.</li>
         </ul>
       </description>
     </release>
     <release version="1.2.0" date="2026-03-30">
       <description>
-        <p>This release brings image preview functionality, UI enhancements, and model capability awareness.</p>
+        <p>This release adds image previews, model update notifications, and capability awareness.</p>
         <ul>
-          <li>Added full-size Image Preview and Slideshow.</li>
-          <li>Added Skill Prompt Syntax Highlighting.</li>
-          <li>Added Model Update Notifications and Dynamic Model Capabilities tracking.</li>
-          <li>Vision-aware attachments and tool-required model selection to prevent invalid actions.</li>
+          <li>Added full-size image preview with slideshow navigation.</li>
+          <li>Added Markdown syntax highlighting in the skill prompt editor.</li>
+          <li>Added model update notifications with a one-click Update button.</li>
+          <li>Detected vision and tool capabilities per model to disable unsupported actions.</li>
         </ul>
       </description>
     </release>
     <release version="1.1.0" date="2026-03-30">
       <description>
-        <p>Major feature release bringing numerous enhancements to chat, attachments, and application functionality.</p>
+        <p>Major feature release adding auto-summarized titles, attachments, HTML Canvas, and slash commands.</p>
         <ul>
-          <li>Added Auto-Summarize conversation titles in the background.</li>
-          <li>Added text file attachments and interactive HTML Canvas rendering.</li>
-          <li>Added Model Pull Dialog with real-time progress.</li>
-          <li>Added robust slash commands including /hn, /memory, /compress, and /debug.</li>
+          <li>Added background conversation title and emoji generation.</li>
+          <li>Added text file and screenshot attachments, plus interactive HTML Canvas previews.</li>
+          <li>Added an in-app Model Pull dialog with live progress and cancellation.</li>
+          <li>Added /hn, /memory, /compress, and /debug slash commands and appearance themes.</li>
         </ul>
       </description>
     </release>

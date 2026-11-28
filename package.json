@@ -1,7 +1,7 @@
 {
   "name": "io.github.pebois.gnome-ai-chat",
   "version": "1.17.0",
-  "description": "A simple chat application for GNOME built with JavaScript (GJS), Gtk4, and Libadwaita. It communicates with the Ollama HTTP API.",
+  "description": "A native GNOME desktop client for chatting with local Ollama models, built with GTK 4 and Libadwaita.",
   "type": "module",
   "scripts": {
     "build": "tsdown",
@@ -9,6 +9,7 @@
     "start": "gjs -m dist/main.mjs",
     "test": "node --no-warnings --experimental-vm-modules node_modules/.bin/jest --verbose",
     "compile-resources": "glib-compile-resources --target=dist/resources.gresource resources.gresource.xml",
+    "screenshots": "bash scripts/screenshots/run.sh",
     "flatpak-cache": "mkdir -p /tmp/npm-flatpak-cache && cp package.json package-lock.json /tmp/npm-flatpak-cache/ && npm install --prefix /tmp/npm-flatpak-cache --cache /tmp/npm-flatpak-cache/cache && tar czf .npm-cache.tar.gz -C /tmp/npm-flatpak-cache --transform 's/cache/npm-cache/' cache && rm -rf /tmp/npm-flatpak-cache",
     "flatpak-build": "flatpak-builder --force-clean --user --install-deps-from=flathub --repo=.flatpak-repo --install .flatpak-builddir io.github.pebois.gnome-ai-chat.json",
     "flatpak-run": "flatpak run io.github.pebois.gnome-ai-chat",
